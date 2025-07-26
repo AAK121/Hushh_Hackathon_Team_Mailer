@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hushh Mailer Agent</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-envelope"></i>
+                    <span>Hushh Mailer</span>
+                </div>
+                <button class="new-chat-btn" onclick="startNewConversation()">
+                    <i class="fas fa-plus"></i>
+                    New Email Draft
+                </button>
+            </div>
+            
+            <div class="conversation-history">
+                <div class="history-section">
+                    <h3>Recent Drafts</h3>
+                    <div class="conversation-list" id="conversationList">
+                        <!-- Conversation items will be added here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <i class="fas fa-user"></i>
+                    <span>User</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h1>Hushh Mailer Agent</h1>
+                    <p>Create professional emails with AI assistance</p>
+                </div>
+
+                <div class="messages-container" id="messagesContainer">
+                    <div class="welcome-message">
+                        <div class="welcome-icon">
+                            <i class="fas fa-envelope-open"></i>
+                        </div>
+                        <h2>Welcome to Hushh Mailer Agent</h2>
+                        <p>I'm here to help you create professional emails. Just describe what you want to write, and I'll draft it for you.</p>
+                        
+                        <div class="example-prompts">
+                            <h3>Try these examples:</h3>
+                            <div class="prompt-examples">
+                                <button class="example-btn" onclick="useExample('I want to send a welcome email to new interns joining next week')">
+                                    <i class="fas fa-handshake"></i>
+                                    Welcome email for new interns
+                                </button>
+                                <button class="example-btn" onclick="useExample('Create a follow-up email for a job interview')">
+                                    <i class="fas fa-briefcase"></i>
+                                    Follow-up interview email
+                                </button>
+                                <button class="example-btn" onclick="useExample('Draft a professional meeting invitation')">
+                                    <i class="fas fa-calendar"></i>
+                                    Meeting invitation
+                                </button>
+                                <button class="example-btn" onclick="useExample('Write a thank you email to clients')">
+                                    <i class="fas fa-heart"></i>
+                                    Thank you email
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Describe the email you want to create..."
+                            rows="1"
+                            onkeydown="handleKeyDown(event)"
+                        ></textarea>
+                        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Preview Modal -->
+        <div class="modal" id="emailModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Email Preview</h2>
+                    <button class="close-btn" onclick="closeModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="email-preview" id="emailPreview">
+                        <!-- Email content will be displayed here -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="requestRevision()">
+                        <i class="fas fa-edit"></i>
+                        Request Changes
+                    </button>
+                    <button class="btn btn-primary" onclick="approveEmail()">
+                        <i class="fas fa-check"></i>
+                        Approve & Send
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Generating email...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

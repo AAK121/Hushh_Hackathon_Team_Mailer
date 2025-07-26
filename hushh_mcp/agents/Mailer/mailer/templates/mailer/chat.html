@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }}</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-envelope"></i> Hushh Mailer</h2>
+                <button class="new-chat-btn" onclick="startNewChat()">
+                    <i class="fas fa-plus"></i> New Chat
+                </button>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="chat-history">
+                    <!-- Chat history will be populated here -->
+                </div>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="upgrade-card">
+                    <i class="fas fa-star"></i>
+                    <span>Hushh Mailer Agent</span>
+                    <small>Powered by AI</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h3>Email Campaign Assistant</h3>
+                    <div class="header-actions">
+                        <button class="btn-upload" onclick="showUploadModal()" style="display: none;">
+                            <i class="fas fa-upload"></i> Upload Excel
+                        </button>
+                        <button class="btn-send-emails" onclick="sendEmails()" style="display: none;">
+                            <i class="fas fa-paper-plane"></i> Send Emails
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="messages-container" id="messagesContainer">
+                    <div class="welcome-message">
+                        <div class="welcome-content">
+                            <h1>Welcome to Hushh Mailer Agent</h1>
+                            <p>I'm your AI-powered email campaign assistant. I can help you:</p>
+                            <ul>
+                                <li><i class="fas fa-edit"></i> Create professional email templates</li>
+                                <li><i class="fas fa-file-excel"></i> Process Excel contact lists</li>
+                                <li><i class="fas fa-paper-plane"></i> Send bulk emails via Mailjet</li>
+                                <li><i class="fas fa-chart-line"></i> Track email campaign results</li>
+                            </ul>
+                            <p class="start-prompt">To get started, describe the type of email you'd like to create!</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-container">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="messageInput" 
+                            placeholder="Describe the email you want to create..."
+                            onkeydown="handleKeyDown(event)"
+                            rows="1"></textarea>
+                        <button class="send-button" onclick="sendMessage()" id="sendButton">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div class="modal" id="uploadModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Excel File</h3>
+                <span class="close" onclick="closeUploadModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="upload-area" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>Drag and drop your Excel file here, or click to browse</p>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;">
+                    <button class="browse-btn" onclick="document.getElementById('excelFile').click()">
+                        Browse Files
+                    </button>
+                </div>
+                <div class="upload-info">
+                    <p><strong>Excel Format Requirements:</strong></p>
+                    <ul>
+                        <li>Include columns: name, email, company_name</li>
+                        <li>Email column is required</li>
+                        <li>Additional columns will be treated as placeholders</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p id="loadingText">Processing...</p>
+        </div>
+    </div>
+
+    <script src="{% static 'js/chat.js' %}"></script>
+</body>
+</html>
