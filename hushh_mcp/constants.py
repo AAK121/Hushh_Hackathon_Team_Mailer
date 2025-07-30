@@ -10,6 +10,7 @@ class ConsentScope(str, Enum):
     VAULT_READ_PHONE = "vault.read.phone"
     VAULT_READ_FINANCE = "vault.read.finance"
     VAULT_READ_CONTACTS = "vault.read.contacts"
+    VAULT_WRITE_CALENDAR = "vault.write.calendar"
 
     # Agent permissioning
     AGENT_SHOPPING_PURCHASE = "agent.shopping.purchase"
