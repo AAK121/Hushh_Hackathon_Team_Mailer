@@ -280,6 +280,7 @@ cache/
 # Temporary files
 *.tmp
 *.temp
+tempCodeRunnerFile.py
 
 # Local development files
 local/
