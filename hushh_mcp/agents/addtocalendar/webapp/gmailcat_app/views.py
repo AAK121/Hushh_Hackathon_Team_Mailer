@@ -32,14 +32,24 @@ def run_agent_view(request):
     if request.method == 'POST':
         try:
             user_id = "web_demo_user_001"
-            consent_token = issue_token(
+            
+            # Issue tokens for both email reading and calendar writing
+            email_consent_token = issue_token(
                 user_id=user_id,
                 agent_id=manifest["id"],
-                scope=manifest["scopes"],
-                expires_in_ms=600 * 1000
+                scope=manifest["scopes"][0],  # VAULT_READ_EMAIL
+                expires_in_ms=3600 * 1000  # 1 hour
             )
+            
+            calendar_consent_token = issue_token(
+                user_id=user_id,
+                agent_id=manifest["id"],
+                scope=manifest["scopes"][1],  # VAULT_WRITE_CALENDAR
+                expires_in_ms=3600 * 1000  # 1 hour
+            )
+            
             agent = AddToCalendarAgent()
-            result = agent.handle(user_id, consent_token.token)
+            result = agent.handle(user_id, email_consent_token.token, calendar_consent_token.token)
             return JsonResponse({'status': 'success', 'data': result})
         except FileNotFoundError as e:
             error_message = f"Configuration Error: {e}. Have you run the 'run_agent_cli.py' script once to authenticate with Google?"
