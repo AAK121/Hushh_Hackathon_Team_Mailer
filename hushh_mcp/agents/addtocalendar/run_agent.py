@@ -18,8 +18,8 @@ from hushh_mcp.agents.addtocalendar.manifest import manifest
 
 def run():
     """Issues a consent token and executes the agent."""
-    # Load .env file from the current directory
-    env_path = os.path.join(os.path.dirname(__file__), '.env')
+    # Load .env file from the project root directory
+    env_path = os.path.join(project_root, '.env')
     load_dotenv(env_path)
     print("🚀 Initializing Self-Contained Calendar Agent...")
 
