@@ -25,20 +25,28 @@ def run():
 
     user_id = "demo_user_encapsulated_001"
 
-    # 1. Issue a token with all required permissions.
-    # For now, issue token with the primary scope - email reading
-    consent_token = issue_token(
+    # 1. Issue tokens with all required permissions.
+    # Issue tokens for both email reading and calendar writing
+    email_consent_token = issue_token(
         user_id=user_id,
         agent_id=manifest["id"],
         scope=manifest["scopes"][0],  # VAULT_READ_EMAIL
         expires_in_ms=3600 * 1000  # 1 hour
     )
-    print(f"✅ Consent token issued for user '{user_id}' with scope '{manifest['scopes'][0].value}'.")
+    print(f"✅ Email consent token issued for user '{user_id}' with scope '{manifest['scopes'][0].value}'.")
+    
+    calendar_consent_token = issue_token(
+        user_id=user_id,
+        agent_id=manifest["id"],
+        scope=manifest["scopes"][1],  # VAULT_WRITE_CALENDAR
+        expires_in_ms=3600 * 1000  # 1 hour
+    )
+    print(f"✅ Calendar consent token issued for user '{user_id}' with scope '{manifest['scopes'][1].value}'.")
 
     # 2. Initialize and run the agent.
     try:
         agent = AddToCalendarAgent()
-        result = agent.handle(user_id, consent_token.token)
+        result = agent.handle(user_id, email_consent_token.token, calendar_consent_token.token)
         print("\n🎉 Agent execution finished.")
         print("📊 Results:")
         print(json.dumps(result, indent=2))

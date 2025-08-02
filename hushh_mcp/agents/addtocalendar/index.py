@@ -121,9 +121,9 @@ class AddToCalendarAgent:
                 print(f"❌ Failed to create event '{event.get('summary')}': {e}")
         return created_links
 
-    def handle(self, user_id: str, token_str: str):
+    def handle(self, user_id: str, email_token_str: str, calendar_token_str: str):
         """Main entry point for the agent, gated by HushhMCP consent checks."""
-        is_valid_email, reason_email, _ = validate_token(token_str, expected_scope=ConsentScope.VAULT_READ_EMAIL)
+        is_valid_email, reason_email, _ = validate_token(email_token_str, expected_scope=ConsentScope.VAULT_READ_EMAIL)
         if not is_valid_email:
             raise PermissionError(f"Email Access Denied: {reason_email}")
         print("✅ Consent validated for email access.")
@@ -137,7 +137,7 @@ class AddToCalendarAgent:
         if not events:
             return {"status": "complete", "message": "No events found in emails."}
 
-        is_valid_cal, reason_cal, _ = validate_token(token_str, expected_scope=ConsentScope.VAULT_WRITE_CALENDAR)
+        is_valid_cal, reason_cal, _ = validate_token(calendar_token_str, expected_scope=ConsentScope.VAULT_WRITE_CALENDAR)
         if not is_valid_cal:
             raise PermissionError(f"Calendar Access Denied: {reason_cal}")
         print("✅ Consent validated for calendar creation.")
