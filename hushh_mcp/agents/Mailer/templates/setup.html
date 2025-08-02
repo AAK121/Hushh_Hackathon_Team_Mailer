@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}API Setup - Hushh Email Agent{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="text-center mb-4">
+            <h1 class="display-5 fw-bold text-dark mb-3">
+                <i class="fas fa-cog me-3" style="color: var(--primary-color);"></i>
+                API Configuration
+            </h1>
+            <p class="lead text-muted">
+                Configure your API keys to enable email automation
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-key me-2"></i>
+                    API Keys Setup
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <!-- Google API Key -->
+                    <div class="mb-4">
+                        <label for="google_api_key" class="form-label">
+                            <i class="fab fa-google me-2"></i>
+                            Google Gemini API Key
+                        </label>
+                        <input type="password" class="form-control" id="google_api_key" name="google_api_key" 
+                               placeholder="Enter your Google Gemini API key" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Used for AI-powered email content generation. Get your key from 
+                            <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                        </div>
+                    </div>
+
+                    <!-- Mailjet API Key -->
+                    <div class="mb-4">
+                        <label for="mailjet_api_key" class="form-label">
+                            <i class="fas fa-envelope me-2"></i>
+                            Mailjet API Key
+                        </label>
+                        <input type="password" class="form-control" id="mailjet_api_key" name="mailjet_api_key" 
+                               placeholder="Enter your Mailjet API key" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Public API key from your Mailjet account
+                        </div>
+                    </div>
+
+                    <!-- Mailjet Secret Key -->
+                    <div class="mb-4">
+                        <label for="mailjet_secret_key" class="form-label">
+                            <i class="fas fa-lock me-2"></i>
+                            Mailjet Secret Key
+                        </label>
+                        <input type="password" class="form-control" id="mailjet_secret_key" name="mailjet_secret_key" 
+                               placeholder="Enter your Mailjet secret key" required>
+                        <div class="form-text">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Private API key from your Mailjet account. Get your keys from 
+                            <a href="https://app.mailjet.com/account/api_keys" target="_blank">Mailjet Dashboard</a>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save me-2"></i>
+                            Save Configuration
+                        </button>
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Dashboard
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Instructions Card -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Setup Instructions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fab fa-google text-warning me-2"></i>Google Gemini API</h6>
+                        <ol class="small">
+                            <li>Visit <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a></li>
+                            <li>Sign in with your Google account</li>
+                            <li>Click "Create API Key"</li>
+                            <li>Copy the generated API key</li>
+                            <li>Paste it in the Google Gemini API Key field above</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-envelope text-primary me-2"></i>Mailjet API</h6>
+                        <ol class="small">
+                            <li>Visit <a href="https://app.mailjet.com/signup" target="_blank">Mailjet</a> and create an account</li>
+                            <li>Go to <a href="https://app.mailjet.com/account/api_keys" target="_blank">API Keys section</a></li>
+                            <li>Copy your API Key (Public)</li>
+                            <li>Copy your Secret Key (Private)</li>
+                            <li>Paste them in the respective fields above</li>
+                        </ol>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Keep your API keys secure and never share them publicly. 
+                    These keys will be stored securely for this session only.
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Tip:</strong> For production use, consider setting these as environment variables 
+                    instead of entering them through the web interface.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle password visibility
+document.addEventListener('DOMContentLoaded', function() {
+    const passwordFields = document.querySelectorAll('input[type="password"]');
+    
+    passwordFields.forEach(field => {
+        const container = field.parentElement;
+        const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
+        toggleBtn.className = 'btn btn-outline-secondary position-absolute end-0 top-50 translate-middle-y me-2';
+        toggleBtn.style.zIndex = '10';
+        toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+        
+        // Make container relative for absolute positioning
+        container.style.position = 'relative';
+        field.style.paddingRight = '3rem';
+        
+        toggleBtn.addEventListener('click', function() {
+            if (field.type === 'password') {
+                field.type = 'text';
+                toggleBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+            } else {
+                field.type = 'password';
+                toggleBtn.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+        
+        container.appendChild(toggleBtn);
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}Email Agent Dashboard - Hushh{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="text-center mb-4">
+            <h1 class="display-4 fw-bold text-dark mb-3">
+                <i class="fas fa-robot me-3" style="color: var(--primary-color);"></i>
+                Email Agent Dashboard
+            </h1>
+            <p class="lead text-muted">
+                Automate your email campaigns with AI-powered content generation
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Step 1: Upload Excel File -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-file-excel me-2"></i>
+                    Step 1: Upload Excel File
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="file-upload-area" id="fileUploadArea">
+                    <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                    <h5>Drag & Drop Excel File Here</h5>
+                    <p class="text-muted">or click to browse</p>
+                    <small class="text-muted">Supported formats: .xlsx, .xls (Max 16MB)</small>
+                    <input type="file" id="excelFile" accept=".xlsx,.xls" style="display: none;">
+                </div>
+                
+                <div id="fileInfo" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle me-2"></i>File Uploaded Successfully</h6>
+                        <div id="fileDetails"></div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr id="tableHeaders"></tr>
+                            </thead>
+                            <tbody id="tablePreview"></tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Available Placeholders:</h6>
+                        <div id="placeholders"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 2: Draft Email -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>
+                    Step 2: Draft Email Content
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="draftForm">
+                    <div class="mb-3">
+                        <label for="userInput" class="form-label">Email Request</label>
+                        <textarea class="form-control" id="userInput" rows="3" 
+                                placeholder="Describe what kind of email you want to send. E.g., 'I want to send a welcome email to all new interns joining next week'"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-info" id="draftBtn">
+                        <span class="loading-spinner spinner-border spinner-border-sm me-2" role="status"></span>
+                        <i class="fas fa-magic me-2"></i>
+                        Generate Email Draft
+                    </button>
+                </form>
+
+                <div id="emailPreview" class="mt-4" style="display: none;">
+                    <h6><i class="fas fa-eye me-2"></i>Email Preview</h6>
+                    <div class="email-preview">
+                        <div class="mb-3">
+                            <strong>Subject:</strong>
+                            <div id="previewSubject" class="mt-1"></div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Content:</strong>
+                            <div id="previewContent" class="mt-1" style="white-space: pre-wrap;"></div>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Mass Email:</strong>
+                            <span id="previewMass" class="badge"></span>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <button class="btn btn-warning w-100" id="editBtn">
+                                <i class="fas fa-edit me-2"></i>
+                                Edit Draft
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button class="btn btn-success w-100" id="sendBtn">
+                                <span class="loading-spinner spinner-border spinner-border-sm me-2" role="status"></span>
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Send Emails
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Step 3: Edit Email (Hidden by default) -->
+<div class="row mb-4" id="editSection" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-warning text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-pencil-alt me-2"></i>
+                    Step 3: Edit Email Content
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="editForm">
+                    <div class="mb-3">
+                        <label for="editSubject" class="form-label">Subject</label>
+                        <input type="text" class="form-control" id="editSubject">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editContent" class="form-label">Email Content</label>
+                        <textarea class="form-control" id="editContent" rows="8"></textarea>
+                        <small class="form-text text-muted">
+                            Use placeholders from your Excel file to personalize emails
+                        </small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="button" class="btn btn-secondary w-100" id="cancelEditBtn">
+                                <i class="fas fa-times me-2"></i>
+                                Cancel
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-success w-100" id="saveEditBtn">
+                                <span class="loading-spinner spinner-border spinner-border-sm me-2" role="status"></span>
+                                <i class="fas fa-save me-2"></i>
+                                Save & Send
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Section -->
+<div class="row mb-4" id="progressSection" style="display: none;">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Email Sending Progress
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar" role="progressbar" style="width: 0%" id="progressBar"></div>
+                </div>
+                <div id="progressText" class="text-center mb-3">
+                    Preparing to send emails...
+                </div>
+                <div id="emailResults" class="mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Send Confirmation -->
+<div class="modal fade" id="confirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                    Confirm Email Sending
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to send emails to <strong id="recipientCount">0</strong> recipients?</p>
+                <p class="text-muted">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmSendBtn">
+                    <i class="fas fa-paper-plane me-2"></i>
+                    Yes, Send Emails
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let uploadedFilePath = '';
+let currentDraft = null;
+let recipientCount = 0;
+
+// File upload functionality
+const fileUploadArea = document.getElementById('fileUploadArea');
+const fileInput = document.getElementById('excelFile');
+
+setupFileUpload(fileUploadArea, fileInput);
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+        handleFileUpload(e.target.files[0]);
+    }
+});
+
+function handleFileUpload(file) {
+    const formData = new FormData();
+    formData.append('excel_file', file);
+    
+    axios.post('/upload_excel', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        }
+    })
+    .then(response => {
+        const data = response.data;
+        uploadedFilePath = data.filepath;
+        recipientCount = data.row_count;
+        
+        // Show file info
+        document.getElementById('fileInfo').style.display = 'block';
+        document.getElementById('fileDetails').innerHTML = `
+            <strong>File:</strong> ${file.name}<br>
+            <strong>Rows:</strong> ${data.row_count}<br>
+            <strong>Columns:</strong> ${data.columns.length}
+        `;
+        
+        // Show table preview
+        const headers = document.getElementById('tableHeaders');
+        const preview = document.getElementById('tablePreview');
+        
+        headers.innerHTML = data.columns.map(col => `<th>${col}</th>`).join('');
+        preview.innerHTML = data.preview.map(row => {
+            return `<tr>${data.columns.map(col => `<td>${row[col] || ''}</td>`).join('')}</tr>`;
+        }).join('');
+        
+        // Show placeholders
+        const placeholders = document.getElementById('placeholders');
+        placeholders.innerHTML = data.columns.map(col => 
+            `<span class="placeholder-chip">{${col}}</span>`
+        ).join('');
+        
+        showAlert(`Excel file uploaded successfully! Found ${data.row_count} recipients.`);
+    })
+    .catch(error => {
+        console.error('Upload error:', error);
+        showAlert(error.response?.data?.error || 'Error uploading file', 'danger');
+    });
+}
+
+// Draft email functionality
+document.getElementById('draftForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const userInput = document.getElementById('userInput').value.trim();
+    if (!userInput) {
+        showAlert('Please enter your email request', 'warning');
+        return;
+    }
+    
+    if (!uploadedFilePath) {
+        showAlert('Please upload an Excel file first', 'warning');
+        return;
+    }
+    
+    const draftBtn = document.getElementById('draftBtn');
+    showLoading(draftBtn);
+    
+    axios.post('/draft_email', {
+        user_input: userInput,
+        excel_file_path: uploadedFilePath
+    })
+    .then(response => {
+        const data = response.data;
+        currentDraft = data;
+        
+        // Show preview
+        document.getElementById('previewSubject').textContent = data.subject;
+        document.getElementById('previewContent').textContent = data.email_template;
+        document.getElementById('previewMass').textContent = data.mass ? 'Yes' : 'No';
+        document.getElementById('previewMass').className = `badge ${data.mass ? 'bg-success' : 'bg-secondary'}`;
+        
+        document.getElementById('emailPreview').style.display = 'block';
+        
+        // Scroll to preview
+        document.getElementById('emailPreview').scrollIntoView({ behavior: 'smooth' });
+        
+        hideLoading(draftBtn);
+        showAlert('Email draft generated successfully!');
+    })
+    .catch(error => {
+        console.error('Draft error:', error);
+        hideLoading(draftBtn);
+        showAlert(error.response?.data?.error || 'Error generating draft', 'danger');
+    });
+});
+
+// Edit button functionality
+document.getElementById('editBtn').addEventListener('click', function() {
+    if (!currentDraft) return;
+    
+    document.getElementById('editSubject').value = currentDraft.subject;
+    document.getElementById('editContent').value = currentDraft.email_template;
+    document.getElementById('editSection').style.display = 'block';
+    
+    // Scroll to edit section
+    document.getElementById('editSection').scrollIntoView({ behavior: 'smooth' });
+});
+
+// Cancel edit
+document.getElementById('cancelEditBtn').addEventListener('click', function() {
+    document.getElementById('editSection').style.display = 'none';
+});
+
+// Save edit
+document.getElementById('editForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const subject = document.getElementById('editSubject').value.trim();
+    const content = document.getElementById('editContent').value.trim();
+    
+    if (!subject || !content) {
+        showAlert('Please fill in both subject and content', 'warning');
+        return;
+    }
+    
+    // Update current draft
+    currentDraft.subject = subject;
+    currentDraft.email_template = content;
+    
+    // Update preview
+    document.getElementById('previewSubject').textContent = subject;
+    document.getElementById('previewContent').textContent = content;
+    
+    // Hide edit section
+    document.getElementById('editSection').style.display = 'none';
+    
+    // Show confirmation modal
+    document.getElementById('recipientCount').textContent = recipientCount;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+});
+
+// Send button functionality
+document.getElementById('sendBtn').addEventListener('click', function() {
+    if (!currentDraft) return;
+    
+    document.getElementById('recipientCount').textContent = recipientCount;
+    new bootstrap.Modal(document.getElementById('confirmModal')).show();
+});
+
+// Confirm send
+document.getElementById('confirmSendBtn').addEventListener('click', function() {
+    if (!currentDraft || !uploadedFilePath) return;
+    
+    // Hide modal
+    bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+    
+    // Show progress section
+    document.getElementById('progressSection').style.display = 'block';
+    document.getElementById('progressSection').scrollIntoView({ behavior: 'smooth' });
+    
+    const sendBtn = document.getElementById('sendBtn');
+    showLoading(sendBtn);
+    
+    // Simulate progress
+    let progress = 0;
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    
+    const progressInterval = setInterval(() => {
+        progress += Math.random() * 15;
+        if (progress > 90) progress = 90;
+        progressBar.style.width = progress + '%';
+        progressText.textContent = `Sending emails... ${Math.round(progress)}%`;
+    }, 500);
+    
+    axios.post('/send_emails', {
+        subject: currentDraft.subject,
+        email_template: currentDraft.email_template,
+        excel_file_path: uploadedFilePath
+    })
+    .then(response => {
+        clearInterval(progressInterval);
+        const data = response.data;
+        
+        // Complete progress
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Email sending completed!';
+        
+        // Show results
+        const results = document.getElementById('emailResults');
+        results.innerHTML = `
+            <div class="alert alert-success">
+                <h6><i class="fas fa-check-circle me-2"></i>Email Sending Complete</h6>
+                <p class="mb-2">${data.message}</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div class="h3 text-success">${data.emails_sent}</div>
+                            <small class="text-muted">Emails Sent</small>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="text-center">
+                            <div class="h3 text-primary">${data.total_emails}</div>
+                            <small class="text-muted">Total Recipients</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a href="/download_status/${encodeURIComponent(uploadedFilePath)}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-download me-2"></i>
+                        Download Status Report
+                    </a>
+                </div>
+            </div>
+        `;
+        
+        hideLoading(sendBtn);
+        showAlert(data.message);
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        console.error('Send error:', error);
+        hideLoading(sendBtn);
+        progressText.textContent = 'Error occurred while sending emails';
+        progressBar.classList.add('bg-danger');
+        showAlert(error.response?.data?.error || 'Error sending emails', 'danger');
+    });
+});
+</script>
+{% endblock %}
