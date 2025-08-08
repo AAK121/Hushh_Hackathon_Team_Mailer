@@ -5,12 +5,20 @@ from enum import Enum
 # ==================== Consent Scopes ====================
 
 class ConsentScope(str, Enum):
-    # Vault data access
+    # Vault data access - read permissions
     VAULT_READ_EMAIL = "vault.read.email"
     VAULT_READ_PHONE = "vault.read.phone"
     VAULT_READ_FINANCE = "vault.read.finance"
     VAULT_READ_CONTACTS = "vault.read.contacts"
+    VAULT_READ_FILE = "vault.read.file"
+    
+    # Vault data access - write permissions
+    VAULT_WRITE_EMAIL = "vault.write.email"
+    VAULT_WRITE_PHONE = "vault.write.phone"
+    VAULT_WRITE_FINANCE = "vault.write.finance"
+    VAULT_WRITE_CONTACTS = "vault.write.contacts"
     VAULT_WRITE_CALENDAR = "vault.write.calendar"
+    VAULT_WRITE_FILE = "vault.write.file"
 
     # Agent permissioning
     AGENT_SHOPPING_PURCHASE = "agent.shopping.purchase"

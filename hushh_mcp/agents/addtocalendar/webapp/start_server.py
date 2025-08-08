@@ -44,7 +44,7 @@ def main():
     if env_path.exists():
         print("✅ Environment file found")
     else:
-        print("⚠️  No .env file found. Make sure OPENAI_API_KEY is set")
+        print("⚠️  No .env file found. Make sure GOOGLE_API_KEY is set")
     
     print("\n🚀 Starting development server...")
     print("📱 Open your browser and go to: http://127.0.0.1:8000")

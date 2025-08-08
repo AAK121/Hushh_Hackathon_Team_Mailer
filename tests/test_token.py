@@ -1,7 +1,13 @@
 # tests/test_token.py
 
+import sys
+import os
 import pytest
 import time
+
+# Add parent directory to Python path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from hushh_mcp.consent.token import (
     issue_token,
     validate_token,

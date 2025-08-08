@@ -58,7 +58,12 @@ def run():
     # Initialize and run the agent
     try:
         agent = MassMailerAgent()
-        result = agent.handle(user_id, multi_scope_token.token, user_input)
+        # Convert single token to dictionary format expected by handle method
+        consent_tokens = {
+            'email_send': multi_scope_token.token,
+            'vault_write': multi_scope_token.token
+        }
+        result = agent.handle(user_id, consent_tokens, user_input)
         
         print("\n🎉 Email Campaign Agent Execution Complete!")
         print("📊 Final Results:")

@@ -54,12 +54,12 @@ def run():
         print(f"\n💥 An error occurred: {e}")
 
 if __name__ == "__main__":
-    api_key = os.environ.get("OPENAI_API_KEY")
-    if not api_key or api_key == "your_openai_api_key_here":
-        print("‼️ ERROR: OPENAI_API_KEY is not properly set.")
+    api_key = os.environ.get("GOOGLE_API_KEY")
+    if not api_key or api_key == "your_google_api_key_here":
+        print("‼️ ERROR: GOOGLE_API_KEY is not properly set.")
         print("📝 Please:")
-        print("   1. Get your API key from https://platform.openai.com/account/api-keys")
-        print("   2. Update the OPENAI_API_KEY in the .env file")
+        print("   1. Get your API key from https://ai.google.dev/")
+        print("   2. Update the GOOGLE_API_KEY in the .env file")
         print("   3. Uncomment the line by removing the # at the beginning")
     else:
         run()

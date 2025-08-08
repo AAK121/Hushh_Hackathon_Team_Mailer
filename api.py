@@ -38,7 +38,7 @@ sys.path.insert(0, str(project_root))
 # HushMCP framework imports
 from hushh_mcp.consent.token import validate_token, issue_token
 from hushh_mcp.constants import ConsentScope
-from hushh_mcp.config import load_config
+from hushh_mcp.config import SECRET_KEY, ENVIRONMENT
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -62,8 +62,7 @@ app.add_middleware(
 # Security
 security = HTTPBearer()
 
-# Load configuration
-config = load_config()
+# Configuration is already loaded in hushh_mcp.config module
 
 # ==================== PYDANTIC MODELS ====================
 
@@ -121,7 +120,9 @@ class AgentRegistry:
     
     def _load_agents(self):
         """Dynamically load all available agents."""
-        agents_dir = project_root / "hushh_mcp" / "agents"
+        # Update the agents directory path to be relative to current working directory
+        current_dir = Path(__file__).parent
+        agents_dir = current_dir / "hushh_mcp" / "agents"
         
         for agent_path in agents_dir.iterdir():
             if agent_path.is_dir() and (agent_path / "index.py").exists():
@@ -308,26 +309,106 @@ async def execute_agent(
         
         # Handle different agent types with their specific interfaces
         if agent_id == "addtocalendar":
-            # AddToCalendarAgent requires email and calendar tokens
+            # Enhanced AddToCalendarAgent with multiple action support
             email_token = request.consent_tokens.get('email_token')
             calendar_token = request.consent_tokens.get('calendar_token')
             
-            if not email_token or not calendar_token:
+            if not email_token:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="AddToCalendarAgent requires 'email_token' and 'calendar_token' in consent_tokens"
+                    detail="AddToCalendarAgent requires 'email_token' in consent_tokens"
                 )
             
+            # Extract action and additional parameters
+            action = request.parameters.get('action', 'comprehensive_analysis')
+            
+            # Validate action-specific requirements
+            if action in ['comprehensive_analysis', 'manual_event'] and not calendar_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Action '{action}' requires 'calendar_token' in consent_tokens"
+                )
+            
+            if action == 'manual_event':
+                event_description = request.parameters.get('event_description')
+                if not event_description:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="manual_event action requires 'event_description' parameter"
+                    )
+            
+            # Execute enhanced agent
             result = agent_instance.handle(
                 user_id=request.user_id,
                 email_token_str=email_token,
-                calendar_token_str=calendar_token
+                calendar_token_str=calendar_token,
+                action=action,
+                **{k: v for k, v in request.parameters.items() 
+                   if k not in ['action']}
             )
             
         elif agent_id == "mailerpanda":
-            # MassMailerAgent has a more complex workflow
-            # For now, provide a simplified interface
-            result = await execute_mailerpanda_agent(agent_instance, request)
+            # Enhanced MailerPanda agent with comprehensive HushMCP integration
+            required_tokens = {
+                'email_token': ConsentScope.VAULT_READ_EMAIL,
+                'file_token': ConsentScope.VAULT_READ_FILE,
+                'write_token': ConsentScope.VAULT_WRITE_EMAIL,
+                'temp_token': ConsentScope.CUSTOM_TEMPORARY
+            }
+            
+            # Check for required consent tokens
+            consent_tokens = {}
+            missing_tokens = []
+            
+            for token_name, expected_scope in required_tokens.items():
+                token_value = request.consent_tokens.get(token_name)
+                if token_value:
+                    try:
+                        is_valid, reason, parsed = validate_token(token_value, expected_scope=expected_scope)
+                        if is_valid and parsed.user_id == request.user_id:
+                            consent_tokens[token_name] = token_value
+                        else:
+                            missing_tokens.append(f"{token_name} (invalid: {reason})")
+                    except Exception as e:
+                        missing_tokens.append(f"{token_name} (error: {str(e)})")
+                else:
+                    # Try to use any available token as fallback
+                    for fallback_name, fallback_token in request.consent_tokens.items():
+                        if fallback_token:
+                            try:
+                                is_valid, reason, parsed = validate_token(fallback_token, expected_scope=ConsentScope.CUSTOM_TEMPORARY)
+                                if is_valid and parsed.user_id == request.user_id:
+                                    consent_tokens[token_name] = fallback_token
+                                    break
+                            except Exception:
+                                continue
+                    
+                    if token_name not in consent_tokens:
+                        missing_tokens.append(token_name)
+            
+            if not consent_tokens:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"MailerPanda requires consent tokens. Missing: {', '.join(missing_tokens)}"
+                )
+            
+            # Extract user input
+            user_input = request.parameters.get('user_input', '')
+            mode = request.parameters.get('mode', 'interactive')
+            
+            if not user_input:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="MailerPanda requires 'user_input' parameter with email campaign description"
+                )
+            
+            # Execute enhanced MailerPanda agent
+            result = agent_instance.handle(
+                user_id=request.user_id,
+                consent_tokens=consent_tokens,
+                user_input=user_input,
+                mode=mode
+            )
             
         else:
             # Generic agent execution
