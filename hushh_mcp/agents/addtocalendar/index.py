@@ -56,7 +56,7 @@ class AddToCalendarAgent:
     def _read_emails(self, gmail_service) -> List[Dict]:
         """Fetches and processes unread emails."""
         results = gmail_service.users().messages().list(
-            userId='me', labelIds=['INBOX'], q='is:unread', maxResults=5
+            userId='me', labelIds=['INBOX', 'UNREAD'], q='is:unread', maxResults=5
         ).execute()
         messages = results.get('messages', [])
         emails = []
@@ -127,6 +127,7 @@ class AddToCalendarAgent:
         if not is_valid_email:
             raise PermissionError(f"Email Access Denied: {reason_email}")
         print("✅ Consent validated for email access.")
+
 
         gmail_service = self._get_google_service('gmail', 'v1', ['https://www.googleapis.com/auth/gmail.readonly'], user_id)
         emails = self._read_emails(gmail_service)
