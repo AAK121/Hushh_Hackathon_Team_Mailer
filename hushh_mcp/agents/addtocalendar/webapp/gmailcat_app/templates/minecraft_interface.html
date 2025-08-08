@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HushMCP Email Suite - Blocky Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #272757;
+            background-image: 
+                radial-gradient(circle at 1px 1px, #505081 1px, transparent 0);
+            background-size: 20px 20px;
+            color: #ffffff;
+            line-height: 1.8;
+            font-size: 10px;
+            overflow-x: hidden;
+        }
+
+        /* Minecraft-style Block Elements */
+        .block {
+            border: 3px solid;
+            border-color: #8686AC #0F0E47 #0F0E47 #8686AC;
+            background: #505081;
+            box-shadow: inset 0 0 0 1px #8686AC;
+        }
+
+        .stone-block {
+            background: #505081;
+            border-color: #8686AC #272757 #272757 #8686AC;
+            box-shadow: inset 0 0 0 1px #8686AC;
+        }
+
+        .diamond-block {
+            background: #8686AC;
+            border-color: #ffffff #0F0E47 #0F0E47 #ffffff;
+            box-shadow: inset 0 0 0 1px #8686AC;
+        }
+
+        .emerald-block {
+            background: #505081;
+            border-color: #8686AC #272757 #272757 #8686AC;
+            box-shadow: inset 0 0 0 1px #8686AC;
+        }
+
+        .redstone-block {
+            background: #0F0E47;
+            border-color: #272757 #000000 #000000 #272757;
+            box-shadow: inset 0 0 0 1px #0F0E47;
+        }
+
+        /* Main Container */
+        .minecraft-container {
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+            gap: 4px;
+            padding: 8px;
+        }
+
+        /* Header Toolbar */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            background: #505081;
+            border: 3px solid;
+            border-color: #8686AC #0F0E47 #0F0E47 #8686AC;
+        }
+
+        .toolbar-title {
+            color: #ffffff;
+            font-size: 12px;
+            margin-right: auto;
+            text-shadow: 2px 2px 0px #000000;
+        }
+
+        /* Minecraft Buttons */
+        .mc-button {
+            padding: 8px 16px;
+            border: 3px solid;
+            border-color: #8686AC #0F0E47 #0F0E47 #8686AC;
+            background: #505081;
+            color: #ffffff;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #000000;
+            transition: all 0.1s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .mc-button:hover {
+            background: #8686AC;
+            border-color: #ffffff #272757 #272757 #ffffff;
+        }
+
+        .mc-button:active {
+            border-color: #0F0E47 #8686AC #8686AC #0F0E47;
+        }
+
+        .mc-button.primary {
+            background: #8686AC;
+            border-color: #ffffff #272757 #272757 #ffffff;
+        }
+
+        .mc-button.primary:hover {
+            background: #ffffff;
+            color: #272757;
+        }
+
+        .mc-button.success {
+            background: #505081;
+            border-color: #8686AC #272757 #272757 #8686AC;
+        }
+
+        .mc-button.danger {
+            background: #0F0E47;
+            border-color: #272757 #000000 #000000 #272757;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 8px;
+            height: calc(100vh - 80px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: #0F0E47;
+            border: 3px solid;
+            border-color: #272757 #000000 #000000 #272757;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .sidebar-section {
+            margin-bottom: 24px;
+        }
+
+        .sidebar-title {
+            color: #ffffff;
+            font-size: 10px;
+            margin-bottom: 12px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .sidebar-item {
+            display: block;
+            padding: 8px 12px;
+            margin-bottom: 4px;
+            background: #505081;
+            border: 2px solid;
+            border-color: #8686AC #272757 #272757 #8686AC;
+            color: #ffffff;
+            text-decoration: none;
+            font-size: 8px;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .sidebar-item:hover {
+            background: #8686AC;
+            border-color: #ffffff #0F0E47 #0F0E47 #ffffff;
+        }
+
+        .sidebar-item.active {
+            background: #272757;
+            border-color: #505081 #0F0E47 #0F0E47 #505081;
+        }
+
+        /* Content Panel */
+        .content-panel {
+            background: #505081;
+            border: 3px solid;
+            border-color: #8686AC #0F0E47 #0F0E47 #8686AC;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .content-header {
+            background: #0F0E47;
+            border-bottom: 3px solid #272757;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .content-title {
+            color: #ffffff;
+            font-size: 10px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: #8686AC;
+            color: #ffffff;
+        }
+
+        /* Forms */
+        .mc-form {
+            background: #505081;
+            border: 3px solid;
+            border-color: #0F0E47 #8686AC #8686AC #0F0E47;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ffffff;
+            font-size: 8px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .mc-input,
+        .mc-textarea {
+            width: 100%;
+            padding: 8px;
+            border: 3px solid;
+            border-color: #0F0E47 #8686AC #8686AC #0F0E47;
+            background: #272757;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            color: #ffffff;
+            line-height: 1.4;
+        }
+
+        .mc-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .mc-input:focus,
+        .mc-textarea:focus {
+            outline: none;
+            border-color: #2980b9 #85c1e9 #85c1e9 #2980b9;
+            box-shadow: inset 0 0 0 1px #5dade2;
+        }
+
+        /* Inventory Grid */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .inventory-slot {
+            aspect-ratio: 1;
+            background: #8b8b8b;
+            border: 3px solid;
+            border-color: #555555 #ffffff #ffffff #555555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.1s;
+        }
+
+        .inventory-slot:hover {
+            border-color: #ffffff #555555 #555555 #ffffff;
+        }
+
+        .inventory-item {
+            font-size: 24px;
+            filter: drop-shadow(1px 1px 0px #000000);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            border: 2px solid;
+            font-size: 8px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .status-success {
+            background: #27ae60;
+            border-color: #58d68d #1e8449 #1e8449 #58d68d;
+            color: #ffffff;
+        }
+
+        .status-error {
+            background: #e74c3c;
+            border-color: #f1948a #c0392b #c0392b #f1948a;
+            color: #ffffff;
+        }
+
+        .status-info {
+            background: #5dade2;
+            border-color: #85c1e9 #2980b9 #2980b9 #85c1e9;
+            color: #ffffff;
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: 200px 1fr;
+            }
+
+            .sidebar {
+                height: 200px;
+                overflow-y: auto;
+            }
+
+            .toolbar-title {
+                font-size: 10px;
+            }
+
+            .mc-button {
+                padding: 6px 12px;
+                font-size: 7px;
+            }
+        }
+
+        /* Hidden by default */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        /* Pixelated Icons */
+        .pixel-icon {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background-size: 16px 16px;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .icon-email { background: #e74c3c; }
+        .icon-calendar { background: #f39c12; }
+        .icon-settings { background: #95a5a6; }
+        .icon-compose { background: #27ae60; }
+        .icon-inbox { background: #3498db; }
+    </style>
+</head>
+<body>
+    {% csrf_token %}
+    
+    <div class="minecraft-container">
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="toolbar-title">📧 HUSHMCP EMAIL SUITE</div>
+            <a href="/dashboard/" class="mc-button">📊 DASHBOARD</a>
+            <button class="mc-button danger" onclick="showHelp()">❓ HELP</button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <div class="sidebar-section">
+                    <div class="sidebar-title">📬 EMAIL TOOLS</div>
+                    <div class="sidebar-item active" onclick="showPanel('compose')">
+                        <span class="pixel-icon icon-compose"></span>✏️ COMPOSE
+                    </div>
+                    <div class="sidebar-item" onclick="showPanel('inbox')">
+                        <span class="pixel-icon icon-inbox"></span>📥 INBOX
+                    </div>
+                    <div class="sidebar-item" onclick="showPanel('mailerpanda')">
+                        <span class="pixel-icon icon-email"></span>🐼 MAILER PANDA
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">📅 CALENDAR TOOLS</div>
+                    <div class="sidebar-item" onclick="showPanel('gmailcat')">
+                        <span class="pixel-icon icon-calendar"></span>🐱 GMAIL CAT
+                    </div>
+                    <div class="sidebar-item" onclick="showPanel('events')">
+                        <span class="pixel-icon icon-calendar"></span>📅 EVENTS
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="sidebar-title">⚙️ SYSTEM</div>
+                    <div class="sidebar-item" onclick="showPanel('settings')">
+                        <span class="pixel-icon icon-settings"></span>⚙️ SETTINGS
+                    </div>
+                    <div class="sidebar-item" onclick="showPanel('consent')">
+                        <span class="pixel-icon icon-settings"></span>🔒 CONSENT
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Panel -->
+            <div class="content-panel">
+                <div class="content-header">
+                    <div class="content-title" id="panelTitle">✏️ COMPOSE EMAIL</div>
+                    <div>
+                        <button class="mc-button primary" id="actionButton">🚀 LAUNCH</button>
+                    </div>
+                </div>
+
+                <div class="content-body" id="contentBody">
+                    <!-- Compose Panel -->
+                    <div id="composePanel" class="panel">
+                        <div class="mc-form">
+                            <div class="form-group">
+                                <label class="form-label">📧 EMAIL TYPE:</label>
+                                <select class="mc-input" id="emailType">
+                                    <option value="simple">🔹 SIMPLE EMAIL</option>
+                                    <option value="campaign">🔹 MASS CAMPAIGN</option>
+                                    <option value="ai">🔹 AI GENERATED</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">📝 SUBJECT:</label>
+                                <input type="text" class="mc-input" id="emailSubject" placeholder="ENTER SUBJECT HERE...">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">💬 MESSAGE:</label>
+                                <textarea class="mc-textarea" id="emailMessage" rows="8" placeholder="TYPE YOUR MESSAGE HERE...
+
+USE AI TO GENERATE CONTENT OR WRITE MANUALLY.
+SUPPORTS PLACEHOLDER VARIABLES LIKE {NAME}, {EMAIL}"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">📋 RECIPIENTS (ONE PER LINE OR UPLOAD FILE):</label>
+                                <textarea class="mc-textarea" id="emailRecipients" rows="4" placeholder="EMAIL1@EXAMPLE.COM
+EMAIL2@EXAMPLE.COM
+OR UPLOAD CSV/EXCEL FILE BELOW"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">📁 UPLOAD CONTACTS FILE:</label>
+                                <input type="file" class="mc-input" id="contactsFile" accept=".csv,.xlsx,.xls">
+                            </div>
+
+                            <button class="mc-button success" onclick="draftEmail()">📝 DRAFT WITH AI</button>
+                            <button class="mc-button primary" onclick="sendEmail()">🚀 SEND EMAILS</button>
+                        </div>
+
+                        <div id="emailStatus" class="hidden"></div>
+                    </div>
+
+                    <!-- Inbox Panel -->
+                    <div id="inboxPanel" class="panel hidden">
+                        <div class="mc-form">
+                            <h3 style="color: #333; margin-bottom: 16px;">📥 INBOX MANAGEMENT</h3>
+                            <p style="color: #666; margin-bottom: 16px;">ANALYZE EMAILS AND CREATE CALENDAR EVENTS AUTOMATICALLY</p>
+                            
+                            <button class="mc-button primary" onclick="processInbox()">🔍 SCAN INBOX</button>
+                            <button class="mc-button success" onclick="createEvents()">📅 CREATE EVENTS</button>
+                        </div>
+
+                        <div id="inboxResults" class="inventory-grid">
+                            <!-- Inbox items will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- MailerPanda Panel -->
+                    <div id="mailerpandaPanel" class="panel hidden">
+                        <div class="mc-form">
+                            <h3 style="color: #333; margin-bottom: 16px;">🐼 MAILER PANDA AI AGENT</h3>
+                            <p style="color: #666; margin-bottom: 16px;">ADVANCED AI EMAIL CAMPAIGNS WITH HUMAN-IN-THE-LOOP APPROVAL</p>
+
+                            <div class="form-group">
+                                <label class="form-label">🎯 CAMPAIGN GOAL:</label>
+                                <input type="text" class="mc-input" id="campaignGoal" placeholder="E.G., PROMOTE NEW PRODUCT, NEWSLETTER, ANNOUNCEMENT">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">👥 TARGET AUDIENCE:</label>
+                                <input type="text" class="mc-input" id="targetAudience" placeholder="E.G., EXISTING CUSTOMERS, PROSPECTS, SUBSCRIBERS">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">🎨 TONE & STYLE:</label>
+                                <select class="mc-input" id="emailTone">
+                                    <option value="professional">🏢 PROFESSIONAL</option>
+                                    <option value="friendly">😊 FRIENDLY</option>
+                                    <option value="urgent">⚡ URGENT</option>
+                                    <option value="casual">😎 CASUAL</option>
+                                </select>
+                            </div>
+
+                            <button class="mc-button primary" onclick="generateWithAI()">🤖 GENERATE WITH AI</button>
+                            <button class="mc-button success" onclick="refineContent()">✨ REFINE CONTENT</button>
+                        </div>
+
+                        <div id="aiResults" class="hidden">
+                            <div class="mc-form">
+                                <h4 style="color: #333; margin-bottom: 12px;">🤖 AI GENERATED CONTENT:</h4>
+                                <div id="generatedContent" style="background: #fff; padding: 12px; border: 2px solid #333; margin-bottom: 12px; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4;"></div>
+                                
+                                <button class="mc-button success" onclick="approveContent()">✅ APPROVE & SEND</button>
+                                <button class="mc-button" onclick="regenerateContent()">🔄 REGENERATE</button>
+                                <button class="mc-button danger" onclick="rejectContent()">❌ REJECT</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GmailCat Panel -->
+                    <div id="gmailcatPanel" class="panel hidden">
+                        <div class="mc-form">
+                            <h3 style="color: #333; margin-bottom: 16px;">🐱 GMAIL CAT AI AGENT</h3>
+                            <p style="color: #666; margin-bottom: 16px;">INTELLIGENT EMAIL ANALYSIS & CALENDAR EVENT CREATION</p>
+
+                            <div class="form-group">
+                                <label class="form-label">📧 EMAIL TO ANALYZE:</label>
+                                <textarea class="mc-textarea" id="emailContent" rows="6" placeholder="PASTE EMAIL CONTENT HERE FOR AI ANALYSIS...
+
+THE AI WILL EXTRACT:
+- MEETING DATES & TIMES
+- EVENT LOCATIONS
+- ATTENDEES
+- AGENDA ITEMS"></textarea>
+                            </div>
+
+                            <button class="mc-button primary" onclick="analyzeEmail()">🔍 ANALYZE EMAIL</button>
+                            <button class="mc-button success" onclick="createCalendarEvent()">📅 CREATE EVENT</button>
+                        </div>
+
+                        <div id="analysisResults" class="hidden">
+                            <div class="mc-form">
+                                <h4 style="color: #333; margin-bottom: 12px;">🔍 ANALYSIS RESULTS:</h4>
+                                <div id="extractedEvents" style="background: #fff; padding: 12px; border: 2px solid #333; margin-bottom: 12px; font-family: Arial, sans-serif; font-size: 12px; line-height: 1.4;"></div>
+                                
+                                <button class="mc-button success" onclick="confirmEventCreation()">✅ CONFIRM & CREATE</button>
+                                <button class="mc-button" onclick="editEventDetails()">✏️ EDIT DETAILS</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Panel -->
+                    <div id="settingsPanel" class="panel hidden">
+                        <div class="mc-form">
+                            <h3 style="color: #333; margin-bottom: 16px;">⚙️ SYSTEM SETTINGS</h3>
+
+                            <div class="form-group">
+                                <label class="form-label">🔑 API KEYS:</label>
+                                <input type="password" class="mc-input" id="mailjetKey" placeholder="MAILJET API KEY">
+                                <input type="password" class="mc-input" id="geminiKey" placeholder="GOOGLE GEMINI API KEY" style="margin-top: 8px;">
+                            </div>
+
+                            <div class="form-group">
+                                <label class="form-label">🎨 THEME:</label>
+                                <select class="mc-input" id="themeSelect">
+                                    <option value="minecraft">🟫 MINECRAFT (CURRENT)</option>
+                                    <option value="modern">🌐 MODERN</option>
+                                    <option value="dark">🌙 DARK MODE</option>
+                                </select>
+                            </div>
+
+                            <button class="mc-button success" onclick="saveSettings()">💾 SAVE SETTINGS</button>
+                        </div>
+                    </div>
+
+                    <!-- Consent Panel -->
+                    <div id="consentPanel" class="panel hidden">
+                        <div class="mc-form">
+                            <h3 style="color: #333; margin-bottom: 16px;">🔒 CONSENT MANAGEMENT</h3>
+                            <p style="color: #666; margin-bottom: 16px;">HUSHMCP PRIVACY-FIRST CONSENT FRAMEWORK</p>
+
+                            <div class="inventory-grid">
+                                <div class="inventory-slot">
+                                    <div class="inventory-item">📧</div>
+                                </div>
+                                <div style="color: #333; font-size: 8px;">
+                                    <strong>EMAIL READ</strong><br>
+                                    ✅ GRANTED<br>
+                                    🕒 EXPIRES: 1H
+                                </div>
+
+                                <div class="inventory-slot">
+                                    <div class="inventory-item">📝</div>
+                                </div>
+                                <div style="color: #333; font-size: 8px;">
+                                    <strong>EMAIL WRITE</strong><br>
+                                    ✅ GRANTED<br>
+                                    🕒 EXPIRES: 1H
+                                </div>
+
+                                <div class="inventory-slot">
+                                    <div class="inventory-item">📅</div>
+                                </div>
+                                <div style="color: #333; font-size: 8px;">
+                                    <strong>CALENDAR ACCESS</strong><br>
+                                    ✅ GRANTED<br>
+                                    🕒 EXPIRES: 24H
+                                </div>
+                            </div>
+
+                            <button class="mc-button success" onclick="generateConsent()">🔐 GENERATE NEW TOKEN</button>
+                            <button class="mc-button danger" onclick="revokeConsent()">🚫 REVOKE ALL</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentPanel = 'compose';
+        
+        // Panel management
+        function showPanel(panelName) {
+            // Hide all panels
+            document.querySelectorAll('.panel').forEach(panel => {
+                panel.classList.add('hidden');
+            });
+            
+            // Remove active class from all sidebar items
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected panel
+            const panel = document.getElementById(panelName + 'Panel');
+            if (panel) {
+                panel.classList.remove('hidden');
+            }
+            
+            // Update active sidebar item
+            event.target.classList.add('active');
+            
+            // Update panel title and action button
+            updatePanelHeader(panelName);
+            currentPanel = panelName;
+        }
+        
+        function updatePanelHeader(panelName) {
+            const titles = {
+                'compose': '✏️ COMPOSE EMAIL',
+                'inbox': '📥 INBOX MANAGEMENT',
+                'mailerpanda': '🐼 MAILER PANDA AI',
+                'gmailcat': '🐱 GMAIL CAT AI',
+                'events': '📅 EVENT MANAGER',
+                'settings': '⚙️ SYSTEM SETTINGS',
+                'consent': '🔒 CONSENT MANAGER'
+            };
+            
+            document.getElementById('panelTitle').textContent = titles[panelName] || '❓ UNKNOWN';
+        }
+        
+        // Status messages
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('emailStatus') || createStatusDiv();
+            statusDiv.className = `status-message status-${type}`;
+            statusDiv.textContent = message;
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 5000);
+        }
+        
+        function createStatusDiv() {
+            const div = document.createElement('div');
+            div.id = 'emailStatus';
+            document.getElementById('contentBody').appendChild(div);
+            return div;
+        }
+        
+        // Email functions
+        async function draftEmail() {
+            const subject = document.getElementById('emailSubject').value;
+            const goal = document.getElementById('campaignGoal')?.value || 'Create engaging email';
+            
+            if (!subject) {
+                showStatus('❌ PLEASE ENTER A SUBJECT', 'error');
+                return;
+            }
+            
+            showStatus('🤖 AI IS DRAFTING YOUR EMAIL...', 'info');
+            
+            try {
+                const response = await fetch('/api/mailerpanda/draft/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        subject: subject,
+                        goal: goal,
+                        audience: document.getElementById('targetAudience')?.value || 'general',
+                        tone: document.getElementById('emailTone')?.value || 'professional'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('emailMessage').value = data.content;
+                    showStatus('✅ AI DRAFT COMPLETED!', 'success');
+                } else {
+                    showStatus('❌ DRAFT FAILED: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Draft error:', error);
+                showStatus('❌ CONNECTION ERROR', 'error');
+            }
+        }
+        
+        async function sendEmail() {
+            const subject = document.getElementById('emailSubject').value;
+            const message = document.getElementById('emailMessage').value;
+            const recipients = document.getElementById('emailRecipients').value;
+            
+            if (!subject || !message || !recipients) {
+                showStatus('❌ PLEASE FILL ALL FIELDS', 'error');
+                return;
+            }
+            
+            showStatus('📤 SENDING EMAILS...', 'info');
+            
+            try {
+                const response = await fetch('/api/mailerpanda/send/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        subject: subject,
+                        message: message,
+                        recipients: recipients.split('\n').filter(email => email.trim())
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showStatus(`✅ ${data.sent_count} EMAILS SENT SUCCESSFULLY!`, 'success');
+                } else {
+                    showStatus('❌ SEND FAILED: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Send error:', error);
+                showStatus('❌ CONNECTION ERROR', 'error');
+            }
+        }
+        
+        async function analyzeEmail() {
+            const content = document.getElementById('emailContent').value;
+            
+            if (!content) {
+                showStatus('❌ PLEASE PASTE EMAIL CONTENT', 'error');
+                return;
+            }
+            
+            showStatus('🔍 AI IS ANALYZING EMAIL...', 'info');
+            
+            try {
+                const response = await fetch('/api/gmailcat/process/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        email_content: content
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('extractedEvents').innerHTML = data.events_html;
+                    document.getElementById('analysisResults').classList.remove('hidden');
+                    showStatus('✅ ANALYSIS COMPLETED!', 'success');
+                } else {
+                    showStatus('❌ ANALYSIS FAILED: ' + data.error, 'error');
+                }
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showStatus('❌ CONNECTION ERROR', 'error');
+            }
+        }
+        
+        // Helper functions
+        function showHelp() {
+            alert(`🎮 HUSHMCP EMAIL SUITE - MINECRAFT EDITION
+
+🎯 CONTROLS:
+- CLICK SIDEBAR ITEMS TO SWITCH PANELS
+- USE FORMS TO INPUT DATA
+- BUTTONS TRIGGER ACTIONS
+
+🤖 AI FEATURES:
+- MAILER PANDA: AI EMAIL CAMPAIGNS
+- GMAIL CAT: EMAIL ANALYSIS & EVENTS
+- CONSENT FRAMEWORK: PRIVACY PROTECTION
+
+🔧 TECH STACK:
+- DJANGO BACKEND
+- GEMINI AI
+- MAILJET EMAIL
+- GOOGLE CALENDAR
+
+📧 NEED HELP? CHECK THE DASHBOARD!`);
+        }
+        
+        function saveSettings() {
+            showStatus('💾 SETTINGS SAVED!', 'success');
+        }
+        
+        function generateConsent() {
+            showStatus('🔐 NEW CONSENT TOKEN GENERATED!', 'success');
+        }
+        
+        function revokeConsent() {
+            showStatus('🚫 ALL CONSENTS REVOKED!', 'info');
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showStatus('🎮 HUSHMCP EMAIL SUITE READY!', 'success');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HushMCP Dashboard - Admin Overview</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #334155;
+        }
+
+        .dashboard-container {
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .dashboard-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .dashboard-subtitle {
+            font-size: 20px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .stat-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 28px;
+            margin: 0 auto 20px;
+        }
+
+        .stat-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .stat-label {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .features-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 32px;
+            text-align: center;
+            color: #1e293b;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 32px;
+        }
+
+        .feature-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s;
+        }
+
+        .feature-item:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .feature-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .feature-icon-small {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 16px;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .feature-description {
+            color: #64748b;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: #4b5563;
+            font-size: 14px;
+        }
+
+        .feature-list li i {
+            color: #10b981;
+            font-size: 12px;
+        }
+
+        .action-section {
+            text-align: center;
+        }
+
+        .action-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            color: white;
+            text-decoration: none;
+        }
+
+        .tech-stack {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 32px;
+            margin-top: 40px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 24px;
+        }
+
+        .tech-item {
+            text-align: center;
+            padding: 20px;
+            border-radius: 8px;
+            background: white;
+            border: 1px solid #e2e8f0;
+        }
+
+        .tech-item i {
+            font-size: 32px;
+            margin-bottom: 12px;
+            color: #3b82f6;
+        }
+
+        .tech-name {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .tech-desc {
+            font-size: 12px;
+            color: #64748b;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-title {
+                font-size: 36px;
+            }
+            
+            .dashboard-subtitle {
+                font-size: 16px;
+            }
+            
+            .features-section {
+                padding: 24px;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">HushMCP Email Suite</h1>
+            <p class="dashboard-subtitle">Privacy-First AI Email Automation Platform</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-envelope"></i>
+                </div>
+                <div class="stat-number" id="emailsSent">0</div>
+                <div class="stat-label">Emails Sent</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-calendar"></i>
+                </div>
+                <div class="stat-number" id="eventsCreated">0</div>
+                <div class="stat-label">Events Created</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="stat-number" id="consentTokens">100</div>
+                <div class="stat-label">% Privacy Compliant</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-icon">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-number" id="activeUsers">1</div>
+                <div class="stat-label">Active Users</div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+            <h2 class="section-title">Platform Features</h2>
+            
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <h3 class="feature-title">MailerPanda Agent</h3>
+                    </div>
+                    <p class="feature-description">
+                        AI-powered email campaign creation with human-in-the-loop approval and advanced personalization.
+                    </p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Gemini AI content generation</li>
+                        <li><i class="fas fa-check"></i> Human approval workflow</li>
+                        <li><i class="fas fa-check"></i> Mass email with Excel integration</li>
+                        <li><i class="fas fa-check"></i> Dynamic placeholder replacement</li>
+                        <li><i class="fas fa-check"></i> Real-time status tracking</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-cat"></i>
+                        </div>
+                        <h3 class="feature-title">GmailCat Agent</h3>
+                    </div>
+                    <p class="feature-description">
+                        Smart email analysis and automatic calendar event creation with privacy-first processing.
+                    </p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> AI event extraction from emails</li>
+                        <li><i class="fas fa-check"></i> Google Calendar integration</li>
+                        <li><i class="fas fa-check"></i> Automatic event scheduling</li>
+                        <li><i class="fas fa-check"></i> Privacy-preserving analysis</li>
+                        <li><i class="fas fa-check"></i> Consent-driven operations</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <h3 class="feature-title">HushMCP Framework</h3>
+                    </div>
+                    <p class="feature-description">
+                        Advanced consent management with cryptographic security and granular permissions.
+                    </p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Cryptographically signed tokens</li>
+                        <li><i class="fas fa-check"></i> Granular permission scopes</li>
+                        <li><i class="fas fa-check"></i> Time-bound access control</li>
+                        <li><i class="fas fa-check"></i> Real-time token revocation</li>
+                        <li><i class="fas fa-check"></i> Complete audit trail</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-item">
+                    <div class="feature-header">
+                        <div class="feature-icon-small">
+                            <i class="fas fa-cogs"></i>
+                        </div>
+                        <h3 class="feature-title">LangGraph Workflows</h3>
+                    </div>
+                    <p class="feature-description">
+                        Sophisticated state management and workflow orchestration for complex email operations.
+                    </p>
+                    <ul class="feature-list">
+                        <li><i class="fas fa-check"></i> Graph-based state management</li>
+                        <li><i class="fas fa-check"></i> Conditional workflow routing</li>
+                        <li><i class="fas fa-check"></i> Error recovery mechanisms</li>
+                        <li><i class="fas fa-check"></i> Interactive feedback loops</li>
+                        <li><i class="fas fa-check"></i> Scalable architecture</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="tech-stack">
+            <h2 class="section-title">Technology Stack</h2>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <i class="fab fa-python"></i>
+                    <div class="tech-name">Python</div>
+                    <div class="tech-desc">Core Backend</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fab fa-django"></i>
+                    <div class="tech-name">Django</div>
+                    <div class="tech-desc">Web Framework</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fas fa-brain"></i>
+                    <div class="tech-name">LangGraph</div>
+                    <div class="tech-desc">Workflow Engine</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fab fa-google"></i>
+                    <div class="tech-name">Gemini AI</div>
+                    <div class="tech-desc">Content Generation</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fas fa-envelope"></i>
+                    <div class="tech-name">Mailjet</div>
+                    <div class="tech-desc">Email Delivery</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fas fa-calendar"></i>
+                    <div class="tech-name">Google Calendar</div>
+                    <div class="tech-desc">Event Management</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <div class="tech-name">HushMCP</div>
+                    <div class="tech-desc">Consent Framework</div>
+                </div>
+                <div class="tech-item">
+                    <i class="fab fa-js"></i>
+                    <div class="tech-name">JavaScript</div>
+                    <div class="tech-desc">Frontend Interaction</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Section -->
+        <div class="action-section">
+            <a href="/" class="action-button">
+                <i class="fas fa-rocket"></i>
+                Launch Email Suite
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Animate counters on load
+        function animateCounter(elementId, targetValue, duration = 2000) {
+            const element = document.getElementById(elementId);
+            const startValue = 0;
+            const increment = targetValue / (duration / 16);
+            let currentValue = startValue;
+
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= targetValue) {
+                    currentValue = targetValue;
+                    clearInterval(timer);
+                }
+                
+                if (elementId === 'consentTokens') {
+                    element.textContent = Math.floor(currentValue) + '%';
+                } else {
+                    element.textContent = Math.floor(currentValue).toLocaleString();
+                }
+            }, 16);
+        }
+
+        // Load and animate stats
+        async function loadStats() {
+            try {
+                // In a real app, these would come from API endpoints
+                const stats = {
+                    emailsSent: 0,
+                    eventsCreated: 0,
+                    consentTokens: 100,
+                    activeUsers: 1
+                };
+
+                // Animate counters
+                animateCounter('emailsSent', stats.emailsSent);
+                animateCounter('eventsCreated', stats.eventsCreated);
+                animateCounter('consentTokens', stats.consentTokens);
+                animateCounter('activeUsers', stats.activeUsers);
+                
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            
+            // Add some visual flair
+            const cards = document.querySelectorAll('.stat-card, .feature-item');
+            cards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+            });
+        });
+    </script>
+</body>
+</html>

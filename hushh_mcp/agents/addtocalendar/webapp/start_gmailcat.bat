@@ -1,4 +1,4 @@
-@echo off
+
 title GmailCat PDA - Web Server
 echo.
 echo  ██████╗ ███╗   ███╗ █████╗ ██╗██╗      ██████╗ █████╗ ████████╗

@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HushMCP Email Suite - Gmail-like Interface</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: #f8fafc;
+            color: #334155;
+            line-height: 1.6;
+        }
+
+        /* Gmail-like Header */
+        .header {
+            background: white;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 22px;
+            font-weight: 600;
+            color: #1e40af;
+        }
+
+        .logo i {
+            font-size: 28px;
+        }
+
+        .search-bar {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 32px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px 12px 48px;
+            border: 1px solid #d1d5db;
+            border-radius: 24px;
+            font-size: 14px;
+            background: #f8fafc;
+            transition: all 0.2s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+
+        .user-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 73px);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e2e8f0;
+            padding: 24px 0;
+            overflow-y: auto;
+        }
+
+        .compose-btn {
+            margin: 0 24px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .compose-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .nav-section {
+            margin-bottom: 32px;
+        }
+
+        .nav-title {
+            padding: 0 24px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6b7280;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 24px;
+            color: #4b5563;
+            text-decoration: none;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+            color: #1e40af;
+        }
+
+        .nav-item.active {
+            background: #eff6ff;
+            color: #1e40af;
+            border-left-color: #3b82f6;
+            font-weight: 500;
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+
+        /* Content Area */
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .content-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            background: white;
+        }
+
+        .content-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .content-subtitle {
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 32px;
+            overflow-y: auto;
+        }
+
+        /* Feature Cards */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .feature-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            margin-bottom: 16px;
+        }
+
+        .feature-card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .feature-card p {
+            color: #64748b;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        /* Action Panel */
+        .action-panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 32px;
+            text-align: center;
+        }
+
+        .action-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #1e293b;
+        }
+
+        .action-subtitle {
+            color: #64748b;
+            margin-bottom: 24px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .action-btn.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .action-btn.secondary {
+            background: white;
+            color: #4b5563;
+            border: 1px solid #d1d5db;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #6b7280;
+            padding: 4px;
+        }
+
+        .modal-body {
+            padding: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .status-message.success {
+            background: #ecfdf5;
+            color: #059669;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-message.error {
+            background: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
+        }
+
+        .status-message.info {
+            background: #eff6ff;
+            color: #2563eb;
+            border: 1px solid #bfdbfe;
+        }
+
+        /* Loading States */
+        .loading {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                border-right: none;
+                border-bottom: 1px solid #e2e8f0;
+            }
+            
+            .search-bar {
+                margin: 0 16px;
+            }
+            
+            .content-body {
+                padding: 16px;
+            }
+            
+            .feature-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo">
+                <i class="fas fa-envelope"></i>
+                <span>HushMCP Email Suite</span>
+            </div>
+        </div>
+        
+        <div class="search-bar">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" class="search-input" placeholder="Search emails, campaigns, events...">
+        </div>
+        
+        <div class="user-section">
+            <div class="user-avatar">HU</div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <button class="compose-btn" onclick="openComposeModal()">
+                <i class="fas fa-pen"></i>
+                Compose Email
+            </button>
+            
+            <div class="nav-section">
+                <div class="nav-title">Email Management</div>
+                <a href="#" class="nav-item active" onclick="showSection('dashboard')">
+                    <i class="fas fa-home"></i>
+                    Dashboard
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('mailerpanda')">
+                    <i class="fas fa-paper-plane"></i>
+                    MailerPanda
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('contacts')">
+                    <i class="fas fa-address-book"></i>
+                    Contacts
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Smart Features</div>
+                <a href="#" class="nav-item" onclick="showSection('gmailcat')">
+                    <i class="fas fa-cat"></i>
+                    GmailCat
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('calendar')">
+                    <i class="fas fa-calendar"></i>
+                    Calendar Events
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('analytics')">
+                    <i class="fas fa-chart-bar"></i>
+                    Analytics
+                </a>
+            </div>
+            
+            <div class="nav-section">
+                <div class="nav-title">Privacy & Consent</div>
+                <a href="#" class="nav-item" onclick="showSection('consent')">
+                    <i class="fas fa-shield-alt"></i>
+                    Consent Tokens
+                </a>
+                <a href="#" class="nav-item" onclick="showSection('settings')">
+                    <i class="fas fa-cog"></i>
+                    Settings
+                </a>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="content-area">
+            <!-- Dashboard Section -->
+            <div id="dashboard-section" class="section active">
+                <div class="content-header">
+                    <h1 class="content-title">Welcome to HushMCP Email Suite</h1>
+                    <p class="content-subtitle">Privacy-first AI-powered email management and automation</p>
+                </div>
+                
+                <div class="content-body">
+                    <div class="feature-grid">
+                        <div class="feature-card" onclick="showSection('mailerpanda')">
+                            <div class="feature-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <h3>AI Email Campaigns</h3>
+                            <p>Generate professional emails with AI, get human approval, and send personalized mass campaigns with full consent management.</p>
+                        </div>
+                        
+                        <div class="feature-card" onclick="showSection('gmailcat')">
+                            <div class="feature-icon">
+                                <i class="fas fa-calendar-plus"></i>
+                            </div>
+                            <h3>Smart Calendar Integration</h3>
+                            <p>Automatically extract events from emails and create calendar entries with AI-powered analysis and privacy-first processing.</p>
+                        </div>
+                        
+                        <div class="feature-card" onclick="showSection('consent')">
+                            <div class="feature-icon">
+                                <i class="fas fa-lock"></i>
+                            </div>
+                            <h3>Privacy & Consent</h3>
+                            <p>Every operation requires explicit consent with cryptographically signed tokens and granular permission control.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="action-panel">
+                        <h2 class="action-title">Quick Actions</h2>
+                        <p class="action-subtitle">Get started with our powerful email automation tools</p>
+                        <div class="action-buttons">
+                            <button class="action-btn primary" onclick="openComposeModal()">
+                                <i class="fas fa-pen"></i>
+                                Create Email Campaign
+                            </button>
+                            <button class="action-btn secondary" onclick="processEmails()">
+                                <i class="fas fa-envelope-open-text"></i>
+                                Process Gmail Inbox
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MailerPanda Section -->
+            <div id="mailerpanda-section" class="section" style="display: none;">
+                <div class="content-header">
+                    <h1 class="content-title">MailerPanda - AI Email Campaigns</h1>
+                    <p class="content-subtitle">Create, refine, and send professional email campaigns with AI assistance</p>
+                </div>
+                
+                <div class="content-body">
+                    <div id="draft-area">
+                        <div class="form-group">
+                            <label class="form-label">Describe your email campaign</label>
+                            <textarea id="emailPrompt" class="form-textarea" placeholder="E.g., Send congratulations to all interns for being selected for our program"></textarea>
+                        </div>
+                        <button class="action-btn primary" onclick="generateDraft()">
+                            <i class="fas fa-magic"></i>
+                            Generate Email Draft
+                        </button>
+                    </div>
+                    
+                    <div id="email-preview" style="display: none;">
+                        <h3>Email Preview</h3>
+                        <div id="email-content"></div>
+                        <div class="action-buttons">
+                            <button class="action-btn primary" onclick="sendEmail()">
+                                <i class="fas fa-paper-plane"></i>
+                                Send Email
+                            </button>
+                            <button class="action-btn secondary" onclick="refineEmail()">
+                                <i class="fas fa-edit"></i>
+                                Refine with Feedback
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GmailCat Section -->
+            <div id="gmailcat-section" class="section" style="display: none;">
+                <div class="content-header">
+                    <h1 class="content-title">GmailCat - Smart Email Processing</h1>
+                    <p class="content-subtitle">Extract events from emails and create calendar entries automatically</p>
+                </div>
+                
+                <div class="content-body">
+                    <div class="action-panel">
+                        <h2 class="action-title">Process Gmail Inbox</h2>
+                        <p class="action-subtitle">Scan your Gmail for events and create calendar entries automatically</p>
+                        <button class="action-btn primary" onclick="processEmails()">
+                            <i class="fas fa-play"></i>
+                            Start Email Processing
+                        </button>
+                    </div>
+                    
+                    <div id="processing-results" style="display: none;">
+                        <h3>Processing Results</h3>
+                        <div id="results-content"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other sections can be added here -->
+            <div id="contacts-section" class="section" style="display: none;">
+                <div class="content-header">
+                    <h1 class="content-title">Contact Management</h1>
+                    <p class="content-subtitle">Manage your email contact lists</p>
+                </div>
+                <div class="content-body">
+                    <div id="contacts-list"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Compose Modal -->
+    <div id="composeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Compose Email Campaign</h2>
+                <button class="modal-close" onclick="closeComposeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Campaign Description</label>
+                    <textarea id="modalEmailPrompt" class="form-textarea" placeholder="Describe the email you want to create..."></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button class="action-btn primary" onclick="generateModalDraft()">
+                        <i class="fas fa-magic"></i>
+                        Generate with AI
+                    </button>
+                    <button class="action-btn secondary" onclick="closeComposeModal()">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let currentDraft = null;
+        let currentSection = 'dashboard';
+
+        // Navigation
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            // Show selected section
+            const targetSection = document.getElementById(sectionName + '-section');
+            if (targetSection) {
+                targetSection.style.display = 'block';
+            }
+            
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            event.target.classList.add('active');
+            currentSection = sectionName;
+            
+            // Load section-specific data
+            if (sectionName === 'contacts') {
+                loadContacts();
+            }
+        }
+
+        // Modal management
+        function openComposeModal() {
+            document.getElementById('composeModal').classList.add('active');
+        }
+
+        function closeComposeModal() {
+            document.getElementById('composeModal').classList.remove('active');
+            document.getElementById('modalEmailPrompt').value = '';
+        }
+
+        // API helpers
+        async function apiCall(endpoint, method = 'GET', data = null) {
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(endpoint, options);
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                return { status: 'error', message: error.message };
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Status messages
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.createElement('div');
+            statusDiv.className = `status-message ${type}`;
+            statusDiv.textContent = message;
+            
+            const targetArea = document.querySelector(`#${currentSection}-section .content-body`);
+            if (targetArea) {
+                targetArea.insertBefore(statusDiv, targetArea.firstChild);
+                setTimeout(() => statusDiv.remove(), 5000);
+            }
+        }
+
+        // MailerPanda functions
+        async function generateDraft() {
+            const prompt = document.getElementById('emailPrompt').value;
+            if (!prompt.trim()) {
+                showStatus('Please enter a campaign description', 'error');
+                return;
+            }
+
+            showStatus('Generating email draft with AI...', 'info');
+            
+            const result = await apiCall('/api/mailerpanda/draft/', 'POST', {
+                user_input: prompt,
+                user_id: 'web_user_001'
+            });
+
+            if (result.status === 'success') {
+                currentDraft = result.draft;
+                displayEmailPreview(result.draft);
+                showStatus('Email draft generated successfully!', 'success');
+            } else {
+                showStatus(`Error: ${result.message}`, 'error');
+            }
+        }
+
+        async function generateModalDraft() {
+            const prompt = document.getElementById('modalEmailPrompt').value;
+            if (!prompt.trim()) {
+                alert('Please enter a campaign description');
+                return;
+            }
+
+            closeComposeModal();
+            showSection('mailerpanda');
+            document.getElementById('emailPrompt').value = prompt;
+            await generateDraft();
+        }
+
+        function displayEmailPreview(draft) {
+            const previewDiv = document.getElementById('email-preview');
+            const contentDiv = document.getElementById('email-content');
+            
+            contentDiv.innerHTML = `
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 16px 0; background: white;">
+                    <div style="border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; margin-bottom: 16px;">
+                        <strong>Subject:</strong> ${draft.subject}
+                    </div>
+                    <div style="white-space: pre-wrap; line-height: 1.6;">
+                        ${draft.content}
+                    </div>
+                    <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #6b7280;">
+                        <div><strong>Mass Email:</strong> ${draft.mass ? 'Yes (using contact list)' : 'No'}</div>
+                        ${draft.receiver_emails.length > 0 ? `<div><strong>Recipients:</strong> ${draft.receiver_emails.join(', ')}</div>` : ''}
+                        ${draft.user_email ? `<div><strong>From:</strong> ${draft.user_email}</div>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            previewDiv.style.display = 'block';
+        }
+
+        async function sendEmail() {
+            if (!currentDraft) {
+                showStatus('No draft available to send', 'error');
+                return;
+            }
+
+            if (!confirm('Are you sure you want to send this email campaign?')) {
+                return;
+            }
+
+            showStatus('Sending emails...', 'info');
+
+            const result = await apiCall('/api/mailerpanda/send/', 'POST', {
+                subject: currentDraft.subject,
+                content: currentDraft.content,
+                user_email: currentDraft.user_email,
+                receiver_emails: currentDraft.receiver_emails,
+                mass: currentDraft.mass,
+                user_id: 'web_user_001'
+            });
+
+            if (result.status === 'success') {
+                showStatus(`Emails sent successfully! Total sent: ${result.result.total_sent}`, 'success');
+            } else {
+                showStatus(`Error sending emails: ${result.message}`, 'error');
+            }
+        }
+
+        async function refineEmail() {
+            const feedback = prompt('Please provide feedback to refine the email:');
+            if (!feedback) return;
+
+            showStatus('Refining email with AI...', 'info');
+
+            const result = await apiCall('/api/mailerpanda/refine/', 'POST', {
+                feedback: feedback,
+                current_template: currentDraft.content,
+                user_id: 'web_user_001'
+            });
+
+            if (result.status === 'success') {
+                currentDraft = result.refined_draft;
+                displayEmailPreview(result.refined_draft);
+                showStatus('Email refined successfully!', 'success');
+            } else {
+                showStatus(`Error refining email: ${result.message}`, 'error');
+            }
+        }
+
+        // GmailCat functions
+        async function processEmails() {
+            if (!confirm('This will scan your Gmail inbox and create calendar events. Continue?')) {
+                return;
+            }
+
+            showStatus('Processing emails and creating calendar events...', 'info');
+
+            const result = await apiCall('/api/gmailcat/process/', 'POST', {
+                user_id: 'web_user_001'
+            });
+
+            if (result.status === 'success') {
+                displayProcessingResults(result.result);
+                showStatus('Email processing completed successfully!', 'success');
+            } else {
+                showStatus(`Error processing emails: ${result.message}`, 'error');
+            }
+        }
+
+        function displayProcessingResults(result) {
+            const resultsDiv = document.getElementById('processing-results');
+            const contentDiv = document.getElementById('results-content');
+            
+            contentDiv.innerHTML = `
+                <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 16px 0; background: white;">
+                    <h4>Processing Summary</h4>
+                    <div style="margin-top: 12px;">
+                        <div><strong>Status:</strong> ${result.status}</div>
+                        <div><strong>Events Created:</strong> ${result.events_created || 0}</div>
+                        ${result.links && result.links.length > 0 ? `
+                            <div style="margin-top: 12px;">
+                                <strong>Created Events:</strong>
+                                <ul style="margin-top: 8px;">
+                                    ${result.links.map(link => `<li><a href="${link}" target="_blank">View Event</a></li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+        }
+
+        // Contact management
+        async function loadContacts() {
+            showStatus('Loading contacts...', 'info');
+
+            const result = await apiCall('/api/mailerpanda/contacts/');
+            const contactsList = document.getElementById('contacts-list');
+
+            if (result.status === 'success') {
+                contactsList.innerHTML = `
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px;">
+                        <h3>Contact List (${result.total} contacts)</h3>
+                        <div style="margin-top: 16px;">
+                            ${result.contacts.map(contact => `
+                                <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #f1f5f9;">
+                                    <div>
+                                        <strong>${contact.name}</strong>
+                                        <div style="color: #6b7280; font-size: 14px;">${contact.email}</div>
+                                    </div>
+                                    <div style="color: #6b7280; font-size: 14px;">
+                                        ${contact.company_name || 'No company'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                showStatus(`Loaded ${result.total} contacts`, 'success');
+            } else {
+                contactsList.innerHTML = '<p>Error loading contacts</p>';
+                showStatus(`Error loading contacts: ${result.message}`, 'error');
+            }
+        }
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load initial data
+            console.log('HushMCP Email Suite initialized');
+            
+            // Add click handlers for nav items
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('onclick').match(/showSection\('(.+)'\)/)[1];
+                    showSection(section);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

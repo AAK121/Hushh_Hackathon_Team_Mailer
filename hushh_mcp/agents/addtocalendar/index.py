@@ -1,5 +1,4 @@
 # hushh_mcp/agents/addtocalendar/index.py
-
 import os
 import json
 import base64
@@ -126,14 +125,14 @@ class AddToCalendarAgent:
         is_valid_email, reason_email, _ = validate_token(email_token_str, expected_scope=ConsentScope.VAULT_READ_EMAIL)
         if not is_valid_email:
             raise PermissionError(f"Email Access Denied: {reason_email}")
-        print("✅ Consent validated for email access.")
+        print("✅ Consent validated for email access.") 
 
 
         gmail_service = self._get_google_service('gmail', 'v1', ['https://www.googleapis.com/auth/gmail.readonly'], user_id)
         emails = self._read_emails(gmail_service)
         if not emails:
             return {"status": "complete", "message": "No new emails to process."}
-
+    
         events = self._extract_events_with_ai(emails)
         if not events:
             return {"status": "complete", "message": "No events found in emails."}
