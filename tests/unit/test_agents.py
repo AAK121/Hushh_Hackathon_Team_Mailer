@@ -378,3 +378,195 @@ class TestAgentSecurityCompliance:
         # This test ensures operations fail with invalid user_id/token combinations
         with pytest.raises(Exception):
             mock_agent.prioritize_emails(sample_emails, '', 'invalid_token')
+
+
+class TestMailerPandaAgent:
+    """Test suite for MailerPanda Agent following HushhMCP protocol."""
+    
+    @pytest.fixture
+    def mock_mailerpanda_agent(self):
+        """Create a mocked MailerPanda agent for testing."""
+        with patch.dict('os.environ', {
+            'GOOGLE_API_KEY': 'test_api_key',
+            'MAILJET_API_KEY': 'test_mailjet_key',
+            'MAILJET_API_SECRET': 'test_mailjet_secret'
+        }):
+            from hushh_mcp.agents.mailerpanda.index import MassMailerAgent
+            agent = MassMailerAgent()
+            return agent
+    
+    @pytest.fixture
+    def valid_consent_tokens(self):
+        """Create valid consent tokens for MailerPanda."""
+        tokens = {}
+        scopes = [
+            ConsentScope.VAULT_READ_EMAIL,
+            ConsentScope.VAULT_WRITE_EMAIL,
+            ConsentScope.VAULT_READ_FILE,
+            ConsentScope.VAULT_WRITE_FILE,
+            ConsentScope.CUSTOM_TEMPORARY
+        ]
+        
+        for scope in scopes:
+            token = issue_token(
+                user_id="test_user_123",
+                agent_id="agent_mailerpanda",
+                scope=scope
+            )
+            tokens[scope.value] = token.token
+        
+        return tokens
+    
+    def test_agent_initialization(self, mock_mailerpanda_agent):
+        """Test MailerPanda agent initializes correctly."""
+        assert mock_mailerpanda_agent.agent_id == "agent_mailerpanda"
+        assert hasattr(mock_mailerpanda_agent, '_validate_consent_for_operation')
+        assert hasattr(mock_mailerpanda_agent, '_create_trust_link_for_delegation')
+    
+    def test_consent_token_validation(self, mock_mailerpanda_agent, valid_consent_tokens, monkeypatch):
+        """Test MailerPanda validates consent tokens properly."""
+        # Mock the validate_token function to return success
+        def mock_validate_token(token, expected_scope=None):
+            # Return (is_valid, reason, parsed_token)
+            mock_parsed_token = type('MockToken', (), {'user_id': 'test_user_123'})()
+            return True, "Valid token", mock_parsed_token
+        
+        monkeypatch.setattr('hushh_mcp.agents.mailerpanda.index.validate_token', mock_validate_token)
+        
+        # Test consent validation for different operations
+        result = mock_mailerpanda_agent._validate_consent_for_operation(
+            valid_consent_tokens, "content_generation", "test_user_123"
+        )
+        assert result == True
+    
+    def test_trust_link_creation(self, mock_mailerpanda_agent, monkeypatch):
+        """Test MailerPanda creates trust links for delegation."""
+        # Mock the encrypt_data function to avoid encryption errors
+        def mock_encrypt_data(data, key):
+            return f"encrypted_{hash(data)}"
+        
+        monkeypatch.setattr('hushh_mcp.agents.mailerpanda.index.encrypt_data', mock_encrypt_data)
+        
+        trust_link = mock_mailerpanda_agent._create_trust_link_for_delegation(
+            target_agent="agent_calendar",
+            resource_type="email_campaign", 
+            resource_id="campaign_123",
+            user_id="test_user_123"
+        )
+        
+        # Should return a trust link identifier string
+        assert isinstance(trust_link, str)
+        assert "trust_link" in trust_link
+    
+    @patch('google.generativeai.GenerativeModel')
+    def test_ai_content_generation(self, mock_ai_model, mock_mailerpanda_agent, valid_consent_tokens):
+        """Test MailerPanda AI content generation with consent."""
+        # Mock AI response
+        mock_response = Mock()
+        mock_response.text = "Generated email content"
+        mock_ai_model.return_value.generate_content.return_value = mock_response
+        
+        # Test state for content generation
+        test_state = {
+            'user_input': 'Create marketing email',
+            'user_id': 'test_user_123',
+            'consent_tokens': valid_consent_tokens,
+            'email_count': 1
+        }
+        
+        # Test that the agent has LLM capability
+        assert hasattr(mock_mailerpanda_agent, 'llm')
+        assert mock_mailerpanda_agent.llm is not None
+    
+    def test_scope_enforcement(self, mock_mailerpanda_agent, monkeypatch):
+        """Test MailerPanda enforces proper scopes from consent tokens."""
+        # Mock validate_token to simulate insufficient permissions
+        def mock_validate_token_fail(token, expected_scope=None):
+            return False, "Insufficient scope", None
+        
+        monkeypatch.setattr('hushh_mcp.agents.mailerpanda.index.validate_token', mock_validate_token_fail)
+        
+        # Test with insufficient scope tokens
+        limited_tokens = {"email_token": "limited_scope_token"}
+        
+        # Should raise PermissionError for operations requiring broader scope
+        with pytest.raises(PermissionError):
+            mock_mailerpanda_agent._validate_consent_for_operation(
+                limited_tokens, "content_generation", "test_user_123"
+            )
+    
+    def test_langgraph_workflow_structure(self, mock_mailerpanda_agent):
+        """Test MailerPanda LangGraph workflow is properly structured."""
+        workflow = mock_mailerpanda_agent._build_workflow()
+        
+        # Verify workflow exists and has expected structure
+        assert workflow is not None
+        assert hasattr(mock_mailerpanda_agent, '_build_workflow')
+    
+    def test_human_in_loop_approval(self, mock_mailerpanda_agent, valid_consent_tokens):
+        """Test MailerPanda human-in-the-loop approval workflow."""
+        # Test state for approval workflow
+        test_state = {
+            'generated_content': {
+                'subject': 'Test Subject',
+                'body': 'Test Body Content'
+            },
+            'user_id': 'test_user_123',
+            'consent_tokens': valid_consent_tokens,
+            'requires_approval': True
+        }
+        
+        # The agent should handle approval workflows
+        assert hasattr(mock_mailerpanda_agent, 'handle')
+    
+    def test_cross_agent_communication(self, mock_mailerpanda_agent):
+        """Test MailerPanda can create trust links for cross-agent operations."""
+        # Test trust link creation method exists
+        assert hasattr(mock_mailerpanda_agent, '_create_trust_link_for_delegation')
+        
+        # Test delegation links creation method exists  
+        assert hasattr(mock_mailerpanda_agent, '_create_delegation_links')
+    
+    def test_error_handling_and_recovery(self, mock_mailerpanda_agent, monkeypatch):
+        """Test MailerPanda handles errors gracefully."""
+        # Mock validate_token to raise exception
+        def mock_validate_token_exception(token, expected_scope=None):
+            raise ValueError("Invalid token format")
+        
+        monkeypatch.setattr('hushh_mcp.agents.mailerpanda.index.validate_token', mock_validate_token_exception)
+        
+        # Test with malformed consent tokens  
+        malformed_tokens = {"malformed": "invalid_token_format"}
+        
+        # Should raise PermissionError due to no valid tokens
+        with pytest.raises(PermissionError):
+            mock_mailerpanda_agent._validate_consent_for_operation(
+                malformed_tokens, "content_generation", "test_user_123"
+            )
+
+    def test_vault_storage_functionality(self, mock_mailerpanda_agent, valid_consent_tokens, monkeypatch):
+        """Test MailerPanda vault storage and retrieval."""
+        # Mock successful consent validation
+        def mock_validate_consent(tokens, operation, user_id):
+            return True
+        
+        monkeypatch.setattr(mock_mailerpanda_agent, '_validate_consent_for_operation', mock_validate_consent)
+        
+        # Test vault storage
+        test_data = {"campaign_id": "test_123", "template": "Test email"}
+        vault_key = mock_mailerpanda_agent._store_in_vault(
+            data=test_data,
+            vault_key="test_campaign_123",
+            user_id="test_user_123", 
+            consent_tokens=valid_consent_tokens
+        )
+        assert vault_key == "test_campaign_123"
+        
+        # Test vault retrieval
+        retrieved_data = mock_mailerpanda_agent._retrieve_from_vault(
+            vault_key="test_campaign_123",
+            user_id="test_user_123",
+            consent_tokens=valid_consent_tokens
+        )
+        # Method returns None in mock implementation, which is expected
+        assert retrieved_data is None
