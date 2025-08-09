@@ -18,12 +18,22 @@ _revoked_tokens = set()
 def issue_token(
     user_id: UserID,
     agent_id: AgentID,
-    scope: ConsentScope,
+    scope,  # Can be ConsentScope or list of scopes (str)
     expires_in_ms: int = DEFAULT_CONSENT_TOKEN_EXPIRY_MS
 ) -> HushhConsentToken:
     issued_at = int(time.time() * 1000)
     expires_at = issued_at + expires_in_ms
-    raw = f"{user_id}|{agent_id}|{scope.value}|{issued_at}|{expires_at}"
+    
+    # Handle both single scope and list of scopes
+    if isinstance(scope, list):
+        scope_value = ','.join(scope)
+        # Use the first scope for the token object's scope field
+        token_scope = ConsentScope(scope[0]) if scope else ConsentScope.CUSTOM_TEMPORARY
+    else:
+        scope_value = scope.value if hasattr(scope, 'value') else str(scope)
+        token_scope = scope
+    
+    raw = f"{user_id}|{agent_id}|{scope_value}|{issued_at}|{expires_at}"
     signature = _sign(raw)
 
     token_string = f"{CONSENT_TOKEN_PREFIX}:{base64.urlsafe_b64encode(raw.encode()).decode()}.{signature}"

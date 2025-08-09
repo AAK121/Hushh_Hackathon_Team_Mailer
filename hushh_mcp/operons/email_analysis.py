@@ -55,17 +55,20 @@ def prioritize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
     # Prepare email summaries for AI analysis
     email_summaries = []
     for i, email in enumerate(emails):
-        # Validate email structure
-        required_fields = ['subject', 'sender', 'date']
+        # Validate email structure - require subject and sender, allow either date or timestamp
+        required_fields = ['subject', 'sender']
         if not all(field in email for field in required_fields):
             print(f"   ⚠️  Skipping email {i}: missing required fields")
             continue
+            
+        # Use date field if available, otherwise use timestamp
+        date_field = email.get('date') or email.get('timestamp', '')
             
         summary = {
             'id': i,
             'subject': email['subject'][:200],  # Limit subject length
             'sender': email['sender'],
-            'date': email['date'],
+            'date': date_field,
             'snippet': email.get('content', '')[:300] if email.get('content') else ''
         }
         email_summaries.append(summary)
@@ -114,7 +117,8 @@ def prioritize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
         )
         
         priority_data = json.loads(response.text)
-        priorities = priority_data.get('priorities', [])
+        # Support both formats for compatibility
+        priorities = priority_data.get('priorities', []) or priority_data.get('prioritized_emails', [])
         
         # Apply priority scores to emails
         prioritized_emails = []
@@ -124,13 +128,13 @@ def prioritize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
             # Find matching priority score
             email_index = emails.index(email)
             priority_info = next(
-                (p for p in priorities if p.get('email_id') == email_index), 
+                (p for p in priorities if p.get('email_id') == email_index or p.get('index') == email_index), 
                 None
             )
             
             if priority_info:
                 email_copy['priority_score'] = priority_info.get('priority_score', 5)
-                email_copy['priority_reasoning'] = priority_info.get('reasoning', 'AI analysis')
+                email_copy['priority_reasoning'] = priority_info.get('reasoning') or priority_info.get('priority_reasoning', 'AI analysis')
                 print(f"   📧 Email {email_index}: {email['subject'][:50]}... → Priority: {email_copy['priority_score']}")
             else:
                 email_copy['priority_score'] = 5  # Default medium priority
@@ -247,7 +251,8 @@ def categorize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
         )
         
         category_data = json.loads(response.text)
-        categories = category_data.get('categories', [])
+        # Support both formats for compatibility
+        categories = category_data.get('categories', []) or category_data.get('categorized_emails', [])
         
         # Apply categories to emails
         categorized_emails = []
@@ -259,7 +264,7 @@ def categorize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
             
             # Find matching category
             category_info = next(
-                (c for c in categories if c.get('email_id') == email_index),
+                (c for c in categories if c.get('email_id') == email_index or c.get('index') == email_index),
                 None
             )
             
@@ -269,6 +274,10 @@ def categorize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
                 
                 email_copy['category'] = category
                 email_copy['category_confidence'] = confidence
+                
+                # Add tags if available
+                if 'tags' in category_info:
+                    email_copy['tags'] = category_info['tags']
                 
                 category_counts[category] = category_counts.get(category, 0) + 1
                 print(f"   📂 Email {email_index}: {category} (confidence: {confidence:.2f})")

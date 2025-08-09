@@ -18,6 +18,24 @@ from ...operons.email_analysis import prioritize_emails_operon, categorize_email
 from hushh_mcp.trust.link import verify_trust_link
 from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
 from hushh_mcp.agents.addtocalendar.manifest import manifest
+import hashlib
+
+def _generate_encryption_key(user_id: str) -> str:
+    """
+    Generate a deterministic hex key from user ID for encryption.
+    
+    Args:
+        user_id: User identifier
+        
+    Returns:
+        32-byte hex string for AES-256 encryption
+    """
+    # Create a deterministic key from user_id using SHA-256
+    # This ensures the same user_id always generates the same key
+    salt = b"hushh_vault_salt_2024"
+    combined = user_id.encode('utf-8') + salt
+    key_hash = hashlib.sha256(combined).digest()
+    return key_hash.hex()
 
 class AddToCalendarAgent:
     """
@@ -182,7 +200,6 @@ class AddToCalendarAgent:
         problematic_chars = [
             '\u034f',  # Combining Grapheme Joiner
             '\u200c',  # Zero Width Non-Joiner  
-            '\u00a0',  # Non-Breaking Space
             '\u200b',  # Zero Width Space
             '\u200d',  # Zero Width Joiner
             '\ufeff',  # Zero Width No-Break Space (BOM)
@@ -193,8 +210,11 @@ class AddToCalendarAgent:
         for char in problematic_chars:
             text = text.replace(char, '')
         
+        # Convert non-breaking spaces to regular spaces (don't remove them)
+        text = text.replace('\u00a0', ' ')
+        
         # Remove excessive whitespace and normalize
-        text = re.sub(r'\s+', ' ', text)  # Multiple spaces to single space
+        text = re.sub(r'[ \t]+', ' ', text)  # Multiple spaces/tabs to single space
         text = re.sub(r'\n\s*\n', '\n\n', text)  # Multiple newlines to double newline
         
         # Normalize Unicode characters to standard forms
@@ -719,7 +739,8 @@ class AddToCalendarAgent:
                 
                 vault_key = f"calendar_event_{created_event['id']}"
                 try:
-                    encrypted_data = encrypt_data(json.dumps(vault_data), user_id)
+                    encryption_key = _generate_encryption_key(user_id)
+                    encrypted_data = encrypt_data(json.dumps(vault_data), encryption_key)
                     # Store encrypted data in vault (implementation would depend on vault storage system)
                     print(f"   🔒 Event data encrypted and stored in vault: {vault_key}")
                 except Exception as vault_error:
@@ -754,7 +775,8 @@ class AddToCalendarAgent:
                         
                         # Store trust link in vault
                         trust_key = f"trust_link_{self.agent_id}_{created_event['id']}"
-                        encrypted_trust = encrypt_data(json.dumps(trust_data), user_id)
+                        trust_encryption_key = _generate_encryption_key(user_id)
+                        encrypted_trust = encrypt_data(json.dumps(trust_data), trust_encryption_key)
                         print(f"   🔗 Trust link data stored: {trust_key}")
                         
                     except Exception as trust_error:
