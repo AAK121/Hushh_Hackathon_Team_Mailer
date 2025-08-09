@@ -316,11 +316,18 @@ async def execute_agent(
             # Enhanced AddToCalendarAgent with multiple action support
             email_token = request.consent_tokens.get('email_token')
             calendar_token = request.consent_tokens.get('calendar_token')
+            google_access_token = request.parameters.get('google_access_token')
             
             if not email_token:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="AddToCalendarAgent requires 'email_token' in consent_tokens"
+                )
+            
+            if not google_access_token:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="AddToCalendarAgent requires 'google_access_token' in parameters"
                 )
             
             # Extract action and additional parameters
@@ -341,14 +348,15 @@ async def execute_agent(
                         detail="manual_event action requires 'event_description' parameter"
                     )
             
-            # Execute enhanced agent
+            # Execute enhanced agent with access token
             result = agent_instance.handle(
                 user_id=request.user_id,
                 email_token_str=email_token,
                 calendar_token_str=calendar_token,
+                google_access_token=google_access_token,
                 action=action,
                 **{k: v for k, v in request.parameters.items() 
-                   if k not in ['action']}
+                   if k not in ['action', 'google_access_token']}
             )
             
         elif agent_id == "mailerpanda":
@@ -485,9 +493,11 @@ async def execute_mailerpanda_agent(agent_instance, request: AgentRequest):
 async def process_emails_to_calendar(
     user_id: str,
     email_token: str,
-    calendar_token: str
+    calendar_token: str,
+    google_access_token: str,
+    action: str = "comprehensive_analysis"
 ):
-    """Specific endpoint for AddToCalendar agent."""
+    """Specific endpoint for AddToCalendar agent with access token support."""
     agent_data = agent_registry.get_agent("addtocalendar")
     if not agent_data:
         raise HTTPException(
@@ -499,7 +509,9 @@ async def process_emails_to_calendar(
         result = agent_data['instance'].handle(
             user_id=user_id,
             email_token_str=email_token,
-            calendar_token_str=calendar_token
+            calendar_token_str=calendar_token,
+            google_access_token=google_access_token,
+            action=action
         )
         
         return AgentResponse(

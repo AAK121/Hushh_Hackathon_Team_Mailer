@@ -58,36 +58,68 @@ class AddToCalendarAgent:
         # Configure Gemini AI
         genai.configure(api_key=google_api_key)
         
-        # Correctly defines the path to credentials.json inside the agent's directory
-        self.creds_path = os.path.join(os.path.dirname(__file__), 'credentials.json')
-        self.token_dir = os.path.dirname(__file__)
-        
         # AI Models configuration
         self.ai_model = "gemini-2.5-flash"
         self.max_emails = 10
 
-
-    def _get_google_service(self, api_name: str, api_version: str, scopes: List[str], user_id: str):
-        """Authenticates with Google APIs and returns a service client."""
-        creds = None
-        token_file = os.path.join(self.token_dir, f'token_{api_name}_{user_id}.json')
-
-
-        if os.path.exists(token_file):
-            creds = Credentials.from_authorized_user_file(token_file, scopes)
-
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                if not os.path.exists(self.creds_path):
-                    raise FileNotFoundError(f"Google credentials not found at {self.creds_path}")
-                flow = InstalledAppFlow.from_client_secrets_file(self.creds_path, scopes)
-                creds = flow.run_local_server(port=0)
-
-            with open(token_file, 'w') as token:
-                token.write(creds.to_json())
+    def _get_google_service_with_token(self, api_name: str, api_version: str, access_token: str):
+        """
+        Creates Google API service using access token from frontend.
+        
+        Args:
+            api_name: Google API service name (e.g., 'gmail', 'calendar')
+            api_version: API version (e.g., 'v1', 'v3')
+            access_token: OAuth access token from frontend
+            
+        Returns:
+            Google API service client
+        """
+        from google.auth.transport.requests import Request
+        from google.oauth2.credentials import Credentials
+        
+        # Create credentials object from access token
+        creds = Credentials(token=access_token)
+        
+        # Build and return the service
         return build(api_name, api_version, credentials=creds)
+
+    def _get_google_service_with_token(self, service_name: str, version: str, access_token: str):
+        """
+        Create a Google API service using an access token instead of credentials file.
+        
+        Args:
+            service_name: Google service name (e.g., 'gmail', 'calendar')
+            version: API version (e.g., 'v1', 'v3')
+            access_token: Google OAuth access token from frontend
+            
+        Returns:
+            Google API service instance or None if failed
+        """
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2.credentials import Credentials
+            from googleapiclient.discovery import build
+            
+            # Create credentials object from access token
+            credentials = Credentials(token=access_token)
+            
+            # Build and return the service
+            service = build(service_name, version, credentials=credentials)
+            print(f"   ✅ {service_name.capitalize()} service created with access token")
+            return service
+            
+        except Exception as e:
+            print(f"   ❌ Failed to create {service_name} service with access token: {e}")
+            return None
+
+    def _get_google_service(self, service_name: str, version: str, user_id: str, consent_token: str):
+        """
+        DEPRECATED: Legacy method for file-based credentials.
+        Use _get_google_service_with_token() for access token authentication.
+        """
+        raise NotImplementedError(
+            "File-based credentials are deprecated. Use access tokens via _get_google_service_with_token()"
+        )
 
     def _read_emails(self, gmail_service, max_results: int = 50) -> List[Dict]:
         """
@@ -921,6 +953,283 @@ class AddToCalendarAgent:
                 }
             }
 
+    def run_comprehensive_email_analysis_with_token(self, user_id: str, email_consent_token: str, 
+                                                   calendar_consent_token: str, google_access_token: str) -> Dict:
+        """
+        Main function that orchestrates the complete email analysis and calendar integration using access tokens.
+        
+        Args:
+            user_id: User identifier
+            email_consent_token: Validated consent token for email access
+            calendar_consent_token: Validated consent token for calendar access
+            google_access_token: Google OAuth access token from frontend
+            
+        Returns:
+            Complete analysis results with all processing steps
+        """
+        print("🚀 Starting Comprehensive Email Analysis Pipeline with Access Token...")
+        analysis_start = datetime.utcnow()
+        
+        try:
+            # Step 1: Create Gmail service using access token
+            print("\n📧 Step 1: Creating Gmail service with access token...")
+            gmail_service = self._get_google_service_with_token('gmail', 'v1', google_access_token)
+            emails = self._read_emails(gmail_service, max_results=self.max_emails)
+            
+            if not emails:
+                return {
+                    'status': 'warning',
+                    'message': 'No emails found to analyze',
+                    'steps_completed': ['email_reading'],
+                    'processing_time': 0
+                }
+
+            # Step 2: Prioritize emails
+            print("\n⭐ Step 2: Prioritizing emails with AI...")
+            prioritized_emails = self.prioritize_emails(emails, user_id, email_consent_token)
+
+            # Step 3: Categorize emails
+            print("\n🏷️ Step 3: Categorizing emails...")
+            categorized_emails = self.categorize_emails(prioritized_emails, user_id, email_consent_token)
+
+            # Step 4: Extract events with enhanced AI
+            print("\n🎯 Step 4: Extracting events with AI...")
+            extracted_events = self._extract_events_with_ai(categorized_emails, user_id, email_consent_token)
+
+            # Step 5: Create events in calendar using access token
+            calendar_results = None
+            if extracted_events:
+                print(f"\n📅 Step 5: Found {len(extracted_events)} events. Creating in calendar...")
+                calendar_results = self.create_events_in_calendar_with_token(
+                    extracted_events, user_id, calendar_consent_token, google_access_token
+                )
+            else:
+                print("\n📅 Step 5: No events found to create in calendar.")
+
+            # Analysis summary
+            analysis_end = datetime.utcnow()
+            processing_time = (analysis_end - analysis_start).total_seconds()
+
+            high_priority_emails = [e for e in categorized_emails if e.get('priority_score', 0) >= 8]
+            event_categories = {}
+            for email in categorized_emails:
+                category = email.get('category', 'unknown')
+                event_categories[category] = event_categories.get(category, 0) + 1
+
+            results = {
+                'status': 'success',
+                'message': 'Comprehensive email analysis completed successfully with access token',
+                'processing_time': round(processing_time, 2),
+                'steps_completed': [
+                    'email_reading', 'prioritization', 'categorization', 
+                    'event_extraction', 'calendar_creation' if calendar_results else 'event_extraction'
+                ],
+                'analysis_summary': {
+                    'total_emails_processed': len(emails),
+                    'high_priority_emails': len(high_priority_emails),
+                    'email_categories': event_categories,
+                    'events_extracted': len(extracted_events),
+                    'events_created': calendar_results['statistics']['successful_creations'] if calendar_results else 0
+                },
+                'data': {
+                    'emails': categorized_emails[:10],  # Top 10 for review
+                    'extracted_events': extracted_events,
+                    'calendar_results': calendar_results
+                },
+                'timestamps': {
+                    'analysis_start': analysis_start.isoformat(),
+                    'analysis_end': analysis_end.isoformat()
+                },
+                'authentication_method': 'access_token'
+            }
+
+            print(f"\n✅ Analysis Complete! Processed {len(emails)} emails in {processing_time:.2f}s")
+            print(f"   📊 High Priority: {len(high_priority_emails)} emails")
+            print(f"   🎯 Events Found: {len(extracted_events)}")
+            if calendar_results:
+                print(f"   📅 Calendar Events: {calendar_results['statistics']['successful_creations']}")
+
+            return results
+
+        except Exception as e:
+            analysis_end = datetime.utcnow()
+            processing_time = (analysis_end - analysis_start).total_seconds()
+            
+            print(f"❌ Analysis pipeline failed after {processing_time:.2f}s: {e}")
+            
+            return {
+                'status': 'error',
+                'message': f'Analysis pipeline failed: {str(e)}',
+                'processing_time': round(processing_time, 2),
+                'error_details': str(e),
+                'steps_completed': ['email_reading'],
+                'timestamps': {
+                    'analysis_start': analysis_start.isoformat(),
+                    'analysis_end': analysis_end.isoformat()
+                }
+            }
+
+    def create_events_in_calendar_with_token(self, events: List[Dict], user_id: str, 
+                                           consent_token: str, google_access_token: str) -> Dict:
+        """
+        Create multiple events in Google Calendar using access token.
+        
+        Args:
+            events: List of event dictionaries to create
+            user_id: User identifier
+            consent_token: Validated consent token
+            google_access_token: Google OAuth access token from frontend
+            
+        Returns:
+            Dictionary with creation results and statistics
+        """
+        if not events:
+            return {
+                'status': 'warning',
+                'message': 'No events provided to create',
+                'results': []
+            }
+
+        print(f"📅 Creating {len(events)} events in Google Calendar with access token...")
+        
+        # Validate consent for calendar write
+        is_valid, reason, _ = validate_token(consent_token, expected_scope=ConsentScope.VAULT_WRITE_CALENDAR)
+        if not is_valid:
+            raise PermissionError(f"Calendar Write Access Denied: {reason}")
+
+        # Create calendar service using access token
+        service = self._get_google_service_with_token('calendar', 'v3', google_access_token)
+        if not service:
+            return {
+                'status': 'error',
+                'message': 'Failed to connect to Google Calendar service with access token',
+                'results': []
+            }
+
+        creation_results = []
+        success_count = 0
+        error_count = 0
+        
+        for i, event_data in enumerate(events):
+            try:
+                # Validate required fields
+                required_fields = ['summary', 'start_time', 'end_time']
+                missing_fields = [field for field in required_fields if not event_data.get(field)]
+                
+                if missing_fields:
+                    creation_results.append({
+                        'index': i,
+                        'status': 'error',
+                        'error': f"Missing required fields: {', '.join(missing_fields)}",
+                        'event_summary': event_data.get('summary', 'Unknown Event')
+                    })
+                    error_count += 1
+                    continue
+
+                # Prepare Google Calendar event
+                google_event = {
+                    'summary': event_data['summary'],
+                    'description': event_data.get('description', ''),
+                    'start': {
+                        'dateTime': event_data['start_time'],
+                        'timeZone': event_data.get('timezone', 'UTC')
+                    },
+                    'end': {
+                        'dateTime': event_data['end_time'],
+                        'timeZone': event_data.get('timezone', 'UTC')
+                    }
+                }
+
+                # Add optional fields
+                if event_data.get('location'):
+                    google_event['location'] = event_data['location']
+                
+                if event_data.get('attendees'):
+                    google_event['attendees'] = [
+                        {'email': email} for email in event_data['attendees']
+                    ]
+                
+                if event_data.get('reminders'):
+                    google_event['reminders'] = {
+                        'useDefault': False,
+                        'overrides': [
+                            {'method': 'popup', 'minutes': minutes}
+                            for minutes in event_data['reminders']
+                        ]
+                    }
+
+                # Create the event
+                created_event = service.events().insert(
+                    calendarId='primary',
+                    body=google_event
+                ).execute()
+
+                # Store in vault for future reference
+                vault_data = {
+                    'google_event_id': created_event['id'],
+                    'original_event_data': event_data,
+                    'created_timestamp': datetime.utcnow().isoformat(),
+                    'user_id': user_id,
+                    'agent_id': self.agent_id,
+                    'confidence_score': event_data.get('confidence_score', 1.0),
+                    'scope': 'calendar_event',
+                    'authentication_method': 'access_token',
+                    'metadata': {
+                        'extraction_method': event_data.get('extracted_by', 'manual'),
+                        'ai_model': self.ai_model,
+                        'event_type': event_data.get('event_type', 'appointment')
+                    }
+                }
+                
+                vault_key = f"calendar_event_{created_event['id']}"
+                try:
+                    encryption_key = _generate_encryption_key(user_id)
+                    encrypted_data = encrypt_data(json.dumps(vault_data), encryption_key)
+                    print(f"   🔒 Event data encrypted and stored in vault: {vault_key}")
+                except Exception as vault_error:
+                    print(f"   ⚠️  Vault storage failed: {vault_error}")
+                
+                creation_results.append({
+                    'index': i,
+                    'status': 'success',
+                    'google_event_id': created_event['id'],
+                    'event_summary': event_data['summary'],
+                    'calendar_link': created_event.get('htmlLink'),
+                    'vault_key': vault_key,
+                    'confidence_score': event_data.get('confidence_score', 1.0)
+                })
+                
+                success_count += 1
+                print(f"   ✅ Created: {event_data['summary']}")
+
+            except Exception as e:
+                creation_results.append({
+                    'index': i,
+                    'status': 'error',
+                    'error': str(e),
+                    'event_summary': event_data.get('summary', 'Unknown Event')
+                })
+                error_count += 1
+                print(f"   ❌ Failed to create: {event_data.get('summary', 'Unknown')} - {e}")
+
+        # Summary
+        total_events = len(events)
+        print(f"\n📊 Calendar Creation Summary:")
+        print(f"   Total: {total_events} | Success: {success_count} | Errors: {error_count}")
+
+        return {
+            'status': 'success' if error_count == 0 else 'partial' if success_count > 0 else 'error',
+            'message': f"Created {success_count}/{total_events} events successfully with access token",
+            'results': creation_results,
+            'statistics': {
+                'total_events': total_events,
+                'successful_creations': success_count,
+                'failed_creations': error_count,
+                'success_rate': (success_count / total_events) * 100 if total_events > 0 else 0
+            },
+            'authentication_method': 'access_token'
+        }
+
     def _add_events_to_calendar(self, calendar_service, events: List[Dict]):
         """Adds a list of extracted events to the user's primary calendar."""
         created_links = []
@@ -940,7 +1249,7 @@ class AddToCalendarAgent:
         return created_links
 
     def handle(self, user_id: str, email_token_str: str, calendar_token_str: str, 
-               action: str = "comprehensive_analysis", **kwargs):
+               google_access_token: str, action: str = "comprehensive_analysis", **kwargs):
         """
         Enhanced main entry point for the agent with multiple capabilities.
         
@@ -948,6 +1257,7 @@ class AddToCalendarAgent:
             user_id: User identifier
             email_token_str: Consent token for email access
             calendar_token_str: Consent token for calendar access
+            google_access_token: Google OAuth access token from frontend
             action: Action to perform ('comprehensive_analysis', 'manual_event', 'analyze_only')
             **kwargs: Additional parameters based on action
             
@@ -955,6 +1265,7 @@ class AddToCalendarAgent:
             Dictionary with results based on the requested action
         """
         print(f"🚀 AddToCalendar Agent starting: {action}")
+        print(f"🔑 Using access token authentication (no credentials file needed)")
         
         try:
             if action == "comprehensive_analysis":
@@ -968,7 +1279,9 @@ class AddToCalendarAgent:
                     raise PermissionError(f"Calendar Access Denied: {reason_cal}")
                 
                 print("✅ Consent validated for comprehensive analysis.")
-                return self.run_comprehensive_email_analysis(user_id, email_token_str, calendar_token_str)
+                return self.run_comprehensive_email_analysis_with_token(
+                    user_id, email_token_str, calendar_token_str, google_access_token
+                )
                 
             elif action == "manual_event":
                 # Create a manual event with AI assistance
@@ -989,15 +1302,18 @@ class AddToCalendarAgent:
                 manual_result = self.create_manual_event(event_description, user_id, calendar_token_str)
                 
                 if manual_result['status'] == 'success' and kwargs.get('add_to_calendar', True):
-                    # Add to calendar
+                    # Add to calendar using access token
                     events_to_create = [manual_result['event']]
-                    calendar_result = self.create_events_in_calendar(events_to_create, user_id, calendar_token_str)
+                    calendar_result = self.create_events_in_calendar_with_token(
+                        events_to_create, user_id, calendar_token_str, google_access_token
+                    )
                     
                     return {
                         'status': 'success',
                         'message': 'Manual event created and added to calendar',
                         'manual_event': manual_result,
-                        'calendar_result': calendar_result
+                        'calendar_result': calendar_result,
+                        'authentication_method': 'access_token'
                     }
                 else:
                     return manual_result
@@ -1010,9 +1326,8 @@ class AddToCalendarAgent:
                 
                 print("✅ Consent validated for email analysis only.")
                 
-                # Run analysis pipeline without calendar creation
-                gmail_service = self._get_google_service('gmail', 'v1', 
-                    ['https://www.googleapis.com/auth/gmail.readonly'], user_id)
+                # Run analysis pipeline without calendar creation using access token
+                gmail_service = self._get_google_service_with_token('gmail', 'v1', google_access_token)
                 emails = self._read_emails(gmail_service, max_results=self.max_emails)
                 prioritized_emails = self.prioritize_emails(emails, user_id, email_token_str)
                 categorized_emails = self.categorize_emails(prioritized_emails, user_id, email_token_str)
@@ -1029,7 +1344,8 @@ class AddToCalendarAgent:
                     'data': {
                         'top_emails': categorized_emails[:10],
                         'potential_events': extracted_events
-                    }
+                    },
+                    'authentication_method': 'access_token'
                 }
                 
             else:
