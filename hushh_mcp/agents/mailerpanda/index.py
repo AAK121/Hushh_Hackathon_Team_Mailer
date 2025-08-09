@@ -722,6 +722,7 @@ Write a professional email based on this input:
                 resource_id=campaign_id,
                 user_id=state["user_id"]
             )
+            print("🔗 Trust link for AddToCalendar agent created.")
             if trust_link:
                 trust_links_created.append({
                     "target_agent": "agent_addtocalendar",

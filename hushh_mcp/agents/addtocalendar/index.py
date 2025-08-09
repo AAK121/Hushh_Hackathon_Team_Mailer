@@ -3,7 +3,7 @@ import os
 import json
 import base64
 from typing import List, Dict, Optional, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from bs4 import BeautifulSoup
 import google.generativeai as genai
 from google.oauth2.credentials import Credentials
@@ -185,14 +185,18 @@ class AddToCalendarAgent:
             List of email dictionaries with content, metadata, and timestamps
         """
         # Get recent emails from inbox (not just unread)
+        
         results = gmail_service.users().messages().list(
             userId='me', 
             labelIds=['INBOX'], 
             maxResults=max_results
         ).execute()
         
+        print("📥 Fetching recent emails from inbox...")
+
         messages = results.get('messages', [])
         emails = []
+
 
         print(f"📧 Processing {len(messages)} recent emails...")
 
@@ -598,7 +602,7 @@ class AddToCalendarAgent:
                 if confidence >= 0.7:  # Only high-confidence events
                     # Add metadata
                     event['extracted_by'] = self.agent_id
-                    event['extraction_timestamp'] = datetime.utcnow().isoformat()
+                    event['extraction_timestamp'] = datetime.now(timezone.utc).isoformat()
                     event['user_id'] = user_id
                     
                     # Validate required fields
@@ -685,7 +689,7 @@ class AddToCalendarAgent:
             event_data.update({
                 'created_manually': True,
                 'created_by': self.agent_id,
-                'creation_timestamp': datetime.utcnow().isoformat(),
+                'creation_timestamp': datetime.now(timezone.utc).isoformat(),
                 'user_id': user_id,
                 'ai_confidence': ai_suggestions.get('confidence', 0.8)
             })
@@ -809,7 +813,7 @@ class AddToCalendarAgent:
                 vault_data = {
                     'google_event_id': created_event['id'],
                     'original_event_data': event_data,
-                    'created_timestamp': datetime.utcnow().isoformat(),
+                    'created_timestamp': datetime.now(timezone.utc).isoformat(),
                     'user_id': user_id,
                     'agent_id': self.agent_id,
                     'confidence_score': event_data.get('confidence_score', 1.0),
@@ -853,7 +857,7 @@ class AddToCalendarAgent:
                             'resource_type': "calendar_event",
                             'resource_id': created_event['id'],
                             'permission_level': "read",
-                            'created_at': datetime.utcnow().isoformat(),
+                            'created_at': datetime.now(timezone.utc).isoformat(),
                             'user_id': user_id
                         }
                         
@@ -906,7 +910,7 @@ class AddToCalendarAgent:
             Complete analysis results with all processing steps
         """
         print("🚀 Starting Comprehensive Email Analysis Pipeline...")
-        analysis_start = datetime.utcnow()
+        analysis_start = datetime.now(timezone.utc)
         
         try:
             # Step 1: Create Gmail service and read recent emails
@@ -944,7 +948,7 @@ class AddToCalendarAgent:
                 print("\n📅 Step 5: No events found to create in calendar.")
 
             # Analysis summary
-            analysis_end = datetime.utcnow()
+            analysis_end = datetime.now(timezone.utc)
             processing_time = (analysis_end - analysis_start).total_seconds()
 
             high_priority_emails = [e for e in categorized_emails if e.get('priority_score', 0) >= 8]
@@ -988,7 +992,7 @@ class AddToCalendarAgent:
             return results
 
         except Exception as e:
-            analysis_end = datetime.utcnow()
+            analysis_end = datetime.now(timezone.utc)
             processing_time = (analysis_end - analysis_start).total_seconds()
             
             print(f"❌ Analysis pipeline failed after {processing_time:.2f}s: {e}")
@@ -1020,12 +1024,13 @@ class AddToCalendarAgent:
             Complete analysis results with all processing steps
         """
         print("🚀 Starting Comprehensive Email Analysis Pipeline with Access Token...")
-        analysis_start = datetime.utcnow()
+        analysis_start = datetime.now(timezone.utc)
         
         try:
             # Step 1: Create Gmail service using access token
             print("\n📧 Step 1: Creating Gmail service with access token...")
             gmail_service = self._get_google_service_with_token('gmail', 'v1', google_access_token)
+            print("   Access token successfully validated for Gmail service.")
             emails = self._read_emails(gmail_service, max_results=self.max_emails)
             
             if not emails:
@@ -1059,7 +1064,7 @@ class AddToCalendarAgent:
                 print("\n📅 Step 5: No events found to create in calendar.")
 
             # Analysis summary
-            analysis_end = datetime.utcnow()
+            analysis_end = datetime.now(timezone.utc)
             processing_time = (analysis_end - analysis_start).total_seconds()
 
             high_priority_emails = [e for e in categorized_emails if e.get('priority_score', 0) >= 8]
@@ -1104,7 +1109,7 @@ class AddToCalendarAgent:
             return results
 
         except Exception as e:
-            analysis_end = datetime.utcnow()
+            analysis_end = datetime.now(timezone.utc)
             processing_time = (analysis_end - analysis_start).total_seconds()
             
             print(f"❌ Analysis pipeline failed after {processing_time:.2f}s: {e}")
@@ -1220,7 +1225,7 @@ class AddToCalendarAgent:
                 vault_data = {
                     'google_event_id': created_event['id'],
                     'original_event_data': event_data,
-                    'created_timestamp': datetime.utcnow().isoformat(),
+                    'created_timestamp': datetime.now(timezone.utc).isoformat(),
                     'user_id': user_id,
                     'agent_id': self.agent_id,
                     'confidence_score': event_data.get('confidence_score', 1.0),

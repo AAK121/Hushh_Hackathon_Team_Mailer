@@ -12,7 +12,7 @@ import os
 import sys
 import json
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, status
@@ -246,13 +246,13 @@ async def root():
         "supported_agents": ["agent_addtocalendar", "agent_mailerpanda"],
         "documentation": "/docs",
         "status": "operational",
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.get("/health", response_model=Dict[str, str])
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 @app.get("/agents", response_model=Dict[str, Any])
 async def list_agents():
@@ -354,7 +354,7 @@ async def validate_consent_token(token: str, scope: str, user_id: str):
 @app.post("/agents/addtocalendar/execute", response_model=AddToCalendarResponse)
 async def execute_addtocalendar_agent(request: AddToCalendarRequest):
     """Execute AddToCalendar agent with email processing and calendar creation."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     
     try:
         # Import the agent
@@ -375,27 +375,33 @@ async def execute_addtocalendar_agent(request: AddToCalendarRequest):
             max_emails=request.max_emails
         )
         
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+
+        if (True):
+            analysis_summary = result.get("analysis_summary", 0)
         
         # Format response
-        response = AddToCalendarResponse(
-            status="success",
-            user_id=request.user_id,
-            action_performed=request.action,
-            emails_processed=result.get("emails_processed", 0),
-            events_extracted=result.get("events_extracted", 0),
-            events_created=result.get("events_created", 0),
-            calendar_links=result.get("calendar_links", []),
-            extracted_events=result.get("extracted_events", []),
-            errors=result.get("errors", []),
-            processing_time=processing_time,
-            trust_links=result.get("trust_links", [])
-        )
+            response = AddToCalendarResponse(
+                status="success",
+                user_id=request.user_id,
+                action_performed=request.action,
+                emails_processed=analysis_summary.get("emails_processed", 0),
+                events_extracted=analysis_summary.get("events_extracted", 0),
+                events_created=analysis_summary.get("events_created", 0),
+                calendar_links=analysis_summary.get("calendar_links", []),
+                extracted_events=analysis_summary.get("extracted_events", []),
+                errors=analysis_summary.get("errors", []),
+                processing_time=processing_time,
+                trust_links=result.get("trust_links", [])
+            )
+        
+        print(response.status)
         
         return response
         
     except Exception as e:
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         return AddToCalendarResponse(
             status="error",
             user_id=request.user_id,
@@ -429,7 +435,7 @@ async def get_addtocalendar_status():
 @app.post("/agents/mailerpanda/execute", response_model=MailerPandaResponse)
 async def execute_mailerpanda_agent(request: MailerPandaRequest):
     """Execute MailerPanda agent with AI content generation and email sending."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     session_id = f"{request.user_id}_{int(start_time.timestamp())}"
     
     try:
@@ -455,7 +461,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
             mode=request.mode
         )
         
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
         # Check if human approval is required
         requires_approval = result.get("requires_approval", False)
@@ -497,7 +503,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
         return response
         
     except Exception as e:
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         if session_id in active_sessions:
             active_sessions[session_id]["status"] = "error"
         
@@ -512,7 +518,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
 @app.post("/agents/mailerpanda/approve", response_model=MailerPandaResponse)
 async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
     """Handle human-in-the-loop approval for MailerPanda campaigns."""
-    start_time = datetime.utcnow()
+    start_time = datetime.now(timezone.utc)
     
     if request.campaign_id not in active_sessions:
         raise HTTPException(status_code=404, detail="Campaign session not found")
@@ -553,7 +559,7 @@ async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
             session["status"] = "regenerating"
             result = {"approval_status": "regenerating"}
         
-        processing_time = (datetime.utcnow() - start_time).total_seconds()
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
         return MailerPandaResponse(
             status=session["status"],
@@ -572,7 +578,7 @@ async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
             user_id=request.user_id,
             campaign_id=request.campaign_id,
             errors=[str(e)],
-            processing_time=(datetime.utcnow() - start_time).total_seconds()
+            processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
         )
 
 @app.get("/agents/mailerpanda/status", response_model=AgentStatusResponse)
