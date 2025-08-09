@@ -5,14 +5,19 @@ from enum import Enum
 # ==================== Consent Scopes ====================
 
 class ConsentScope(str, Enum):
-    # Vault data access
+    # Vault data read access
     VAULT_READ_EMAIL = "vault.read.email"
     VAULT_READ_PHONE = "vault.read.phone"
     VAULT_READ_FINANCE = "vault.read.finance"
     VAULT_READ_CONTACTS = "vault.read.contacts"
+    VAULT_READ_FILE = "vault.read.file"
+    VAULT_READ_CALENDAR = "vault.read.calendar"
     
     # Vault data write access
     VAULT_WRITE_CALENDAR = "vault.write.calendar"
+    VAULT_WRITE_EMAIL = "vault.write.email"
+    VAULT_WRITE_FILE = "vault.write.file"
+    VAULT_WRITE_CONTACTS = "vault.write.contacts"
 
     # Agent permissioning
     AGENT_SHOPPING_PURCHASE = "agent.shopping.purchase"
@@ -23,6 +28,7 @@ class ConsentScope(str, Enum):
     # Custom and extensible scopes
     CUSTOM_TEMPORARY = "custom.temporary"
     CUSTOM_SESSION_WRITE = "custom.session.write"
+    CUSTOM_EMAIL_SEND = "custom.email.send"
 
     @classmethod
     def list(cls):

@@ -39,6 +39,7 @@ sys.path.insert(0, str(project_root))
 from hushh_mcp.consent.token import validate_token, issue_token
 from hushh_mcp.constants import ConsentScope
 from hushh_mcp.config import SECRET_KEY, ENVIRONMENT
+from hushh_mcp.frontend_integration import frontend_integration, CredentialRequest, ConsentRequest
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -275,6 +276,9 @@ async def generate_consent_token(request: ConsentTokenRequest):
             expires_at=expires_at,
             scopes=request.scopes
         )
+    except HTTPException:
+        # Re-raise HTTP exceptions (like invalid scope validation)
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -594,6 +598,141 @@ async def startup_event():
 async def shutdown_event():
     """Clean up resources on shutdown."""
     print("🛑 Shutting down HushMCP Agent API Server")
+
+# ==================== FRONTEND INTEGRATION ENDPOINTS ====================
+
+@app.post("/frontend/credentials/store")
+async def store_user_credentials(request: CredentialRequest):
+    """
+    Store user credentials securely with Supabase authentication.
+    
+    This endpoint allows frontend applications to securely store:
+    - Google OAuth credentials (credentials.json)
+    - Mailjet API keys
+    - Other service credentials
+    
+    All data is encrypted before storage in the vault.
+    """
+    try:
+        result = frontend_integration.store_user_credentials(request)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to store credentials: {str(e)}"
+        )
+
+@app.get("/frontend/credentials/{credential_type}")
+async def retrieve_user_credentials(
+    credential_type: str,
+    user_id: str,
+    supabase_token: str
+):
+    """
+    Retrieve user credentials with Supabase authentication.
+    
+    Supported credential types:
+    - google: Google OAuth credentials
+    - mailjet: Mailjet API credentials
+    """
+    try:
+        result = frontend_integration.retrieve_user_credentials(
+            user_id, supabase_token, credential_type
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve credentials: {str(e)}"
+        )
+
+@app.post("/frontend/consent/generate")
+async def generate_frontend_consent_tokens(request: ConsentRequest):
+    """
+    Generate HushhMCP consent tokens for authenticated frontend users.
+    
+    This endpoint creates properly scoped consent tokens that can be used
+    to execute agents with the user's permission.
+    """
+    try:
+        result = frontend_integration.generate_consent_tokens(request)
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate consent tokens: {str(e)}"
+        )
+
+@app.post("/frontend/sessions/create")
+async def create_agent_session(
+    user_id: str,
+    supabase_token: str,
+    agent_id: str
+):
+    """
+    Create a complete agent execution session.
+    
+    This endpoint creates:
+    - Required consent tokens for the agent
+    - Credential vault references
+    - Session metadata
+    
+    Returns everything needed to execute an agent.
+    """
+    try:
+        result = frontend_integration.create_agent_session(
+            user_id, supabase_token, agent_id
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create agent session: {str(e)}"
+        )
+
+@app.get("/frontend/agents/available")
+async def get_available_agents_for_frontend():
+    """
+    Get list of available agents with their required scopes.
+    
+    This endpoint provides frontend applications with:
+    - Agent metadata
+    - Required consent scopes
+    - Credential requirements
+    """
+    agents = agent_registry.list_agents()
+    
+    # Enhance with scope and credential requirements
+    enhanced_agents = []
+    for agent in agents:
+        # Get manifest data for scopes
+        agent_data = agent_registry.get_agent(agent.id)
+        manifest = agent_data.get('manifest', {}) if agent_data else {}
+        
+        enhanced_agent = {
+            "id": agent.id,
+            "name": agent.name,
+            "description": agent.description,
+            "version": agent.version,
+            "scopes": [scope.value for scope in manifest.get('scopes', [])],
+            "required_credentials": [],
+            "trust_links": manifest.get('trust_links', {}),
+            "frontend_ready": True
+        }
+        
+        # Determine required credentials based on agent ID
+        if agent.id == "agent_mailerpanda":
+            enhanced_agent["required_credentials"] = ["mailjet"]
+        elif agent.id == "agent_addtocalendar":
+            enhanced_agent["required_credentials"] = ["google"]
+        
+        enhanced_agents.append(enhanced_agent)
+    
+    return {
+        "status": "success",
+        "agents": enhanced_agents,
+        "total_agents": len(enhanced_agents)
+    }
 
 # ==================== MAIN ENTRY POINT ====================
 

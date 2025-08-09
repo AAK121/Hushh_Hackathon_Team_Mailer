@@ -21,15 +21,16 @@ manifest = {
     ],
     "scopes": [
         ConsentScope.VAULT_READ_EMAIL,    # For reading contact data and email templates
-        ConsentScope.VAULT_READ_CONTACTS, # For storing campaign results and drafts  
-        ConsentScope.VAULT_WRITE_CALENDAR, # For writing status files (reusing write scope)
+        ConsentScope.VAULT_WRITE_EMAIL,   # For storing campaign results and drafts
+        ConsentScope.VAULT_READ_FILE,     # For reading Excel contact files
+        ConsentScope.VAULT_WRITE_FILE,    # For writing status files
         ConsentScope.CUSTOM_TEMPORARY     # For AI generation and email sending
     ],
     "required_scopes": {
         "content_generation": [ConsentScope.VAULT_READ_EMAIL, ConsentScope.CUSTOM_TEMPORARY],
-        "email_sending": [ConsentScope.VAULT_READ_EMAIL, ConsentScope.VAULT_READ_CONTACTS, ConsentScope.CUSTOM_TEMPORARY],
-        "contact_management": [ConsentScope.VAULT_READ_CONTACTS, ConsentScope.VAULT_WRITE_CALENDAR],
-        "campaign_storage": [ConsentScope.VAULT_READ_CONTACTS, ConsentScope.VAULT_WRITE_CALENDAR]
+        "email_sending": [ConsentScope.VAULT_READ_EMAIL, ConsentScope.VAULT_WRITE_EMAIL, ConsentScope.CUSTOM_TEMPORARY],
+        "contact_management": [ConsentScope.VAULT_READ_FILE, ConsentScope.VAULT_WRITE_FILE],
+        "campaign_storage": [ConsentScope.VAULT_WRITE_EMAIL, ConsentScope.VAULT_WRITE_FILE]
     },
     "trust_links": {
         "can_delegate_to": [
