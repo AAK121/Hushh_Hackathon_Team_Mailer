@@ -83,7 +83,9 @@ class AddToCalendarAgent:
         # Build and return the service
         return build(api_name, api_version, credentials=creds)
 
-    def _get_google_service_with_token(self, service_name: str, version: str, access_token: str):
+    def _get_google_service_with_token(self, service_name: str, version: str, access_token: str, 
+                                       refresh_token: str = None, client_id: str = None, 
+                                       client_secret: str = None):
         """
         Create a Google API service using an access token instead of credentials file.
         
@@ -91,6 +93,9 @@ class AddToCalendarAgent:
             service_name: Google service name (e.g., 'gmail', 'calendar')
             version: API version (e.g., 'v1', 'v3')
             access_token: Google OAuth access token from frontend
+            refresh_token: Optional refresh token for token renewal
+            client_id: Optional OAuth client ID
+            client_secret: Optional OAuth client secret
             
         Returns:
             Google API service instance or None if failed
@@ -101,7 +106,18 @@ class AddToCalendarAgent:
             from googleapiclient.discovery import build
             
             # Create credentials object from access token
-            credentials = Credentials(token=access_token)
+            if refresh_token and client_id and client_secret:
+                # Full OAuth credentials with refresh capability
+                credentials = Credentials(
+                    token=access_token,
+                    refresh_token=refresh_token,
+                    token_uri="https://oauth2.googleapis.com/token",
+                    client_id=client_id,
+                    client_secret=client_secret
+                )
+            else:
+                # Simple access token only (may have limited functionality)
+                credentials = Credentials(token=access_token)
             
             # Build and return the service
             service = build(service_name, version, credentials=credentials)
@@ -110,6 +126,42 @@ class AddToCalendarAgent:
             
         except Exception as e:
             print(f"   ❌ Failed to create {service_name} service with access token: {e}")
+            return None
+
+    def _get_google_service_with_token_data(self, service_name: str, version: str, token_data: dict):
+        """
+        Create a Google API service using complete token data from OAuth flow.
+        
+        Args:
+            service_name: Google service name (e.g., 'gmail', 'calendar')
+            version: API version (e.g., 'v1', 'v3')
+            token_data: Complete token data including access_token, refresh_token, etc.
+            
+        Returns:
+            Google API service instance or None if failed
+        """
+        try:
+            from google.auth.transport.requests import Request
+            from google.oauth2.credentials import Credentials
+            from googleapiclient.discovery import build
+            
+            # Extract OAuth credentials from token data
+            credentials = Credentials(
+                token=token_data.get('token'),
+                refresh_token=token_data.get('refresh_token'),
+                token_uri=token_data.get('token_uri', "https://oauth2.googleapis.com/token"),
+                client_id=token_data.get('client_id'),
+                client_secret=token_data.get('client_secret'),
+                scopes=token_data.get('scopes', [])
+            )
+            
+            # Build and return the service
+            service = build(service_name, version, credentials=credentials)
+            print(f"   ✅ {service_name.capitalize()} service created with complete token data")
+            return service
+            
+        except Exception as e:
+            print(f"   ❌ Failed to create {service_name} service with token data: {e}")
             return None
 
     def _get_google_service(self, service_name: str, version: str, user_id: str, consent_token: str):
