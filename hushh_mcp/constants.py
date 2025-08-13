@@ -25,6 +25,12 @@ class ConsentScope(str, Enum):
     AGENT_IDENTITY_VERIFY = "agent.identity.verify"
     AGENT_SALES_OPTIMIZE = "agent.sales.optimize"
 
+    # Relationship Memory scopes
+    VAULT_READ_MEMORY = "vault.read.memory"
+    VAULT_WRITE_MEMORY = "vault.write.memory"
+    VAULT_READ_REMINDER = "vault.read.reminder"
+    VAULT_WRITE_REMINDER = "vault.write.reminder"
+    
     # Custom and extensible scopes
     CUSTOM_TEMPORARY = "custom.temporary"
     CUSTOM_SESSION_WRITE = "custom.session.write"
