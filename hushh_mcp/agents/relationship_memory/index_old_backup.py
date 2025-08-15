@@ -46,15 +46,6 @@ class ContactInfo(BaseModel):
     company: Optional[str] = Field(None, description="Company or workplace")
     location: Optional[str] = Field(None, description="Location or address")
     notes: Optional[str] = Field(None, description="Additional notes or context")
-    dates: Optional[Dict[str, str]] = Field(None, description="Important dates like birthday, anniversary (format: DD-MM)")
-
-class DateInfo(BaseModel):
-    """Structured date information for adding important dates to contacts"""
-    contact_name: str = Field(..., description="Name of the contact")
-    date_type: str = Field(..., description="Type of date (birthday, anniversary, etc.)")
-    date_value: str = Field(..., description="Date in DD-MM format")
-    year: Optional[str] = Field(None, description="Year if provided (YYYY format)")
-    notes: Optional[str] = Field(None, description="Additional notes about this date")
 
 class MemoryInfo(BaseModel):
     """Structured memory information for function tool calling"""
@@ -76,14 +67,12 @@ class UserIntent(BaseModel):
     action: Literal[
         "add_contact", "add_memory", "add_reminder", 
         "show_contacts", "show_memories", "show_reminders", 
-        "search_contacts", "get_contact_details", "add_date", 
-        "show_upcoming_dates", "unknown"
+        "search_contacts", "get_contact_details", "unknown"
     ] = Field(..., description="The intended action")
     confidence: float = Field(..., description="Confidence level (0.0 to 1.0)")
     contact_info: Optional[ContactInfo] = Field(None, description="Contact information if adding/updating contact")
     memory_info: Optional[MemoryInfo] = Field(None, description="Memory information if adding memory")
     reminder_info: Optional[ReminderInfo] = Field(None, description="Reminder information if setting reminder")
-    date_info: Optional[DateInfo] = Field(None, description="Date information if adding important dates")
     search_query: Optional[str] = Field(None, description="Search query if searching")
     contact_name: Optional[str] = Field(None, description="Contact name for queries")
 
@@ -228,9 +217,6 @@ class RelationshipMemoryAgent:
         workflow.add_node("show_memories_tool", self._show_memories_tool)
         workflow.add_node("show_reminders_tool", self._show_reminders_tool)
         workflow.add_node("search_contacts_tool", self._search_contacts_tool)
-        workflow.add_node("get_contact_details_tool", self._get_contact_details_tool)
-        workflow.add_node("add_date_tool", self._add_date_tool)
-        workflow.add_node("show_upcoming_dates_tool", self._show_upcoming_dates_tool)
         workflow.add_node("generate_response", self._generate_response_node)
         workflow.add_node("handle_error", self._handle_error_node)
         
@@ -249,9 +235,6 @@ class RelationshipMemoryAgent:
                 "show_memories": "show_memories_tool",
                 "show_reminders": "show_reminders_tool",
                 "search_contacts": "search_contacts_tool",
-                "get_contact_details": "get_contact_details_tool",
-                "add_date": "add_date_tool",
-                "show_upcoming_dates": "show_upcoming_dates_tool",
                 "error": "handle_error"
             }
         )
@@ -264,9 +247,6 @@ class RelationshipMemoryAgent:
         workflow.add_edge("show_memories_tool", "generate_response")
         workflow.add_edge("show_reminders_tool", "generate_response")
         workflow.add_edge("search_contacts_tool", "generate_response")
-        workflow.add_edge("get_contact_details_tool", "generate_response")
-        workflow.add_edge("add_date_tool", "generate_response")
-        workflow.add_edge("show_upcoming_dates_tool", "generate_response")
         workflow.add_edge("handle_error", "generate_response")
         workflow.add_edge("generate_response", END)
         
@@ -279,49 +259,26 @@ class RelationshipMemoryAgent:
         Extract the user's intent and structured information from their message.
         
         Available actions:
-        - add_contact: User wants to add a new contact OR update existing contact information
+        - add_contact: User wants to add a new contact (extract name, email, phone, etc.)
         - add_memory: User wants to record a memory about someone
         - add_reminder: User wants to set a reminder related to someone  
         - show_contacts: User wants to see all their contacts
         - show_memories: User wants to see memories (all or for specific person)
         - show_reminders: User wants to see reminders
         - search_contacts: User wants to search for specific contacts
-        - get_contact_details: User wants detailed information about a specific contact
-        - add_date: User wants to add important dates (birthday, anniversary, etc.) to a contact
-        - show_upcoming_dates: User wants to see upcoming important dates/birthdays/anniversaries
         - unknown: Intent cannot be determined clearly
-        
-        IMPORTANT CONTACT MANAGEMENT RULES:
-        - If user says "add email for [name]" or "update [name]", this is add_contact (to update existing)
-        - If user asks "show details of [name]" or "tell me about [name]", this is get_contact_details
-        - Always extract the full name as provided by the user
-        
-        IMPORTANT DATE MANAGEMENT RULES:
-        - If user says "[name]'s birthday is [date]" or "add birthday for [name]", this is add_date
-        - If user asks "upcoming dates" or "important dates coming", this is show_upcoming_dates
-        - Extract dates in DD-MM format (e.g., "12 nov" -> "12-11", "25 december" -> "25-12")
-        - Extract date types: birthday, anniversary, wedding, graduation, etc.
         
         IMPORTANT: Extract ALL relevant information:
         - For add_contact: Extract name, email, phone, company, location, notes
         - For add_memory: Extract contact_name and summary of the memory
         - For add_reminder: Extract contact_name, title, date if mentioned
         - For searches: Extract the search query or contact name
-        - For get_contact_details: Extract the contact name
-        - For add_date: Extract contact_name, date_type, date_value (DD-MM), year if provided
         
         Examples:
         - "Add John Smith with email john@example.com" -> add_contact, ContactInfo(name="John Smith", email="john@example.com")
-        - "Add email for John Smith as john@gmail.com" -> add_contact, ContactInfo(name="John Smith", email="john@gmail.com")
         - "Remember that Sarah loves hiking" -> add_memory, MemoryInfo(contact_name="Sarah", summary="Sarah loves hiking")
         - "Show me all my contacts" -> show_contacts
-        - "Show me details of Alice" -> get_contact_details, contact_name="Alice"
-        - "Tell me about John Smith" -> get_contact_details, contact_name="John Smith"
-        - "What do you know about Alice?" -> get_contact_details, contact_name="Alice"
-        - "Om's birthday is on 12 nov" -> add_date, DateInfo(contact_name="Om", date_type="birthday", date_value="12-11")
-        - "Add anniversary for John on 25 december 2020" -> add_date, DateInfo(contact_name="John", date_type="anniversary", date_value="25-12", year="2020")
-        - "Show upcoming important dates" -> show_upcoming_dates
-        - "Any birthdays coming up?" -> show_upcoming_dates
+        - "What do you know about Alice?" -> show_memories, contact_name="Alice"
         """
         
         user_message = f"""Parse this user input and extract ALL relevant structured information:
@@ -369,47 +326,6 @@ class RelationshipMemoryAgent:
     
     # ==================== Function Tool Implementations ====================
     
-    def _find_contact_by_name(self, vault_manager, name: str) -> Optional[Dict]:
-        """Find contact by name (case insensitive, fuzzy matching)"""
-        try:
-            all_contacts = vault_manager.get_all_contacts()
-            name_lower = name.lower().strip()
-            
-            # Exact match first
-            for contact in all_contacts:
-                if contact.get('name', '').lower().strip() == name_lower:
-                    return contact
-            
-            # Partial match (contains)
-            for contact in all_contacts:
-                contact_name = contact.get('name', '').lower().strip()
-                if name_lower in contact_name or contact_name in name_lower:
-                    return contact
-            
-            return None
-        except Exception:
-            return None
-    
-    def _is_contact_unique(self, vault_manager, name: str) -> bool:
-        """Check if contact name is unique"""
-        existing_contact = self._find_contact_by_name(vault_manager, name)
-        return existing_contact is None
-    
-    def _update_existing_contact(self, vault_manager, existing_contact: Dict, new_data: Dict) -> Dict:
-        """Update existing contact with new information"""
-        # Merge data - keep existing data but update with new non-empty values
-        updated_contact = existing_contact.copy()
-        
-        for key, value in new_data.items():
-            if value:  # Only update if new value is not None or empty
-                updated_contact[key] = value
-        
-        # Store updated contact
-        contact_id = existing_contact.get('id', existing_contact['name'].lower().replace(' ', '_'))
-        vault_manager._store_record('contact', contact_id, updated_contact, ConsentScope.VAULT_WRITE_CONTACTS)
-        
-        return updated_contact
-
     def _add_contact_tool(self, state: RelationshipMemoryState) -> RelationshipMemoryState:
         """Function tool for adding contacts"""
         intent = state["parsed_intent"]
@@ -431,45 +347,14 @@ class RelationshipMemoryAgent:
                 "phone": intent.contact_info.phone,
                 "company": intent.contact_info.company,
                 "location": intent.contact_info.location,
-                "notes": intent.contact_info.notes,
-                "dates": intent.contact_info.dates
+                "notes": intent.contact_info.notes
             }
             
-            # Check if contact already exists
-            existing_contact = self._find_contact_by_name(vault_manager, intent.contact_info.name)
+            contact_id = vault_manager.store_contact(contact_data)
             
-            if existing_contact:
-                # Contact exists - update with new information
-                updated_contact = self._update_existing_contact(vault_manager, existing_contact, contact_data)
-                
-                # Determine what was updated
-                updated_fields = []
-                for key, value in contact_data.items():
-                    if value and (key not in existing_contact or existing_contact.get(key) != value):
-                        updated_fields.append(key)
-                
-                if updated_fields:
-                    state["action_taken"] = "update_contact"
-                    updated_info = ", ".join(updated_fields)
-                    state["response_message"] = f"✅ Successfully updated {existing_contact['name']} ({updated_info})"
-                else:
-                    state["action_taken"] = "contact_unchanged"
-                    state["response_message"] = f"ℹ️ Contact {existing_contact['name']} already exists with this information"
-                
-                state["result_data"] = [{"contact_id": updated_contact.get('id'), "name": updated_contact['name']}]
-            else:
-                # New contact - check if name is unique enough
-                if not self._is_contact_unique(vault_manager, intent.contact_info.name):
-                    # This shouldn't happen due to _find_contact_by_name, but extra safety
-                    state["error"] = f"A similar contact name already exists. Please use a more specific name."
-                    return state
-                
-                # Create new contact
-                contact_id = vault_manager.store_contact(contact_data)
-                
-                state["action_taken"] = "add_contact"
-                state["response_message"] = f"✅ Successfully added {intent.contact_info.name} to your contacts"
-                state["result_data"] = [{"contact_id": contact_id, "name": intent.contact_info.name}]
+            state["action_taken"] = "add_contact"
+            state["response_message"] = f"✅ Successfully added {intent.contact_info.name} to your contacts"
+            state["result_data"] = [{"contact_id": contact_id, "name": intent.contact_info.name}]
             
         except Exception as e:
             state["error"] = f"Failed to add contact: {str(e)}"
@@ -571,18 +456,18 @@ class RelationshipMemoryAgent:
             
             vault_manager = VaultManager(user_id=state["user_id"], vault_key=state["vault_key"])
             
-            # Get all memories first
-            memories = vault_manager.get_all_memories()
-            
-            # Filter by contact if specified
+            # Check if looking for specific contact
+            contact_name = None
             if state["parsed_intent"].contact_name:
-                contact_name = state["parsed_intent"].contact_name.lower()
-                memories = [m for m in memories if contact_name in m.get("contact_name", "").lower()]
-                state["response_message"] = f"🧠 Found {len(memories)} memories about {state['parsed_intent'].contact_name}"
-            else:
-                state["response_message"] = f"🧠 Found {len(memories)} memories"
+                contact_name = state["parsed_intent"].contact_name
+            
+            memories = vault_manager.get_all_memories(contact_name)
             
             state["action_taken"] = "show_memories"
+            if contact_name:
+                state["response_message"] = f"🧠 Found {len(memories)} memories about {contact_name}"
+            else:
+                state["response_message"] = f"🧠 Found {len(memories)} memories"
             state["result_data"] = memories
             
         except Exception as e:
@@ -633,254 +518,6 @@ class RelationshipMemoryAgent:
             state["error"] = f"Failed to search contacts: {str(e)}"
         
         return state
-    
-    def _get_contact_details_tool(self, state: RelationshipMemoryState) -> RelationshipMemoryState:
-        """Function tool for getting detailed information about a specific contact"""
-        intent = state["parsed_intent"]
-        
-        # Extract contact name from various possible sources
-        contact_name = None
-        if intent.contact_info and intent.contact_info.name:
-            contact_name = intent.contact_info.name
-        elif intent.contact_name:
-            contact_name = intent.contact_name
-        elif intent.search_query:
-            contact_name = intent.search_query
-        
-        if not contact_name:
-            state["error"] = "Contact name is required to get details"
-            return state
-        
-        try:
-            if VaultManager is None:
-                state["error"] = "VaultManager not available"
-                return state
-            
-            vault_manager = VaultManager(user_id=state["user_id"], vault_key=state["vault_key"])
-            
-            # Find the contact
-            contact = self._find_contact_by_name(vault_manager, contact_name)
-            
-            if not contact:
-                state["error"] = f"Contact '{contact_name}' not found"
-                return state
-            
-            # Get related memories and reminders
-            memories = vault_manager.get_memories_for_contact(contact['name'])
-            all_reminders = vault_manager.get_all_reminders()
-            reminders = [r for r in all_reminders if r.get('contact_name', '').lower() == contact['name'].lower()]
-            
-            # Format detailed response
-            details = []
-            details.append(f"👤 **{contact['name']}**")
-            
-            if contact.get('email'):
-                details.append(f"📧 Email: {contact['email']}")
-            if contact.get('phone'):
-                details.append(f"📞 Phone: {contact['phone']}")
-            if contact.get('company'):
-                details.append(f"🏢 Company: {contact['company']}")
-            if contact.get('location'):
-                details.append(f"📍 Location: {contact['location']}")
-            if contact.get('notes'):
-                details.append(f"📝 Notes: {contact['notes']}")
-            
-            # Show important dates
-            if contact.get('dates'):
-                details.append(f"\n📅 **Important Dates:**")
-                for date_type, date_value in contact['dates'].items():
-                    if not date_type.endswith('_notes'):  # Skip notes entries
-                        # Convert date format for display
-                        if '-' in date_value:
-                            date_parts = date_value.split('-')
-                            if len(date_parts) >= 2:
-                                day, month = date_parts[0], date_parts[1]
-                                month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                             "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                                month_name = month_names[int(month)] if int(month) <= 12 else month
-                                date_display = f"{day} {month_name}"
-                                if len(date_parts) > 2:  # Include year if available
-                                    date_display += f" {date_parts[2]}"
-                                details.append(f"  🎉 {date_type.title()}: {date_display}")
-            
-            if memories:
-                details.append(f"\n🧠 **Memories ({len(memories)}):**")
-                for memory in memories[-3:]:  # Show last 3 memories
-                    details.append(f"  • {memory.get('description', 'No description')}")
-            
-            if reminders:
-                details.append(f"\n⏰ **Reminders ({len(reminders)}):**")
-                for reminder in reminders[-3:]:  # Show last 3 reminders
-                    details.append(f"  • {reminder.get('title', 'No title')} ({reminder.get('date', 'No date')})")
-            
-            state["action_taken"] = "get_contact_details"
-            state["response_message"] = "\n".join(details)
-            state["result_data"] = [{
-                "contact": contact,
-                "memories_count": len(memories),
-                "reminders_count": len(reminders)
-            }]
-            
-        except Exception as e:
-            state["error"] = f"Failed to get contact details: {str(e)}"
-        
-        return state
-    
-    def _add_date_tool(self, state: RelationshipMemoryState) -> RelationshipMemoryState:
-        """Function tool for adding important dates to contacts"""
-        intent = state["parsed_intent"]
-        
-        if not intent.date_info or not intent.date_info.contact_name or not intent.date_info.date_type or not intent.date_info.date_value:
-            state["error"] = "Contact name, date type, and date value are required"
-            return state
-        
-        try:
-            if VaultManager is None:
-                state["error"] = "VaultManager not available"
-                return state
-            
-            vault_manager = VaultManager(user_id=state["user_id"], vault_key=state["vault_key"])
-            
-            # Find the contact
-            contact = self._find_contact_by_name(vault_manager, intent.date_info.contact_name)
-            
-            if not contact:
-                state["error"] = f"Contact '{intent.date_info.contact_name}' not found. Please add the contact first."
-                return state
-            
-            # Initialize dates dictionary if it doesn't exist
-            if not contact.get('dates'):
-                contact['dates'] = {}
-            
-            # Add the new date
-            date_key = intent.date_info.date_type.lower()
-            date_value = intent.date_info.date_value
-            
-            # Include year if provided
-            if intent.date_info.year:
-                date_value = f"{date_value}-{intent.date_info.year}"
-            
-            contact['dates'][date_key] = date_value
-            
-            # If notes provided, store them too
-            if intent.date_info.notes:
-                notes_key = f"{date_key}_notes"
-                contact['dates'][notes_key] = intent.date_info.notes
-            
-            # Update the contact
-            updated_contact = self._update_existing_contact(vault_manager, contact, contact)
-            
-            state["action_taken"] = "add_date"
-            state["response_message"] = f"📅 Successfully added {intent.date_info.date_type} ({intent.date_info.date_value}) for {contact['name']}"
-            state["result_data"] = [{
-                "contact_name": contact['name'],
-                "date_type": intent.date_info.date_type,
-                "date_value": date_value
-            }]
-            
-        except Exception as e:
-            state["error"] = f"Failed to add date: {str(e)}"
-        
-        return state
-    
-    def _show_upcoming_dates_tool(self, state: RelationshipMemoryState) -> RelationshipMemoryState:
-        """Function tool for showing upcoming important dates"""
-        try:
-            if VaultManager is None:
-                state["error"] = "VaultManager not available"
-                return state
-            
-            vault_manager = VaultManager(user_id=state["user_id"], vault_key=state["vault_key"])
-            all_contacts = vault_manager.get_all_contacts()
-            
-            current_date = datetime.now()
-            current_month = current_date.month
-            current_day = current_date.day
-            
-            upcoming_dates = []
-            
-            for contact in all_contacts:
-                if contact.get('dates'):
-                    for date_type, date_value in contact['dates'].items():
-                        # Skip notes entries
-                        if date_type.endswith('_notes'):
-                            continue
-                        
-                        try:
-                            # Parse date (DD-MM or DD-MM-YYYY format)
-                            if '-' in date_value:
-                                date_parts = date_value.split('-')
-                                if len(date_parts) >= 2:
-                                    day = int(date_parts[0])
-                                    month = int(date_parts[1])
-                                    year = date_parts[2] if len(date_parts) > 2 else None
-                                    
-                                    # Calculate days until this date
-                                    days_until = self._calculate_days_until(current_month, current_day, month, day)
-                                    
-                                    # Show dates within next 60 days
-                                    if 0 <= days_until <= 60:
-                                        upcoming_dates.append({
-                                            'contact_name': contact['name'],
-                                            'date_type': date_type,
-                                            'date_value': date_value,
-                                            'day': day,
-                                            'month': month,
-                                            'year': year,
-                                            'days_until': days_until,
-                                            'notes': contact['dates'].get(f"{date_type}_notes")
-                                        })
-                        except (ValueError, IndexError):
-                            continue
-            
-            # Sort by days until
-            upcoming_dates.sort(key=lambda x: x['days_until'])
-            
-            if not upcoming_dates:
-                state["response_message"] = "📅 No upcoming important dates in the next 60 days"
-            else:
-                response_lines = [f"📅 Upcoming Important Dates ({len(upcoming_dates)} found):"]
-                for date_info in upcoming_dates:
-                    days_text = "Today!" if date_info['days_until'] == 0 else f"in {date_info['days_until']} days"
-                    month_names = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-                    month_name = month_names[date_info['month']]
-                    
-                    date_line = f"  🎉 {date_info['contact_name']}'s {date_info['date_type']}: {date_info['day']} {month_name} ({days_text})"
-                    if date_info['notes']:
-                        date_line += f" - {date_info['notes']}"
-                    response_lines.append(date_line)
-                
-                state["response_message"] = "\n".join(response_lines)
-            
-            state["action_taken"] = "show_upcoming_dates"
-            state["result_data"] = upcoming_dates
-            
-        except Exception as e:
-            state["error"] = f"Failed to get upcoming dates: {str(e)}"
-        
-        return state
-    
-    def _calculate_days_until(self, current_month: int, current_day: int, target_month: int, target_day: int) -> int:
-        """Calculate days until a recurring date (birthday/anniversary)"""
-        from datetime import date, timedelta
-        
-        current_year = datetime.now().year
-        
-        # Try this year first
-        try:
-            target_date = date(current_year, target_month, target_day)
-            current_date = date(current_year, current_month, current_day)
-            
-            if target_date >= current_date:
-                return (target_date - current_date).days
-            else:
-                # Date has passed this year, try next year
-                target_date = date(current_year + 1, target_month, target_day)
-                return (target_date - current_date).days
-        except ValueError:
-            # Invalid date (like Feb 29 on non-leap year)
-            return 999  # Return high number to put at end
     
     def _generate_response_node(self, state: RelationshipMemoryState) -> RelationshipMemoryState:
         """Generate final response with context-aware formatting"""

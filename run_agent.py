@@ -4,7 +4,7 @@ Script to run the Relationship Memory Agent
 import uvicorn
 from fastapi import FastAPI
 from hushh_mcp.agents.relationship_memory import init_agent
-from hushh_mcp.agents.relationship_memory.api import router
+from hushh_mcp.agents.relationship_memory.utils.api import router
 
 # Initialize FastAPI app
 app = FastAPI(title="Relationship Memory Agent API")
