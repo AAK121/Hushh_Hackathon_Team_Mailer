@@ -13,7 +13,7 @@ load_dotenv(env_path)
 # Add the project root to Python path
 sys.path.insert(0, project_root)
 
-from hushh_mcp.agents.relationship_memory.langgraph_agent import RelationshipMemoryAgent
+from hushh_mcp.agents.relationship_memory.index import RelationshipMemoryAgent
 import uuid
 
 def test_basic_functionality():

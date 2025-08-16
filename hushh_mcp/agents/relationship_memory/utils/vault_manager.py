@@ -20,7 +20,21 @@ class VaultManager:
     def __init__(self, user_id: str, vault_key: str, db_path: Optional[str] = None):
         self.user_id = UserID(user_id)
         self.agent_id = AgentID("relationship_memory")
-        self.vault_key = vault_key
+        
+        # Ensure vault_key is in hex format for encryption
+        if isinstance(vault_key, str):
+            # If it's already hex, use it; otherwise convert to hex
+            try:
+                # Test if it's valid hex
+                bytes.fromhex(vault_key)
+                self.vault_key = vault_key
+            except ValueError:
+                # Convert string to hex
+                import hashlib
+                self.vault_key = hashlib.sha256(vault_key.encode()).hexdigest()
+        else:
+            # Convert bytes to hex
+            self.vault_key = vault_key.hex() if hasattr(vault_key, 'hex') else str(vault_key)
         
         # Initialize database
         if db_path is None:
@@ -161,10 +175,12 @@ class VaultManager:
             return cursor.rowcount > 0
     
     # Contact Management
-    def store_contact(self, contact_data: Dict) -> VaultRecord:
-        """Store a contact in the vault"""
+    def store_contact(self, contact_data: Dict) -> str:
+        """Store a contact in the vault and return the contact ID"""
         contact_id = contact_data.get('id', contact_data['name'].lower().replace(' ', '_'))
-        return self._store_record('contact', contact_id, contact_data, ConsentScope.VAULT_WRITE_CONTACTS)
+        contact_data['id'] = contact_id  # Ensure ID is in the data
+        self._store_record('contact', contact_id, contact_data, ConsentScope.VAULT_WRITE_CONTACTS)
+        return contact_id
     
     def get_contact(self, contact_id: str) -> Optional[Dict]:
         """Retrieve a specific contact"""
@@ -178,11 +194,37 @@ class VaultManager:
         """Delete a contact"""
         return self._delete_record('contact', contact_id, ConsentScope.VAULT_WRITE_CONTACTS)
     
+    def find_contact_by_name(self, name: str) -> Optional[Dict]:
+        """Find a contact by name (case insensitive)"""
+        all_contacts = self.get_all_contacts()
+        name_lower = name.lower().strip()
+        
+        # Exact match first
+        for contact in all_contacts:
+            if contact.get('name', '').lower().strip() == name_lower:
+                return contact
+        
+        # Partial match
+        for contact in all_contacts:
+            contact_name = contact.get('name', '').lower().strip()
+            if name_lower in contact_name or contact_name in name_lower:
+                return contact
+        
+        return None
+    
+    def update_contact(self, contact_id: str, contact_data: Dict) -> bool:
+        """Update an existing contact"""
+        contact_data['id'] = contact_id
+        self._store_record('contact', contact_id, contact_data, ConsentScope.VAULT_WRITE_CONTACTS)
+        return True
+    
     # Memory Management
-    def store_memory(self, memory_data: Dict) -> VaultRecord:
-        """Store a memory in the vault"""
+    def store_memory(self, memory_data: Dict) -> str:
+        """Store a memory in the vault and return the memory ID"""
         memory_id = memory_data.get('id', f"memory_{int(datetime.now().timestamp())}")
-        return self._store_record('memory', memory_id, memory_data, ConsentScope.VAULT_WRITE_MEMORY)
+        memory_data['id'] = memory_id  # Ensure ID is in the data
+        self._store_record('memory', memory_id, memory_data, ConsentScope.VAULT_WRITE_MEMORY)
+        return memory_id
     
     def get_memories_for_contact(self, contact_name: str) -> List[Dict]:
         """Retrieve all memories for a specific contact"""
@@ -198,10 +240,12 @@ class VaultManager:
         return self._delete_record('memory', memory_id, ConsentScope.VAULT_WRITE_MEMORY)
     
     # Reminder Management
-    def store_reminder(self, reminder_data: Dict) -> VaultRecord:
-        """Store a reminder in the vault"""
+    def store_reminder(self, reminder_data: Dict) -> str:
+        """Store a reminder in the vault and return the reminder ID"""
         reminder_id = reminder_data.get('id', f"reminder_{int(datetime.now().timestamp())}")
-        return self._store_record('reminder', reminder_id, reminder_data, ConsentScope.VAULT_WRITE_REMINDER)
+        reminder_data['id'] = reminder_id  # Ensure ID is in the data
+        self._store_record('reminder', reminder_id, reminder_data, ConsentScope.VAULT_WRITE_REMINDER)
+        return reminder_id
     
     def get_reminders_for_contact(self, contact_name: str) -> List[Dict]:
         """Retrieve all reminders for a specific contact"""
