@@ -1,4 +1,4 @@
-"""Relationship memory agent for HushhMCP."""
+"""AddToCalendar agent for HushhMCP."""
 
 # Try to import simplified agent first, fall back to original
 try:

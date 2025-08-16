@@ -1,9 +1,9 @@
 {
   "executive_summary": {
-    "intrinsic_value": 2753.13,
-    "market_price": 350.0,
+    "intrinsic_value": 2374.92,
+    "market_price": 100.0,
     "recommendation": "BUY",
-    "upside_potential": 6.8661,
+    "upside_potential": 22.7492,
     "confidence_score": 1.0
   },
   "dcf_analysis": {
@@ -15,35 +15,35 @@
       255556436.29
     ],
     "present_value_fcf": [
-      162810675.56,
-      163625407.89,
-      164444217.26,
-      165267124.11,
-      166094148.92
+      161330578.51,
+      160663923.23,
+      160000022.72,
+      159338865.6,
+      158680440.54
     ],
-    "terminal_value": 4029928418.42,
-    "pv_terminal_value": 2619176963.67,
-    "enterprise_value": 3441418537.4,
-    "net_debt": 688283707.48,
-    "equity_value": 2753134829.92,
+    "terminal_value": 3492604629.3,
+    "pv_terminal_value": 2168632687.35,
+    "enterprise_value": 2968646517.95,
+    "net_debt": 593729303.59,
+    "equity_value": 2374917214.36,
     "shares_outstanding": 1000000,
-    "intrinsic_value_per_share": 2753.13,
-    "wacc": 0.09,
+    "intrinsic_value_per_share": 2374.92,
+    "wacc": 0.1,
     "terminal_growth_rate": 0.025,
-    "calculation_date": "2025-08-16T23:20:14.026663"
+    "calculation_date": "2025-08-17T01:19:02.985635"
   },
   "investment_recommendation": {
     "recommendation": "BUY",
-    "rationale": "Stock appears undervalued with 686.6% upside potential",
-    "market_price": 350.0,
-    "intrinsic_value": 2753.13,
-    "upside_potential": 6.8661,
+    "rationale": "Stock appears undervalued with 2274.9% upside potential",
+    "market_price": 100.0,
+    "intrinsic_value": 2374.92,
+    "upside_potential": 22.7492,
     "confidence_score": 1.0,
     "confidence_threshold": 0.15,
-    "analysis_date": "2025-08-16T23:20:14.026672"
+    "analysis_date": "2025-08-17T01:19:02.985643"
   },
   "report_metadata": {
-    "report_date": "2025-08-16T23:20:14.026674",
+    "report_date": "2025-08-17T01:19:02.985646",
     "methodology": "Discounted Cash Flow (DCF) Analysis",
     "analyst": "Chandu Finance Agent",
     "version": "1.0.0"

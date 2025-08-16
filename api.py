@@ -15,6 +15,14 @@ from typing import Dict, List, Optional, Any
 from datetime import datetime, timezone
 from pathlib import Path
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv('.env')
+    print("Environment variables loaded from .env file")
+except ImportError:
+    print("python-dotenv not installed, using system environment variables")
+
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -441,8 +449,12 @@ async def execute_addtocalendar_agent(request: AddToCalendarRequest):
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
 
-        if (True):
-            analysis_summary = result.get("analysis_summary", 0)
+        if result:
+            analysis_summary = result.get("analysis_summary", {})
+            
+            # Ensure analysis_summary is a dict
+            if not isinstance(analysis_summary, dict):
+                analysis_summary = {}
         
         # Format response
             response = AddToCalendarResponse(
@@ -841,10 +853,15 @@ async def execute_relationship_memory_agent(request: RelationshipMemoryRequest):
                 processing_time=processing_time
             )
         else:
+            # Extract error message properly
+            error_message = result.get("message") or result.get("error") or "Unknown error occurred"
             return RelationshipMemoryResponse(
                 status="error",
+                agent_id=result.get("agent_id", "relationship_memory"),
                 user_id=request.user_id,
-                errors=[result.get("error", "Unknown error occurred")],
+                message=error_message,
+                results=None,
+                errors=[error_message],
                 processing_time=processing_time
             )
             
@@ -928,7 +945,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "api:app",
         host="127.0.0.1",
-        port=8001,
+        port=8002,
         reload=False,
         log_level="info"
     )
