@@ -230,6 +230,42 @@ def get_agent_requirements(agent_id: str) -> Dict[str, Any]:
                 "use_ai_generation": "Whether to use AI for content generation (default: True)"
             }
         }
+    elif agent_id == "agent_chandufinance":
+        return {
+            "required_tokens": ["finance_token"],
+            "required_scopes": [
+                "vault.read.finance", "vault.write.file", 
+                "agent.finance.analyze", "custom.session.write"
+            ],
+            "additional_requirements": {
+                "ticker": "Stock ticker symbol (e.g., AAPL, MSFT)",
+                "command": "Command to execute (run_valuation, get_financials, run_sensitivity, market_analysis)"
+            },
+            "optional_parameters": {
+                "market_price": "Current market price for comparison",
+                "wacc": "Weighted average cost of capital (default: 0.10)",
+                "terminal_growth_rate": "Terminal growth rate for DCF (default: 0.025)",
+                "wacc_range": "WACC range for sensitivity analysis (tuple)",
+                "growth_range": "Growth rate range for sensitivity analysis (tuple)"
+            }
+        }
+    elif agent_id == "agent_relationship_memory":
+        return {
+            "required_tokens": ["memory_tokens (dict)"],
+            "required_scopes": [
+                "vault.read.contacts", "vault.write.contacts",
+                "vault.read.memory", "vault.write.memory", 
+                "vault.read.reminder", "vault.write.reminder"
+            ],
+            "additional_requirements": {
+                "user_input": "Natural language input for relationship management",
+                "user_id": "User identifier"
+            },
+            "optional_parameters": {
+                "vault_key": "Specific vault key for data access",
+                "is_startup": "Whether this is a startup/initialization call (default: False)"
+            }
+        }
     else:
         return {"error": "Unknown agent"}
 
@@ -243,7 +279,7 @@ async def root():
     return {
         "service": "HushMCP Agent API",
         "version": "2.0.0",
-        "supported_agents": ["agent_addtocalendar", "agent_mailerpanda"],
+        "supported_agents": ["agent_addtocalendar", "agent_mailerpanda", "agent_chandufinance", "agent_relationship_memory"],
         "documentation": "/docs",
         "status": "operational",
         "timestamp": datetime.now(timezone.utc).isoformat()
@@ -283,6 +319,33 @@ async def list_agents():
             "execute": "/agents/mailerpanda/execute",
             "approve": "/agents/mailerpanda/approve",
             "status": "/agents/mailerpanda/status"
+        }
+    }
+    
+    # ChanduFinance agent info
+    agents["agent_chandufinance"] = {
+        "name": "ChanduFinance Agent",
+        "version": "1.0.0", 
+        "description": "Financial valuation and DCF analysis with investment recommendations",
+        "status": "available",
+        "requirements": get_agent_requirements("agent_chandufinance"),
+        "endpoints": {
+            "execute": "/agents/chandufinance/execute",
+            "status": "/agents/chandufinance/status"
+        }
+    }
+    
+    # Relationship Memory agent info
+    agents["agent_relationship_memory"] = {
+        "name": "Relationship Memory Agent",
+        "version": "2.0.0",
+        "description": "AI-powered relationship management with contact tracking, memories, and reminders",
+        "status": "available", 
+        "requirements": get_agent_requirements("agent_relationship_memory"),
+        "endpoints": {
+            "execute": "/agents/relationship_memory/execute",
+            "proactive": "/agents/relationship_memory/proactive",
+            "status": "/agents/relationship_memory/status"
         }
     }
     
@@ -616,6 +679,239 @@ async def get_mailerpanda_session(campaign_id: str):
     }
 
 # ============================================================================
+# CHANDUFINANCE AGENT ENDPOINTS  
+# ============================================================================
+
+class ChanduFinanceRequest(BaseModel):
+    """Request model for ChanduFinance agent execution."""
+    user_id: str = Field(..., min_length=1, description="User identifier")
+    token: str = Field(..., min_length=10, description="Financial analysis consent token")
+    ticker: str = Field(..., min_length=1, max_length=10, description="Stock ticker symbol")
+    command: str = Field(..., description="Command to execute")
+    market_price: Optional[float] = Field(None, gt=0, description="Current market price")
+    wacc: Optional[float] = Field(0.10, gt=0, lt=1, description="Weighted average cost of capital")
+    terminal_growth_rate: Optional[float] = Field(0.025, gt=0, lt=1, description="Terminal growth rate")
+    wacc_range: Optional[tuple] = Field(None, description="WACC range for sensitivity analysis") 
+    growth_range: Optional[tuple] = Field(None, description="Growth rate range for sensitivity analysis")
+
+class ChanduFinanceResponse(BaseModel):
+    """Response model for ChanduFinance agent execution."""
+    status: str
+    agent_id: str = "chandufinance"
+    user_id: str
+    ticker: str
+    message: Optional[str] = None
+    results: Optional[Dict[str, Any]] = None
+    errors: Optional[List[str]] = None
+    processing_time: float
+
+@app.post("/agents/chandufinance/execute", response_model=ChanduFinanceResponse)
+async def execute_chandufinance_agent(request: ChanduFinanceRequest):
+    """Execute ChanduFinance agent for financial valuation and DCF analysis."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import and execute the ChanduFinance agent
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        # Prepare parameters
+        parameters = {
+            'command': request.command,
+            'ticker': request.ticker
+        }
+        
+        # Add optional parameters if provided
+        if request.market_price is not None:
+            parameters['market_price'] = request.market_price
+        if request.wacc is not None:
+            parameters['wacc'] = request.wacc
+        if request.terminal_growth_rate is not None:
+            parameters['terminal_growth_rate'] = request.terminal_growth_rate
+        if request.wacc_range is not None:
+            parameters['wacc_range'] = request.wacc_range
+        if request.growth_range is not None:
+            parameters['growth_range'] = request.growth_range
+        
+        # Execute the agent
+        result = run_agent(
+            user_id=request.user_id,
+            token=request.token,
+            parameters=parameters
+        )
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        # Format response based on agent result
+        if result.get("status") == "success":
+            return ChanduFinanceResponse(
+                status="success",
+                user_id=request.user_id,
+                ticker=request.ticker,
+                message=result.get("message", "Financial analysis completed successfully"),
+                results=result.get("results", result),
+                processing_time=processing_time
+            )
+        else:
+            return ChanduFinanceResponse(
+                status="error",
+                user_id=request.user_id,
+                ticker=request.ticker,
+                errors=[result.get("error", "Unknown error occurred")],
+                processing_time=processing_time
+            )
+            
+    except Exception as e:
+        return ChanduFinanceResponse(
+            status="error",
+            user_id=request.user_id,
+            ticker=request.ticker,
+            errors=[str(e)],
+            processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+        )
+
+@app.get("/agents/chandufinance/status", response_model=AgentStatusResponse)
+async def get_chandufinance_status():
+    """Get ChanduFinance agent status and requirements."""
+    return AgentStatusResponse(
+        agent_id="agent_chandufinance",
+        name="ChanduFinance Agent",
+        version="1.0.0",
+        status="available", 
+        required_scopes=[
+            "vault.read.finance", "vault.write.file",
+            "agent.finance.analyze", "custom.session.write"
+        ],
+        required_inputs={
+            "user_id": "User identifier",
+            "token": "Financial analysis consent token",
+            "ticker": "Stock ticker symbol (e.g., AAPL, MSFT)",
+            "command": "Command to execute (run_valuation, get_financials, run_sensitivity, market_analysis)"
+        }
+    )
+
+# ============================================================================
+# RELATIONSHIP MEMORY AGENT ENDPOINTS
+# ============================================================================
+
+class RelationshipMemoryRequest(BaseModel):
+    """Request model for Relationship Memory agent execution."""
+    user_id: str = Field(..., min_length=1, description="User identifier")
+    tokens: Dict[str, str] = Field(..., description="Dictionary of consent tokens for various scopes")
+    user_input: str = Field(..., min_length=1, description="Natural language input for relationship management")
+    vault_key: Optional[str] = Field(None, description="Specific vault key for data access")
+    is_startup: Optional[bool] = Field(False, description="Whether this is a startup/initialization call")
+
+class RelationshipMemoryResponse(BaseModel):
+    """Response model for Relationship Memory agent execution."""
+    status: str
+    agent_id: str = "relationship_memory"
+    user_id: str
+    message: Optional[str] = None
+    results: Optional[Dict[str, Any]] = None
+    errors: Optional[List[str]] = None
+    processing_time: float
+
+@app.post("/agents/relationship_memory/execute", response_model=RelationshipMemoryResponse)
+async def execute_relationship_memory_agent(request: RelationshipMemoryRequest):
+    """Execute Relationship Memory agent for contact and memory management."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import and execute the Relationship Memory agent
+        from hushh_mcp.agents.relationship_memory.index import run
+        
+        # Execute the agent
+        result = run(
+            user_id=request.user_id,
+            tokens=request.tokens,
+            user_input=request.user_input,
+            vault_key=request.vault_key,
+            is_startup=request.is_startup
+        )
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        # Format response based on agent result
+        if result.get("status") == "success":
+            return RelationshipMemoryResponse(
+                status="success",
+                user_id=request.user_id,
+                message=result.get("message", "Relationship management completed successfully"),
+                results=result,
+                processing_time=processing_time
+            )
+        else:
+            return RelationshipMemoryResponse(
+                status="error",
+                user_id=request.user_id,
+                errors=[result.get("error", "Unknown error occurred")],
+                processing_time=processing_time
+            )
+            
+    except Exception as e:
+        return RelationshipMemoryResponse(
+            status="error",
+            user_id=request.user_id,
+            errors=[str(e)],
+            processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+        )
+
+@app.post("/agents/relationship_memory/proactive")
+async def execute_relationship_memory_proactive(request: Dict[str, Any]):
+    """Execute proactive checks for Relationship Memory agent."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import and execute the proactive function
+        from hushh_mcp.agents.relationship_memory.index import run_proactive_check
+        
+        # Execute proactive check
+        result = run_proactive_check(
+            user_id=request.get("user_id"),
+            tokens=request.get("tokens", {}),
+            vault_key=request.get("vault_key")
+        )
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return {
+            "status": "success" if result.get("status") == "success" else "error",
+            "agent_id": "relationship_memory",
+            "user_id": request.get("user_id"),
+            "results": result,
+            "processing_time": processing_time
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "relationship_memory", 
+            "user_id": request.get("user_id"),
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.get("/agents/relationship_memory/status", response_model=AgentStatusResponse)
+async def get_relationship_memory_status():
+    """Get Relationship Memory agent status and requirements."""
+    return AgentStatusResponse(
+        agent_id="agent_relationship_memory",
+        name="Relationship Memory Agent",
+        version="2.0.0",
+        status="available",
+        required_scopes=[
+            "vault.read.contacts", "vault.write.contacts",
+            "vault.read.memory", "vault.write.memory",
+            "vault.read.reminder", "vault.write.reminder"
+        ],
+        required_inputs={
+            "user_id": "User identifier",
+            "tokens": "Dictionary of consent tokens for various scopes",
+            "user_input": "Natural language input for relationship management"
+        }
+    )
+
+# ============================================================================
 # MAIN APPLICATION
 # ============================================================================
 
@@ -626,6 +922,8 @@ if __name__ == "__main__":
     print("Supported Agents:")
     print("   - AddToCalendar Agent: /agents/addtocalendar/")
     print("   - MailerPanda Agent: /agents/mailerpanda/")
+    print("   - ChanduFinance Agent: /agents/chandufinance/")
+    print("   - Relationship Memory Agent: /agents/relationship_memory/")
     
     uvicorn.run(
         "api:app",

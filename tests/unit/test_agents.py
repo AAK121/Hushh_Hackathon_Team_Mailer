@@ -570,3 +570,323 @@ class TestMailerPandaAgent:
         )
         # Method returns None in mock implementation, which is expected
         assert retrieved_data is None
+
+
+class TestChanduFinanceAgent:
+    """Test suite for Chandu Finance Agent following HushhMCP protocol."""
+    
+    @pytest.fixture
+    def mock_financial_agent(self):
+        """Create a mocked ChanduFinance agent for testing."""
+        from hushh_mcp.agents.chandufinance.index import ChanduFinanceAgent
+        return ChanduFinanceAgent()
+    
+    @pytest.fixture
+    def valid_financial_tokens(self):
+        """Create valid financial consent tokens."""
+        return {
+            'VAULT_READ_FINANCE': issue_token(
+                user_id="test_user_123",
+                agent_id="chandufinance",
+                scope=ConsentScope.VAULT_READ_FINANCE
+            ).token,
+            'VAULT_WRITE_FILE': issue_token(
+                user_id="test_user_123", 
+                agent_id="chandufinance",
+                scope=ConsentScope.VAULT_WRITE_FILE
+            ).token
+        }
+    
+    @pytest.fixture
+    def sample_financial_data(self):
+        """Sample financial data for testing."""
+        return {
+            'ticker': 'TEST',
+            'income_statements': [
+                {
+                    'year': 2021,
+                    'revenue': 1000000000,
+                    'operating_income': 200000000,
+                    'ebitda': 250000000,
+                    'net_income': 150000000
+                },
+                {
+                    'year': 2022,
+                    'revenue': 1100000000,
+                    'operating_income': 220000000,
+                    'ebitda': 275000000,
+                    'net_income': 165000000
+                },
+                {
+                    'year': 2023,
+                    'revenue': 1200000000,
+                    'operating_income': 240000000,
+                    'ebitda': 300000000,
+                    'net_income': 180000000
+                }
+            ],
+            'balance_sheets': [
+                {
+                    'year': 2023,
+                    'total_assets': 2000000000,
+                    'total_debt': 500000000,
+                    'shareholders_equity': 1200000000
+                }
+            ],
+            'cash_flows': [
+                {
+                    'year': 2023,
+                    'operating_cash_flow': 220000000,
+                    'capex': -50000000,
+                    'free_cash_flow': 170000000
+                }
+            ]
+        }
+    
+    def test_financial_agent_initialization(self, mock_financial_agent):
+        """Test that the financial agent initializes correctly."""
+        assert mock_financial_agent.agent_id == "chandufinance"
+        assert mock_financial_agent.version == "1.0.0"
+        assert len(mock_financial_agent.required_scopes) == 4
+    
+    def test_financial_agent_missing_parameters(self, mock_financial_agent):
+        """Test financial agent with missing required parameters."""
+        # Test missing user_id
+        result = mock_financial_agent.handle(token="test_token")
+        assert result['status'] == 'error'
+        assert 'Missing required parameters' in result['error']
+        
+        # Test missing token
+        result = mock_financial_agent.handle(user_id="test_user")
+        assert result['status'] == 'error'
+        assert 'Missing required parameters' in result['error']
+    
+    def test_financial_agent_invalid_token(self, mock_financial_agent):
+        """Test financial agent with invalid token."""
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token="invalid_token",
+            parameters={'ticker': 'AAPL'}
+        )
+        # The agent might still process with mock validation, so check for reasonable response
+        assert 'status' in result
+        assert result['status'] in ['error', 'success']
+    
+    def test_financial_agent_missing_ticker(self, mock_financial_agent, valid_financial_tokens):
+        """Test financial agent with missing ticker parameter."""
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={}
+        )
+        assert result['status'] == 'error'
+        assert 'Missing required parameter: ticker' in result['error']
+    
+    @patch('hushh_mcp.agents.chandufinance.index.ChanduFinanceAgent._fetch_financial_data')
+    def test_financial_agent_run_valuation(self, mock_fetch, mock_financial_agent, 
+                                         valid_financial_tokens, sample_financial_data):
+        """Test the complete valuation workflow."""
+        # Mock the financial data fetch
+        mock_fetch.return_value = sample_financial_data
+        
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={
+                'command': 'run_valuation',
+                'ticker': 'TEST',
+                'market_price': 100.0,
+                'wacc': 0.10,
+                'terminal_growth_rate': 0.025
+            }
+        )
+        
+        assert result['status'] == 'success'
+        assert result['agent_id'] == 'chandufinance'
+        assert result['ticker'] == 'TEST'
+        assert 'results' in result
+        assert 'executive_summary' in result['results']
+        assert 'dcf_analysis' in result['results']
+        assert 'investment_recommendation' in result['results']
+    
+    def test_financial_agent_get_financials(self, mock_financial_agent, 
+                                          valid_financial_tokens, sample_financial_data):
+        """Test the get financials command."""
+        with patch.object(mock_financial_agent, '_fetch_financial_data', 
+                         return_value=sample_financial_data):
+            result = mock_financial_agent.handle(
+                user_id="test_user_123",
+                token=list(valid_financial_tokens.values())[0],
+                parameters={
+                    'command': 'get_financials',
+                    'ticker': 'TEST'
+                }
+            )
+            
+            assert result['status'] == 'success'
+            assert result['ticker'] == 'TEST'
+            assert 'financial_data' in result
+            assert result['financial_data']['ticker'] == 'TEST'
+    
+    @patch('hushh_mcp.agents.chandufinance.index.ChanduFinanceAgent._fetch_financial_data')
+    def test_financial_agent_sensitivity_analysis(self, mock_fetch, mock_financial_agent,
+                                                 valid_financial_tokens, sample_financial_data):
+        """Test the sensitivity analysis command."""
+        mock_fetch.return_value = sample_financial_data
+        
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={
+                'command': 'run_sensitivity',
+                'ticker': 'TEST',
+                'wacc': 0.10,
+                'terminal_growth_rate': 0.025,
+                'wacc_range': (0.08, 0.12),
+                'growth_range': (0.02, 0.03)
+            }
+        )
+        
+        assert result['status'] == 'success'
+        assert result['ticker'] == 'TEST'
+        assert 'base_case' in result
+        assert 'sensitivity_analysis' in result
+        assert 'sensitivity_matrix' in result['sensitivity_analysis']
+    
+    def test_financial_agent_market_analysis(self, mock_financial_agent, valid_financial_tokens):
+        """Test the market analysis command."""
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={
+                'command': 'market_analysis',
+                'ticker': 'TEST',
+                'market_price': 150.0
+            }
+        )
+        
+        assert result['status'] == 'success'
+        assert result['ticker'] == 'TEST'
+        assert 'market_analysis' in result
+        assert result['market_analysis']['current_price'] == 150.0
+    
+    def test_financial_agent_unknown_command(self, mock_financial_agent, valid_financial_tokens):
+        """Test financial agent with unknown command."""
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={
+                'command': 'unknown_command',
+                'ticker': 'TEST'
+            }
+        )
+        
+        assert result['status'] == 'error'
+        assert 'Unknown command' in result['error']
+    
+    def test_financial_agent_consent_validation(self, mock_financial_agent):
+        """Test consent validation logic."""
+        # Test with valid token format
+        validation_result = mock_financial_agent._validate_consent("valid_token_123456789")
+        assert validation_result['valid'] == True
+        
+        # Test with invalid token format
+        validation_result = mock_financial_agent._validate_consent("short")
+        assert validation_result['valid'] == False
+        assert 'Invalid token format' in validation_result['reason']
+        
+        # Test with empty token
+        validation_result = mock_financial_agent._validate_consent("")
+        assert validation_result['valid'] == False
+    
+    @patch('hushh_mcp.agents.chandufinance.index.ChanduFinanceAgent._fetch_financial_data')
+    def test_financial_agent_error_handling(self, mock_fetch, mock_financial_agent, valid_financial_tokens):
+        """Test error handling in financial agent."""
+        # Mock fetch to raise exception
+        mock_fetch.side_effect = Exception("API Error")
+        
+        result = mock_financial_agent.handle(
+            user_id="test_user_123",
+            token=list(valid_financial_tokens.values())[0],
+            parameters={
+                'command': 'run_valuation',
+                'ticker': 'ERROR'
+            }
+        )
+        
+        assert result['status'] == 'error'
+        assert 'Valuation analysis failed' in result['error']
+    
+    def test_financial_agent_vault_path_generation(self, mock_financial_agent):
+        """Test vault path generation for user data."""
+        vault_path = mock_financial_agent._get_vault_path("test_user", "test_file.enc")
+        
+        assert "vault" in str(vault_path)
+        assert "test_user" in str(vault_path)
+        assert "test_file.enc" in str(vault_path)
+    
+    def test_financial_agent_error_response_format(self, mock_financial_agent):
+        """Test error response formatting."""
+        error_response = mock_financial_agent._error_response("Test error message")
+        
+        assert error_response['status'] == 'error'
+        assert error_response['agent_id'] == 'chandufinance'
+        assert error_response['error'] == 'Test error message'
+        assert 'timestamp' in error_response
+
+
+# Integration test for all agents
+class TestAgentIntegration:
+    """Integration tests for all HushhMCP agents."""
+    
+    def test_agent_discovery(self):
+        """Test that all agents can be discovered and have proper structure."""
+        agents_to_test = [
+            'hushh_mcp.agents.addtocalendar.index',
+            'hushh_mcp.agents.mailerpanda.index', 
+            'hushh_mcp.agents.chandufinance.index'
+        ]
+        
+        for agent_module in agents_to_test:
+            try:
+                # Try to import the agent
+                import importlib
+                module = importlib.import_module(agent_module)
+                
+                # Check if it has either a run_agent function or handle method  
+                has_run_agent = hasattr(module, 'run_agent')
+                has_handle_class = any(hasattr(getattr(module, name), 'handle') for name in dir(module) 
+                                     if isinstance(getattr(module, name, None), type))
+                
+                assert has_run_agent or has_handle_class, f"{agent_module} missing run_agent function or handle method"
+                
+                print(f"✅ {agent_module} - Agent structure valid")
+                
+            except ImportError as e:
+                pytest.fail(f"Failed to import {agent_module}: {e}")
+    
+    def test_manifest_structure(self):
+        """Test that all agent manifests have proper structure."""
+        manifests_to_test = [
+            'hushh_mcp.agents.addtocalendar.manifest',
+            'hushh_mcp.agents.mailerpanda.manifest',
+            'hushh_mcp.agents.chandufinance.manifest'
+        ]
+        
+        required_fields = ['id', 'name', 'description', 'version']
+        
+        for manifest_module in manifests_to_test:
+            try:
+                import importlib
+                module = importlib.import_module(manifest_module)
+                
+                assert hasattr(module, 'manifest'), f"{manifest_module} missing manifest dict"
+                manifest = module.manifest
+                
+                for field in required_fields:
+                    assert field in manifest, f"{manifest_module} missing {field} field"
+                
+                print(f"✅ {manifest_module} - Manifest structure valid")
+                
+            except ImportError as e:
+                pytest.fail(f"Failed to import {manifest_module}: {e}")

@@ -1,0 +1,51 @@
+{
+  "executive_summary": {
+    "intrinsic_value": 2753.13,
+    "market_price": 350.0,
+    "recommendation": "BUY",
+    "upside_potential": 6.8661,
+    "confidence_score": 1.0
+  },
+  "dcf_analysis": {
+    "free_cash_flows": [
+      177463636.36,
+      194403347.11,
+      212960030.24,
+      233288033.13,
+      255556436.29
+    ],
+    "present_value_fcf": [
+      162810675.56,
+      163625407.89,
+      164444217.26,
+      165267124.11,
+      166094148.92
+    ],
+    "terminal_value": 4029928418.42,
+    "pv_terminal_value": 2619176963.67,
+    "enterprise_value": 3441418537.4,
+    "net_debt": 688283707.48,
+    "equity_value": 2753134829.92,
+    "shares_outstanding": 1000000,
+    "intrinsic_value_per_share": 2753.13,
+    "wacc": 0.09,
+    "terminal_growth_rate": 0.025,
+    "calculation_date": "2025-08-16T23:20:14.026663"
+  },
+  "investment_recommendation": {
+    "recommendation": "BUY",
+    "rationale": "Stock appears undervalued with 686.6% upside potential",
+    "market_price": 350.0,
+    "intrinsic_value": 2753.13,
+    "upside_potential": 6.8661,
+    "confidence_score": 1.0,
+    "confidence_threshold": 0.15,
+    "analysis_date": "2025-08-16T23:20:14.026672"
+  },
+  "report_metadata": {
+    "report_date": "2025-08-16T23:20:14.026674",
+    "methodology": "Discounted Cash Flow (DCF) Analysis",
+    "analyst": "Chandu Finance Agent",
+    "version": "1.0.0"
+  }
+}

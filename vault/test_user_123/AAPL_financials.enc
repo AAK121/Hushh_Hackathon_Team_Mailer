@@ -1,0 +1,44 @@
+{
+  "ticker": "AAPL",
+  "company_name": "AAPL Corporation",
+  "income_statements": [
+    {
+      "year": 2021,
+      "revenue": 1000000000,
+      "operating_income": 200000000,
+      "ebitda": 250000000,
+      "net_income": 150000000
+    },
+    {
+      "year": 2022,
+      "revenue": 1100000000,
+      "operating_income": 220000000,
+      "ebitda": 275000000,
+      "net_income": 165000000
+    },
+    {
+      "year": 2023,
+      "revenue": 1200000000,
+      "operating_income": 240000000,
+      "ebitda": 300000000,
+      "net_income": 180000000
+    }
+  ],
+  "balance_sheets": [
+    {
+      "year": 2023,
+      "total_assets": 2000000000,
+      "total_debt": 500000000,
+      "shareholders_equity": 1200000000
+    }
+  ],
+  "cash_flows": [
+    {
+      "year": 2023,
+      "operating_cash_flow": 220000000,
+      "capex": -50000000,
+      "free_cash_flow": 170000000
+    }
+  ],
+  "fetch_date": "2025-08-16T21:37:46.071934"
+}
