@@ -2,7 +2,7 @@
 
 **Version:** 2.0.0  
 **Framework:** FastAPI + HushMCP  
-**Supported Agents:** AddToCalendar, MailerPanda  
+**Supported Agents:** AddToCalendar, MailerPanda, ChanduFinance, Relationship Memory  
 
 > 🛡️ Privacy-first AI agent orchestration platform with comprehensive consent management and human-in-the-loop workflows.
 
@@ -16,7 +16,168 @@
 - [🔑 Authentication & Consent](#-authentication--consent)
 - [📅 AddToCalendar Agent API](#-addtocalendar-agent-api)
 - [📧 MailerPanda Agent API](#-mailerpanda-agent-api)
-- [🔄 Human-in-the-Loop Workflows](#-human-in-the-loop-workflows)
+- [💰 ChanduFinance Agent API](#-chandufinance-agent-api)
+- [📊 Response Formats](#-response-formats)
+- [❌ Error Handling](#-error-handling)
+- [🔧 Testing](#-testing)
+
+---
+
+## 💰 ChanduFinance Agent API
+
+### Agent Overview
+
+The ChanduFinance agent is an AI-powered personal financial advisor that provides personalized investment advice, portfolio analysis, and financial education based on your unique financial profile.
+
+### Input Requirements
+
+```bash
+GET /agents/chandufinance/status
+```
+
+**Required Inputs:**
+- `user_id`: User identifier
+- `token`: HushhMCP consent token with appropriate scopes
+- `command`: Command to execute
+
+**Required Scopes:**
+- `vault.read.file`: Read user financial data
+- `vault.write.file`: Save financial profiles and goals
+- `vault.read.finance`: Access financial analysis data
+- `agent.finance.analyze`: Perform financial analysis
+
+### Execute ChanduFinance Agent
+
+```bash
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:finance_consent_token...",
+    "command": "setup_profile",
+    "full_name": "John Smith",
+    "age": 28,
+    "occupation": "Software Engineer",
+    "monthly_income": 6000.0,
+    "monthly_expenses": 4000.0,
+    "current_savings": 15000.0,
+    "risk_tolerance": "moderate",
+    "investment_experience": "beginner",
+    "investment_budget": 1500.0
+}
+```
+
+### Available Commands
+
+| Command | Description | Use Case |
+|---------|-------------|----------|
+| `setup_profile` | Create comprehensive financial profile | Initial onboarding |
+| `view_profile` | View complete financial profile | Profile overview |
+| `update_income` | Update monthly income | Job change/promotion |
+| `add_goal` | Add financial goals | Goal-based planning |
+| `personal_stock_analysis` | Personalized stock analysis | Investment decisions |
+| `investment_education` | Educational content | Learning |
+| `behavioral_coaching` | Behavioral finance guidance | Bias management |
+| `explain_like_im_new` | Beginner explanations | Education |
+
+### Stock Analysis Example
+
+```bash
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:finance_consent_token...",
+    "command": "personal_stock_analysis",
+    "ticker": "AAPL"
+}
+```
+
+### Goal Management Example
+
+```bash
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:finance_consent_token...",
+    "command": "add_goal",
+    "goal_name": "Emergency Fund",
+    "target_amount": 20000.0,
+    "target_date": "2026-12-31",
+    "priority": "high"
+}
+```
+
+### Response Format
+
+```json
+{
+    "status": "success",
+    "agent_id": "chandufinance",
+    "user_id": "user_123",
+    "command": "personal_stock_analysis",
+    "message": "Analysis completed successfully",
+    "profile_summary": {
+        "monthly_income": "$6,000.00",
+        "savings_rate": "33.3%",
+        "risk_tolerance": "moderate"
+    },
+    "ticker": "AAPL",
+    "current_price": 175.50,
+    "personalized_analysis": "Based on your moderate risk tolerance and $1,500 monthly investment budget, AAPL represents a solid choice for your portfolio. Consider allocating $450 (30% of monthly budget) as a conservative position...",
+    "next_steps": [
+        "Start with $150/month DCA for 3 months",
+        "Learn about Apple's business model",
+        "Consider VTI for broader diversification"
+    ],
+    "vault_stored": true,
+    "processing_time": 2.3
+}
+```
+
+### Educational Content Example
+
+```bash
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:finance_consent_token...",
+    "command": "explain_like_im_new",
+    "topic": "compound_interest",
+    "complexity": "beginner"
+}
+```
+
+Response:
+```json
+{
+    "status": "success",
+    "agent_id": "chandufinance",
+    "user_id": "user_123",
+    "command": "explain_like_im_new",
+    "explanation": "Think of compound interest like a snowball rolling down a hill. At first, it's small, but as it rolls, it picks up more snow and gets bigger faster and faster...",
+    "coaching_advice": "Start investing early, even small amounts. A 25-year-old investing $200/month will have more at retirement than a 35-year-old investing $400/month.",
+    "next_steps": [
+        "Open an investment account",
+        "Start with index funds",
+        "Automate your investments"
+    ],
+    "processing_time": 1.8
+}
+```
+
+---
+
+## �� Response Formats MailerPanda Agent API](#-mailerpanda-agent-api)
+- [� ChanduFinance Agent API](#-chandufinance-agent-api)
+- [🧠 Relationship Memory Agent API](#-relationship-memory-agent-api)
+- [�🔄 Human-in-the-Loop Workflows](#-human-in-the-loop-workflows)
 - [📊 Response Formats](#-response-formats)
 - [🧪 Testing & Examples](#-testing--examples)
 - [⚠️ Error Handling](#️-error-handling)
@@ -29,13 +190,15 @@ The HushMCP Agent API provides a unified REST interface for interacting with pri
 
 ### ✨ Key Features
 
-- **🤖 Multi-Agent Support**: AddToCalendar and MailerPanda agents
+- **🤖 Multi-Agent Support**: AddToCalendar, MailerPanda, ChanduFinance, and Relationship Memory agents
 - **🔒 Privacy-First Design**: Complete consent token validation
 - **👥 Human-in-the-Loop**: Interactive approval workflows
 - **📊 Real-time Status**: Session management and progress tracking
 - **🛡️ Secure Operations**: HushMCP framework integration
 - **📚 Interactive Docs**: Built-in Swagger UI documentation
 - **🔄 CORS Support**: Frontend integration ready
+- **💰 Financial Intelligence**: AI-powered personal financial advisor
+- **🧠 Memory Management**: Persistent relationship and context memory
 
 ---
 
@@ -352,7 +515,223 @@ Response:
 
 ---
 
-## 📊 Response Formats
+## � ChanduFinance Agent API
+
+The **ChanduFinance Agent** is an AI-powered personal financial advisor that provides personalized investment advice, financial planning, and educational content based on your unique financial profile.
+
+### Base URL
+```
+POST /agents/chandufinance/execute
+GET  /agents/chandufinance/status
+```
+
+### Core Features
+- **Profile Management**: Complete financial profile setup and management
+- **Goal Planning**: Create and track financial goals with timelines
+- **Investment Analysis**: AI-powered personalized stock analysis
+- **Financial Education**: Beginner-friendly explanations and coaching
+- **Risk Assessment**: Personalized risk tolerance evaluation
+
+### Required Scopes
+```
+vault.read.file      - Read user profile data
+vault.write.file     - Save profile and goal updates
+vault.read.finance   - Access financial data
+agent.finance.analyze - Perform financial analysis
+```
+
+### Available Commands
+
+#### Profile Management
+- `setup_profile` - Create comprehensive financial profile
+- `view_profile` - Display current financial snapshot
+- `update_income` - Update monthly income
+- `set_budget` - Set detailed budget categories
+
+#### Goal Management
+- `add_goal` - Create financial goals with timelines
+- `goal_progress_check` - Track progress toward goals
+
+#### Investment Analysis
+- `personal_stock_analysis` - AI-powered stock analysis
+- `portfolio_review` - Comprehensive portfolio assessment
+
+#### Education & Coaching
+- `explain_like_im_new` - Beginner-friendly explanations
+- `investment_education` - Structured learning modules
+- `behavioral_coaching` - Overcome investment biases
+
+### Example: Setup Financial Profile
+
+**Request:**
+```json
+{
+  "user_id": "user_123",
+  "token": "HCT:valid_token_here",
+  "command": "setup_profile",
+  "monthly_income": 6000.0,
+  "monthly_expenses": 4000.0,
+  "age": 28,
+  "current_savings": 15000.0,
+  "risk_tolerance": "moderate",
+  "investment_experience": "beginner"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "user_id": "user_123",
+  "command": "setup_profile",
+  "message": "Financial profile created successfully",
+  "profile_summary": {
+    "monthly_income": "$6,000.00",
+    "monthly_expenses": "$4,000.00",
+    "savings_rate": "33.3%",
+    "investment_budget": "$1,500.00",
+    "risk_tolerance": "moderate"
+  },
+  "welcome_message": "Congratulations on taking control of your finances! With a 33% savings rate, you're ahead of most people...",
+  "next_steps": [
+    "Set up investment goals",
+    "Learn about compound interest",
+    "Start your first investment analysis"
+  ],
+  "vault_stored": true,
+  "processing_time": 0.8
+}
+```
+
+### Example: Personalized Stock Analysis
+
+**Request:**
+```json
+{
+  "user_id": "user_123",
+  "token": "HCT:valid_token_here",
+  "command": "personal_stock_analysis",
+  "ticker": "AAPL"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "user_id": "user_123",
+  "command": "personal_stock_analysis",
+  "ticker": "AAPL",
+  "current_price": 175.50,
+  "personalized_analysis": "Apple is an excellent choice for your moderate risk profile. As a beginner, you want quality companies with predictable growth...",
+  "profile_health_score": {
+    "risk_alignment": "excellent",
+    "goal_alignment": "strong",
+    "experience_match": "perfect"
+  },
+  "position_sizing": {
+    "recommended_amount": 200.0,
+    "percentage_of_budget": 13.3,
+    "reasoning": "15% allocation allows for diversification while building core position"
+  },
+  "next_steps": [
+    "Consider starting with $100-200 position",
+    "Learn about Apple's business model",
+    "Set up automatic monthly investments"
+  ],
+  "processing_time": 1.2
+}
+```
+
+### Example: Investment Education
+
+**Request:**
+```json
+{
+  "user_id": "user_123",
+  "token": "HCT:valid_token_here",
+  "command": "explain_like_im_new",
+  "topic": "compound_interest",
+  "complexity": "beginner"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "user_id": "user_123",
+  "command": "explain_like_im_new",
+  "topic": "compound_interest",
+  "explanation": "Think of compound interest like a snowball rolling down a hill. It starts small, but as it rolls, it picks up more snow and gets bigger and bigger...",
+  "examples": [
+    "If you invest $1,000 at 7% annually for 30 years, you'll have $7,612",
+    "The key is time - starting early is more powerful than investing more later"
+  ],
+  "next_steps": [
+    "Try the compound interest calculator",
+    "Set up your first automatic investment",
+    "Learn about dollar-cost averaging"
+  ],
+  "processing_time": 0.6
+}
+```
+
+---
+
+## 🧠 Relationship Memory Agent API
+
+The **Relationship Memory Agent** maintains persistent context and memory for user interactions, relationships, and preferences across conversations.
+
+### Base URL
+```
+POST /agents/relationship_memory/execute
+GET  /agents/relationship_memory/status
+```
+
+### Core Features
+- **Persistent Memory**: Remember user preferences and context
+- **Relationship Tracking**: Maintain information about user relationships
+- **Context Awareness**: Build on previous conversations
+- **Reminder Management**: Set and track reminders
+
+### Required Scopes
+```
+vault.read.contacts  - Read contact information
+vault.write.contacts - Save relationship data
+vault.read.memory    - Access stored memories
+vault.write.memory   - Store new memories
+vault.read.reminder  - Read reminders
+vault.write.reminder - Create reminders
+```
+
+### Example: Natural Language Interaction
+
+**Request:**
+```json
+{
+  "user_id": "user_123",
+  "token": "HCT:valid_token_here",
+  "user_input": "Remember that John's birthday is next month and he likes coffee",
+  "is_startup": false
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "user_id": "user_123",
+  "response": "I've noted that John's birthday is next month and that he likes coffee. I'll help you remember this for future gift ideas or planning.",
+  "memory_stored": true,
+  "relationships_updated": ["John"],
+  "processing_time": 0.4
+}
+```
+
+---
+
+## �📊 Response Formats
 
 ### Standard Response Structure
 

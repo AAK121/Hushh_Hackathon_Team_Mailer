@@ -697,52 +697,127 @@ async def get_mailerpanda_session(campaign_id: str):
 class ChanduFinanceRequest(BaseModel):
     """Request model for ChanduFinance agent execution."""
     user_id: str = Field(..., min_length=1, description="User identifier")
-    token: str = Field(..., min_length=10, description="Financial analysis consent token")
-    ticker: str = Field(..., min_length=1, max_length=10, description="Stock ticker symbol")
+    token: str = Field(..., min_length=10, description="HushhMCP consent token")
     command: str = Field(..., description="Command to execute")
-    market_price: Optional[float] = Field(None, gt=0, description="Current market price")
-    wacc: Optional[float] = Field(0.10, gt=0, lt=1, description="Weighted average cost of capital")
-    terminal_growth_rate: Optional[float] = Field(0.025, gt=0, lt=1, description="Terminal growth rate")
-    wacc_range: Optional[tuple] = Field(None, description="WACC range for sensitivity analysis") 
-    growth_range: Optional[tuple] = Field(None, description="Growth rate range for sensitivity analysis")
+    
+    # Profile setup parameters
+    full_name: Optional[str] = Field(None, description="User's full name")
+    age: Optional[int] = Field(None, ge=16, le=100, description="User's age")
+    occupation: Optional[str] = Field(None, description="User's occupation")
+    monthly_income: Optional[float] = Field(None, ge=0, description="Monthly income")
+    monthly_expenses: Optional[float] = Field(None, ge=0, description="Monthly expenses")
+    current_savings: Optional[float] = Field(None, ge=0, description="Current savings amount")
+    current_debt: Optional[float] = Field(None, ge=0, description="Current debt amount")
+    investment_budget: Optional[float] = Field(None, ge=0, description="Investment budget")
+    risk_tolerance: Optional[str] = Field(None, description="Risk tolerance (conservative/moderate/aggressive)")
+    investment_experience: Optional[str] = Field(None, description="Investment experience level")
+    
+    # Goal management parameters
+    goal_name: Optional[str] = Field(None, description="Financial goal name")
+    target_amount: Optional[float] = Field(None, ge=0, description="Goal target amount")
+    target_date: Optional[str] = Field(None, description="Goal target date (YYYY-MM-DD)")
+    priority: Optional[str] = Field(None, description="Goal priority (high/medium/low)")
+    
+    # Stock analysis parameters
+    ticker: Optional[str] = Field(None, min_length=1, max_length=10, description="Stock ticker symbol")
+    
+    # Education parameters
+    topic: Optional[str] = Field(None, description="Educational topic")
+    complexity: Optional[str] = Field(None, description="Complexity level (beginner/intermediate/advanced)")
 
 class ChanduFinanceResponse(BaseModel):
     """Response model for ChanduFinance agent execution."""
     status: str
     agent_id: str = "chandufinance"
     user_id: str
-    ticker: str
+    command: str
     message: Optional[str] = None
-    results: Optional[Dict[str, Any]] = None
+    
+    # Profile data
+    profile_summary: Optional[Dict[str, Any]] = None
+    welcome_message: Optional[str] = None
+    profile_health_score: Optional[Dict[str, Any]] = None
+    personal_info: Optional[Dict[str, Any]] = None
+    financial_info: Optional[Dict[str, Any]] = None
+    preferences: Optional[Dict[str, Any]] = None
+    goals: Optional[List[Dict[str, Any]]] = None
+    
+    # Analysis results
+    ticker: Optional[str] = None
+    current_price: Optional[float] = None
+    personalized_analysis: Optional[str] = None
+    explanation: Optional[str] = None
+    coaching_advice: Optional[str] = None
+    goal_details: Optional[Dict[str, Any]] = None
+    
+    # Metadata
+    next_steps: Optional[List[str]] = None
+    vault_stored: Optional[bool] = None
+    timestamp: Optional[str] = None
     errors: Optional[List[str]] = None
     processing_time: float
 
 @app.post("/agents/chandufinance/execute", response_model=ChanduFinanceResponse)
 async def execute_chandufinance_agent(request: ChanduFinanceRequest):
-    """Execute ChanduFinance agent for financial valuation and DCF analysis."""
+    """Execute ChanduFinance agent for comprehensive personal financial advice."""
     start_time = datetime.now(timezone.utc)
     
     try:
         # Import and execute the ChanduFinance agent
         from hushh_mcp.agents.chandufinance.index import run_agent
         
-        # Prepare parameters
+        # Prepare parameters based on command
         parameters = {
-            'command': request.command,
-            'ticker': request.ticker
+            'command': request.command
         }
         
-        # Add optional parameters if provided
-        if request.market_price is not None:
-            parameters['market_price'] = request.market_price
-        if request.wacc is not None:
-            parameters['wacc'] = request.wacc
-        if request.terminal_growth_rate is not None:
-            parameters['terminal_growth_rate'] = request.terminal_growth_rate
-        if request.wacc_range is not None:
-            parameters['wacc_range'] = request.wacc_range
-        if request.growth_range is not None:
-            parameters['growth_range'] = request.growth_range
+        # Add parameters based on command type
+        if request.command == 'setup_profile':
+            # Profile setup parameters
+            if request.full_name is not None:
+                parameters['full_name'] = request.full_name
+            if request.age is not None:
+                parameters['age'] = request.age
+            if request.occupation is not None:
+                parameters['occupation'] = request.occupation
+            if request.monthly_income is not None:
+                parameters['monthly_income'] = request.monthly_income
+            if request.monthly_expenses is not None:
+                parameters['monthly_expenses'] = request.monthly_expenses
+            if request.current_savings is not None:
+                parameters['current_savings'] = request.current_savings
+            if request.current_debt is not None:
+                parameters['current_debt'] = request.current_debt
+            if request.investment_budget is not None:
+                parameters['investment_budget'] = request.investment_budget
+            if request.risk_tolerance is not None:
+                parameters['risk_tolerance'] = request.risk_tolerance
+            if request.investment_experience is not None:
+                parameters['investment_experience'] = request.investment_experience
+                
+        elif request.command == 'update_income':
+            if request.monthly_income is not None:
+                parameters['income'] = request.monthly_income
+                
+        elif request.command == 'add_goal':
+            if request.goal_name is not None:
+                parameters['goal_name'] = request.goal_name
+            if request.target_amount is not None:
+                parameters['target_amount'] = request.target_amount
+            if request.target_date is not None:
+                parameters['target_date'] = request.target_date
+            if request.priority is not None:
+                parameters['priority'] = request.priority
+                
+        elif request.command == 'personal_stock_analysis':
+            if request.ticker is not None:
+                parameters['ticker'] = request.ticker
+                
+        elif request.command in ['explain_like_im_new', 'investment_education', 'behavioral_coaching']:
+            if request.topic is not None:
+                parameters['topic'] = request.topic
+            if request.complexity is not None:
+                parameters['complexity'] = request.complexity
         
         # Execute the agent
         result = run_agent(
@@ -758,16 +833,31 @@ async def execute_chandufinance_agent(request: ChanduFinanceRequest):
             return ChanduFinanceResponse(
                 status="success",
                 user_id=request.user_id,
-                ticker=request.ticker,
-                message=result.get("message", "Financial analysis completed successfully"),
-                results=result.get("results", result),
+                command=request.command,
+                message=result.get("message", "Operation completed successfully"),
+                profile_summary=result.get("profile_summary"),
+                welcome_message=result.get("welcome_message"),
+                profile_health_score=result.get("profile_health_score"),
+                personal_info=result.get("personal_info"),
+                financial_info=result.get("financial_info"),
+                preferences=result.get("preferences"),
+                goals=result.get("goals"),
+                ticker=result.get("ticker"),
+                current_price=result.get("current_price"),
+                personalized_analysis=result.get("personalized_analysis"),
+                explanation=result.get("explanation"),
+                coaching_advice=result.get("coaching_advice"),
+                goal_details=result.get("goal_details"),
+                next_steps=result.get("next_steps"),
+                vault_stored=result.get("vault_stored"),
+                timestamp=result.get("timestamp"),
                 processing_time=processing_time
             )
         else:
             return ChanduFinanceResponse(
                 status="error",
                 user_id=request.user_id,
-                ticker=request.ticker,
+                command=request.command,
                 errors=[result.get("error", "Unknown error occurred")],
                 processing_time=processing_time
             )
@@ -776,7 +866,7 @@ async def execute_chandufinance_agent(request: ChanduFinanceRequest):
         return ChanduFinanceResponse(
             status="error",
             user_id=request.user_id,
-            ticker=request.ticker,
+            command=request.command,
             errors=[str(e)],
             processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
         )
@@ -786,19 +876,33 @@ async def get_chandufinance_status():
     """Get ChanduFinance agent status and requirements."""
     return AgentStatusResponse(
         agent_id="agent_chandufinance",
-        name="ChanduFinance Agent",
-        version="1.0.0",
+        name="ChanduFinance Personal Financial Advisor",
+        version="2.0.0",
         status="available", 
         required_scopes=[
-            "vault.read.finance", "vault.write.file",
-            "agent.finance.analyze", "custom.session.write"
+            "vault.read.file", "vault.write.file",
+            "vault.read.finance", "agent.finance.analyze"
         ],
         required_inputs={
             "user_id": "User identifier",
-            "token": "Financial analysis consent token",
-            "ticker": "Stock ticker symbol (e.g., AAPL, MSFT)",
-            "command": "Command to execute (run_valuation, get_financials, run_sensitivity, market_analysis)"
-        }
+            "token": "HushhMCP consent token",
+            "command": "Command to execute",
+        },
+        supported_commands=[
+            "setup_profile",
+            "update_personal_info", 
+            "update_income",
+            "set_budget",
+            "add_goal",
+            "view_profile",
+            "personal_stock_analysis",
+            "portfolio_review",
+            "goal_progress_check",
+            "explain_like_im_new",
+            "investment_education",
+            "behavioral_coaching"
+        ],
+        description="AI-powered personal financial advisor with encrypted vault storage, goal tracking, stock analysis, and educational content"
     )
 
 # ============================================================================
