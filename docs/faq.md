@@ -1,6 +1,6 @@
 # 🙋 Hushh PDA Hackathon – FAQ
 
-This FAQ covers common questions asked by hackathon participants, agent builders, and reviewers.
+This FAQ covers common questions asked by hackathon participants, agent bui## 🧾 What should be in our submission?ers.
 
 ---
 
@@ -109,6 +109,20 @@ hushh_mcp/agents/my_agent_name/manifest.py
 
 ---
 
+## 🚫 Can I hardcode user data, API keys, or credentials in my agent?
+
+**No.**
+
+- All user data, API keys, tokens, and credentials must be provided via API calls or user input at runtime.
+- Agent code and manifests must not contain any hardcoded user secrets, tokens, or credentials.
+- Pre-embedded (hardcoded) agent credentials or info may only be used as a fallback for demo/testing, and only if no user data is available.
+- All agentic API conversations must use dynamic, user-supplied data and keys whenever possible.
+- Any agent that hardcodes user data, keys, or credentials (except for fallback/demo) will be disqualified.
+
+**Always use the API to fetch user data, tokens, and keys. Never embed secrets in code.**
+
+---
+
 ## 🛑 What will disqualify my team?
 
 * ❌ Skipping token or trust validation
@@ -151,5 +165,3 @@ hushh_mcp/agents/my_agent_name/manifest.py
 Build something powerful. Build it with permission.
 —
 Team Hushh
-
-```

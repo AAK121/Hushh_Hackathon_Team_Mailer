@@ -145,7 +145,11 @@ class RelationshipMemoryAgent:
     Full LangGraph implementation with function tool calling and HushhMCP compliance.
     """
     
-    def __init__(self):
+    def __init__(self, api_keys: Dict[str, str] = None):
+        """Initialize the relationship memory agent with dynamic API key support."""
+        # Store dynamic API keys
+        self.api_keys = api_keys or {}
+        
         self.agent_id = manifest["id"]
         self.required_scopes = manifest["scopes"]
         
@@ -157,16 +161,27 @@ class RelationshipMemoryAgent:
             main_env_path = os.path.join(project_root, '.env')
             load_dotenv(main_env_path)
         
-        # Initialize Gemini LLM
-        gemini_api_key = os.getenv("GEMINI_API_KEY")
-        if not gemini_api_key:
-            raise ValueError("GEMINI_API_KEY environment variable not set")
-        
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.5-flash",
-            temperature=0,
-            google_api_key=gemini_api_key
+        # Initialize Gemini LLM with dynamic API key support
+        self._initialize_llm()
+    
+    def _initialize_llm(self, gemini_api_key: str = None):
+        """Initialize LLM with dynamic API key support."""
+        # Priority: passed parameter > dynamic api_keys > environment variable
+        api_key = (
+            gemini_api_key or 
+            self.api_keys.get('gemini_api_key') or 
+            os.getenv("GEMINI_API_KEY")
         )
+        
+        if api_key:
+            self.llm = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash",
+                temperature=0,
+                google_api_key=api_key
+            )
+        else:
+            print("⚠️ No Gemini API key provided. LLM functionality may be limited.")
+            self.llm = None
         
         # Build the LangGraph workflow with error handling
         try:
@@ -176,10 +191,17 @@ class RelationshipMemoryAgent:
             # Create a minimal fallback 
             self.graph = None
     
-    def handle(self, user_id: str, tokens: Dict[str, str], user_input: str, vault_key: Optional[str] = None, is_startup: bool = False) -> Dict[str, Any]:
+    def handle(self, user_id: str, tokens: Dict[str, str], user_input: str, vault_key: Optional[str] = None, is_startup: bool = False, **parameters) -> Dict[str, Any]:
         """
         Main handler method using LangGraph workflow with function tool calling.
+        Supports dynamic API key injection via parameters.
         """
+        
+        # Process dynamic API keys from parameters
+        if 'gemini_api_key' in parameters:
+            self._initialize_llm(parameters['gemini_api_key'])
+        if 'api_keys' in parameters:
+            self.api_keys.update(parameters['api_keys'])
         
         # Generate vault key if not provided
         if not vault_key:
@@ -1434,7 +1456,7 @@ Examples of good advice:
 
 # ==================== Entry Point Function ====================
 
-def run(user_id: str, tokens: Dict[str, str], user_input: str, vault_key: Optional[str] = None, is_startup: bool = False) -> Dict[str, Any]:
+def run(user_id: str, tokens: Dict[str, str], user_input: str, vault_key: Optional[str] = None, is_startup: bool = False, **api_keys) -> Dict[str, Any]:
     """
     Enhanced entry point function for the Proactive Relationship Memory Agent.
     
@@ -1444,12 +1466,20 @@ def run(user_id: str, tokens: Dict[str, str], user_input: str, vault_key: Option
         user_input: User's input message
         vault_key: Optional vault key for data encryption
         is_startup: Flag indicating if this is a startup/proactive check
+        **api_keys: Dynamic API keys for agent initialization
     
     Returns:
         Dict containing response and execution details
     """
-    agent = RelationshipMemoryAgent()
-    return agent.handle(user_id, tokens, user_input, vault_key, is_startup)
+    # Extract API keys for agent initialization
+    agent_api_keys = {}
+    if 'gemini_api_key' in api_keys:
+        agent_api_keys['gemini_api_key'] = api_keys['gemini_api_key']
+    if 'api_keys' in api_keys:
+        agent_api_keys.update(api_keys['api_keys'])
+    
+    agent = RelationshipMemoryAgent(api_keys=agent_api_keys)
+    return agent.handle(user_id, tokens, user_input, vault_key, is_startup, **api_keys)
 
 def run_proactive_check(user_id: str, tokens: Dict[str, str], vault_key: Optional[str] = None) -> Dict[str, Any]:
     """

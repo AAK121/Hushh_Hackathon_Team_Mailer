@@ -4,6 +4,75 @@
 
 ChanduFinance is a revolutionary AI-powered personal financial advisor that learns your income, budget, goals, and risk tolerance to provide **personalized investment advice**. Unlike traditional financial apps that show generic data, this agent uses LLM capabilities to understand YOUR unique financial situation and provide tailored recommendations.
 
+## 🔗 Frontend-Backend Integration
+
+### 📡 **API Endpoint**
+```
+POST http://localhost:8002/agents/chandufinance/execute
+Content-Type: application/json
+```
+
+### 🔑 **Dynamic API Key Support**
+ChanduFinance now supports **dynamic API keys** passed through the frontend, eliminating hardcoded credentials:
+
+```javascript
+// Frontend API Call Example
+const response = await fetch('http://localhost:8002/agents/chandufinance/execute', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    user_id: "user_123",
+    token: "HCT:user_token_here",
+    command: "setup_profile",
+    
+    // Dynamic API keys passed from frontend
+    gemini_api_key: userProvidedGeminiKey,  // User's own Gemini API key
+    api_keys: {
+      custom_service_key: "additional_api_key"
+    },
+    
+    // Command-specific parameters
+    full_name: "John Doe",
+    age: 30,
+    monthly_income: 5000.0,
+    monthly_expenses: 3000.0,
+    risk_tolerance: "moderate"
+  })
+});
+```
+
+### 🎯 **Request Model**
+```typescript
+interface ChanduFinanceRequest {
+  // Required fields
+  user_id: string;
+  token: string;  // HushhMCP consent token
+  command: string;
+  
+  // Dynamic API keys (NEW!)
+  gemini_api_key?: string;  // Pass user's Gemini API key
+  api_keys?: Record<string, string>;  // Additional service keys
+  
+  // Command-specific parameters
+  [key: string]: any;
+}
+```
+
+### 📋 **Response Model**
+```typescript
+interface ChanduFinanceResponse {
+  status: "success" | "error";
+  agent_id: "chandufinance";
+  user_id: string;
+  message?: string;
+  results?: any;
+  errors?: string[];
+  processing_time: number;
+}
+```
+
 ## 💎 What Makes ChanduFinance Unique
 
 ### 🧠 **LLM-Powered Personalization**
@@ -72,7 +141,9 @@ result = run_agent(
         'current_savings': 15000,
         'risk_tolerance': 'moderate',
         'investment_experience': 'beginner',
-        'investment_budget': 1500
+        'investment_budget': 1500,
+        # API keys provided dynamically (not hardcoded)
+        'gemini_api_key': 'your_gemini_api_key_here'  # Optional for LLM features
     }
 )
 ```
@@ -191,6 +262,8 @@ const setupProfile = async (profileData) => {
       user_id: userId,
       token: consentToken,
       command: 'setup_profile',
+      // API keys provided dynamically (not hardcoded)
+      gemini_api_key: userProvidedGeminiKey, // Optional for LLM features
       ...profileData
     })
   });
@@ -199,7 +272,7 @@ const setupProfile = async (profileData) => {
 };
 
 // Personalized Stock Analysis
-const analyzeStock = async (ticker) => {
+const analyzeStock = async (ticker, geminiApiKey = null) => {
   const response = await fetch('/agents/chandufinance/execute', {
     method: 'POST',
     headers: {
@@ -210,7 +283,9 @@ const analyzeStock = async (ticker) => {
       user_id: userId,
       token: consentToken,
       command: 'personal_stock_analysis',
-      ticker: ticker
+      ticker: ticker,
+      // API key provided dynamically if user wants LLM features
+      ...(geminiApiKey && { gemini_api_key: geminiApiKey })
     })
   });
   
@@ -374,6 +449,233 @@ Automatically calculates how much YOU should invest based on:
 - Adapts advice style to your feedback
 - Improves recommendations based on your goals
 
+## 🎯 Frontend Integration Examples
+
+### 🖥️ **Complete Frontend Implementation**
+
+#### **React Component Example**
+```jsx
+import React, { useState } from 'react';
+
+const ChanduFinanceWidget = ({ userApiKey, userToken }) => {
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const createProfile = async (profileData) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8002/agents/chandufinance/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: "current_user",
+          token: userToken,
+          command: "setup_profile",
+          gemini_api_key: userApiKey,  // User's own API key
+          ...profileData
+        })
+      });
+      
+      const result = await response.json();
+      if (result.status === 'success') {
+        setProfile(result.results);
+      }
+    } catch (error) {
+      console.error('Profile creation failed:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getPersonalizedAdvice = async (stockSymbol) => {
+    const response = await fetch('http://localhost:8002/agents/chandufinance/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: "current_user",
+        token: userToken,
+        command: "personal_stock_analysis",
+        gemini_api_key: userApiKey,
+        stock_symbols: [stockSymbol],
+        analysis_type: "comprehensive"
+      })
+    });
+    return response.json();
+  };
+
+  return (
+    <div className="chandufinance-widget">
+      {/* Your financial advisor UI here */}
+    </div>
+  );
+};
+```
+
+#### **Vue.js Integration**
+```vue
+<template>
+  <div class="financial-dashboard">
+    <button @click="setupProfile">Setup Profile</button>
+    <button @click="getAdvice">Get Investment Advice</button>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      userToken: this.$store.state.userToken,
+      geminiApiKey: this.$store.state.userApiKeys.gemini
+    };
+  },
+  methods: {
+    async setupProfile() {
+      const response = await this.$http.post('/agents/chandufinance/execute', {
+        user_id: this.userId,
+        token: this.userToken,
+        command: "setup_profile",
+        gemini_api_key: this.geminiApiKey,
+        full_name: this.userProfile.name,
+        age: this.userProfile.age,
+        monthly_income: this.userProfile.income,
+        monthly_expenses: this.userProfile.expenses,
+        risk_tolerance: this.userProfile.riskLevel
+      });
+      
+      if (response.data.status === 'success') {
+        this.$toast.success('Profile created successfully!');
+      }
+    }
+  }
+};
+</script>
+```
+
+### 🔧 **Advanced Integration Patterns**
+
+#### **Error Handling & Retry Logic**
+```javascript
+class ChanduFinanceAPI {
+  constructor(baseURL, defaultApiKey) {
+    this.baseURL = baseURL;
+    this.defaultApiKey = defaultApiKey;
+  }
+
+  async execute(command, params, retries = 3) {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const response = await fetch(`${this.baseURL}/agents/chandufinance/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            command,
+            gemini_api_key: this.defaultApiKey,
+            ...params
+          })
+        });
+
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+          return result;
+        } else {
+          throw new Error(result.errors?.join(', ') || 'Unknown error');
+        }
+      } catch (error) {
+        if (attempt === retries) throw error;
+        await this.delay(1000 * attempt); // Exponential backoff
+      }
+    }
+  }
+
+  delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+}
+```
+
+#### **Real-time Updates with WebSocket**
+```javascript
+// WebSocket integration for real-time financial updates
+const ws = new WebSocket('ws://localhost:8002/ws/chandufinance');
+
+ws.onmessage = (event) => {
+  const update = JSON.parse(event.data);
+  if (update.type === 'portfolio_update') {
+    updatePortfolioDisplay(update.data);
+  }
+};
+
+// Request portfolio analysis with real-time updates
+const requestPortfolioAnalysis = async () => {
+  await fetch('http://localhost:8002/agents/chandufinance/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      token: userToken,
+      command: "portfolio_review",
+      gemini_api_key: userApiKey,
+      enable_realtime: true,
+      websocket_id: ws.id
+    })
+  });
+};
+```
+
+### 🔐 **Security Best Practices**
+
+#### **Secure API Key Management**
+```javascript
+// ❌ DON'T: Store API keys in frontend code
+const BAD_EXAMPLE = {
+  gemini_api_key: "AIzaSyC..." // Never do this!
+};
+
+// ✅ DO: Get API keys from secure user session
+const secureApiCall = async () => {
+  // Get API key from authenticated user session
+  const userApiKey = await getUserApiKey(); // From secure backend
+  
+  return fetch('/agents/chandufinance/execute', {
+    method: 'POST',
+    headers: { 
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${userJwtToken}`
+    },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      token: hushhToken,
+      command: "view_profile",
+      gemini_api_key: userApiKey  // Securely passed
+    })
+  });
+};
+```
+
+#### **Token Validation**
+```javascript
+const validateAndExecute = async (command, params) => {
+  // Validate token before making request
+  const tokenValid = await validateHushhToken(userToken);
+  if (!tokenValid) {
+    throw new Error('Invalid or expired token');
+  }
+
+  return fetch('/agents/chandufinance/execute', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: currentUser.id,
+      token: userToken,
+      command,
+      gemini_api_key: await getSecureApiKey(),
+      ...params
+    })
+  });
+};
+```
+
 ## 🔒 Security & Privacy
 
 ### 🛡️ **HushhMCP Compliance**
@@ -452,3 +754,4 @@ ChanduFinance isn't just another financial calculator - it's your **personal fin
 - **Protects your privacy**: All data encrypted in your personal vault
 
 **Experience the future of personal finance - where AI doesn't replace human judgment, but enhances it with personalized wisdom.**
+

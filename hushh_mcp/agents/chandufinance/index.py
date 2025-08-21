@@ -166,22 +166,37 @@ class PersonalFinancialAgent:
     strict compliance with HushhMCP consent and vault security protocols.
     """
     
-    def __init__(self):
+    def __init__(self, api_keys: Dict[str, str] = None):
         self.agent_id = manifest["id"]
         self.version = manifest["version"] 
         self.required_scopes = manifest["required_scopes"]
         
-        # Initialize LLM if available
+        # Store API keys passed dynamically (not hardcoded)
+        self.api_keys = api_keys or {}
+        
+        # Initialize LLM if API key is provided dynamically
         self.llm = None
-        if LLM_AVAILABLE and os.getenv('GEMINI_API_KEY'):
+        self._initialize_llm()
+    
+    def _initialize_llm(self, gemini_api_key: str = None):
+        """Initialize LLM with dynamically provided API key, fallback to env var only if no key provided."""
+        if not LLM_AVAILABLE:
+            return
+            
+        # Priority: 1) Dynamically provided key, 2) Stored API keys, 3) Environment fallback
+        api_key = gemini_api_key or self.api_keys.get('gemini_api_key') or os.getenv('GEMINI_API_KEY')
+        
+        if api_key:
             try:
                 self.llm = ChatGoogleGenerativeAI(
                     model="gemini-1.5-flash",
-                    google_api_key=os.getenv('GEMINI_API_KEY'),
+                    google_api_key=api_key,
                     temperature=0.7
                 )
             except Exception as e:
                 print(f"⚠️ LLM initialization failed: {e}")
+        else:
+            print("⚠️ No Gemini API key provided - LLM features disabled")
     
     def handle(self, **kwargs) -> Dict[str, Any]:
         """Main entry point for the personal financial agent."""
@@ -193,6 +208,12 @@ class PersonalFinancialAgent:
             
             if not user_id or not token:
                 return self._error_response("Missing required parameters: user_id and token")
+            
+            # Update API keys if provided dynamically (not hardcoded)
+            if 'gemini_api_key' in parameters:
+                self._initialize_llm(parameters['gemini_api_key'])
+            if 'api_keys' in parameters:
+                self.api_keys.update(parameters['api_keys'])
             
             # Validate consent token with proper HushhMCP validation
             is_valid, reason, parsed_token = validate_token(token)
@@ -1316,5 +1337,15 @@ class PersonalFinancialAgent:
 # Main entry point for HushhMCP API integration
 def run_agent(**kwargs):
     """Entry point for the personal financial agent."""
-    agent = PersonalFinancialAgent()
+    # Extract API keys from parameters to pass to agent initialization
+    parameters = kwargs.get('parameters', {})
+    api_keys = {}
+    
+    if 'gemini_api_key' in parameters:
+        api_keys['gemini_api_key'] = parameters['gemini_api_key']
+    if 'api_keys' in parameters:
+        api_keys.update(parameters['api_keys'])
+    
+    # Initialize agent with dynamic API keys (not hardcoded)
+    agent = PersonalFinancialAgent(api_keys=api_keys if api_keys else None)
     return agent.handle(**kwargs)

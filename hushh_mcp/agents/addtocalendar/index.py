@@ -49,18 +49,36 @@ class AddToCalendarAgent:
     - Manual event addition with AI assistance
     - Secure data handling with HushMCP vault encryption
     """
-    def __init__(self):
-        self.agent_id = manifest["id"]
-        google_api_key = os.environ.get("GOOGLE_API_KEY")
-        if not google_api_key:
-            raise ValueError("GOOGLE_API_KEY environment variable is not set.")
+    def __init__(self, api_keys: Dict[str, str] = None):
+        """Initialize the AddToCalendar agent with dynamic API key support."""
+        # Store dynamic API keys
+        self.api_keys = api_keys or {}
         
-        # Configure Gemini AI
-        genai.configure(api_key=google_api_key)
+        self.agent_id = manifest["id"]
+        
+        # Initialize Google AI with dynamic API key support
+        self._initialize_google_ai()
         
         # AI Models configuration
         self.ai_model = "gemini-2.5-flash"
         self.max_emails = 10
+    
+    def _initialize_google_ai(self, google_api_key: str = None):
+        """Initialize Google AI with dynamic API key support."""
+        # Priority: passed parameter > dynamic api_keys > environment variable
+        api_key = (
+            google_api_key or 
+            self.api_keys.get('google_api_key') or 
+            os.environ.get("GOOGLE_API_KEY")
+        )
+        
+        if api_key:
+            # Configure Gemini AI
+            genai.configure(api_key=api_key)
+            self.google_api_key = api_key
+        else:
+            print("⚠️ No Google API key provided. AI functionality may be limited.")
+            self.google_api_key = None
 
     def _get_google_service_with_token(self, api_name: str, api_version: str, access_token: str):
         """
@@ -1309,6 +1327,7 @@ class AddToCalendarAgent:
                google_access_token: str, action: str = "comprehensive_analysis", **kwargs):
         """
         Enhanced main entry point for the agent with multiple capabilities.
+        Supports dynamic API key injection via kwargs.
         
         Args:
             user_id: User identifier
@@ -1316,11 +1335,19 @@ class AddToCalendarAgent:
             calendar_token_str: Consent token for calendar access
             google_access_token: Google OAuth access token from frontend
             action: Action to perform ('comprehensive_analysis', 'manual_event', 'analyze_only')
-            **kwargs: Additional parameters based on action
+            **kwargs: Additional parameters including dynamic API keys
             
         Returns:
             Dictionary with results based on the requested action
         """
+        # Process dynamic API keys from kwargs
+        if 'google_api_key' in kwargs:
+            self._initialize_google_ai(kwargs['google_api_key'])
+        if 'api_keys' in kwargs:
+            self.api_keys.update(kwargs['api_keys'])
+            # Re-initialize services with updated keys
+            self._initialize_google_ai()
+            
         print(f"🚀 AddToCalendar Agent starting: {action}")
         print(f"🔑 Using access token authentication (no credentials file needed)")
         

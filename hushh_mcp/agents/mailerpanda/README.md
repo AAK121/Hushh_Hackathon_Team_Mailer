@@ -6,98 +6,349 @@
 
 > 🐼 Advanced AI-powered mass mailer agent with complete privacy-first architecture, consent validation, and cross-agent communication capabilities.
 
----
+## 🔗 Frontend-Backend Integration
 
-## 🌟 Overview
-
-MailerPanda is a sophisticated email campaign agent that leverages AI for content generation while maintaining strict privacy controls through the HushhMCP framework. It provides intelligent email composition, mass distribution, and cross-agent delegation capabilities.
-
-### ✨ Key Features
-
-- **🤖 AI Content Generation**: Gemini 2.0 Flash integration for intelligent email composition
-- **🔒 Privacy-First Design**: Complete HushhMCP consent validation system
-- **📊 LangGraph Workflows**: Modern state management with human-in-the-loop approval
-- **🔗 Cross-Agent Communication**: Trust link delegation for seamless integration
-- **📧 Mass Email Distribution**: Mailjet integration for reliable delivery
-- **🛡️ Vault Integration**: Secure data storage with encryption
-- **👥 Human Approval**: Interactive approval workflows for quality control
-
----
-
-## 🏗️ Architecture
-
-### Core Components
-
+### 📡 **API Endpoint**
 ```
-MailerPanda Agent
-├── 🧠 AI Content Engine (Gemini 2.0)
-├── 🔐 Consent Validation System
-├── 📊 LangGraph Workflow Manager
-├── 📧 Email Distribution Engine (Mailjet)
-├── 🔗 Trust Link Manager
-├── 🛡️ Vault Storage System
-└── 👥 Human-in-the-Loop Interface
+POST http://localhost:8002/agents/mailerpanda/execute
+Content-Type: application/json
 ```
 
-### HushhMCP Integration
+### 🔑 **Dynamic API Key Support**
+MailerPanda agent supports **dynamic API keys** for secure, user-specific email and AI functionality:
 
-- **Consent Scopes**: `VAULT_READ_EMAIL`, `VAULT_WRITE_EMAIL`, `VAULT_READ_FILE`, `VAULT_WRITE_FILE`, `CUSTOM_TEMPORARY`
-- **Trust Links**: Full delegation workflow for cross-agent operations
-- **Vault Storage**: Encrypted campaign data storage
-- **Privacy Controls**: Operation-specific consent validation
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Required Environment Variables
-GOOGLE_API_KEY=your_gemini_api_key
-MAILJET_API_KEY=your_mailjet_api_key
-MAILJET_API_SECRET=your_mailjet_secret
+```javascript
+// Frontend API Call Example
+const response = await fetch('http://localhost:8002/agents/mailerpanda/execute', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    user_id: "user_123",
+    user_input: "Create a welcome email campaign for new customers",
+    mode: "interactive",
+    consent_tokens: {
+      "vault.read.email": "HCT:user_read_email_token",
+      "vault.write.email": "HCT:user_write_email_token",
+      "vault.read.contacts": "HCT:user_contacts_token"
+    },
+    
+    // Dynamic API keys passed from frontend
+    google_api_key: userProvidedGoogleKey,     // User's Google/Gemini API key
+    mailjet_api_key: userProvidedMailjetKey,   // User's Mailjet API key
+    mailjet_api_secret: userProvidedMailjetSecret, // User's Mailjet secret
+    api_keys: {
+      custom_email_service: "additional_api_key"
+    },
+    
+    // Campaign settings
+    require_approval: true,
+    use_ai_generation: true
+  })
+});
 ```
 
-### Basic Usage
-
-```python
-from hushh_mcp.agents.mailerpanda.index import MassMailerAgent
-from hushh_mcp.consent.token import issue_token
-from hushh_mcp.constants import ConsentScope
-
-# Initialize agent
-agent = MassMailerAgent()
-
-# Create consent tokens
-consent_tokens = {
-    'content_generation': issue_token(
-        user_id="user_123",
-        agent_id="agent_mailerpanda", 
-        scope=ConsentScope.CUSTOM_TEMPORARY
-    ).token
+### 🎯 **Request Model**
+```typescript
+interface MailerPandaRequest {
+  // Required fields
+  user_id: string;
+  user_input: string;  // Natural language campaign description
+  mode: "interactive" | "headless" | "demo";
+  consent_tokens: Record<string, string>;  // HushhMCP tokens
+  
+  // Email configuration
+  sender_email?: string;
+  recipient_emails?: string[];
+  
+  // Campaign settings
+  require_approval?: boolean;
+  use_ai_generation?: boolean;
+  
+  // Dynamic API keys (NEW!)
+  google_api_key?: string;      // User's Google/Gemini API key
+  mailjet_api_key?: string;     // User's Mailjet API key
+  mailjet_api_secret?: string;  // User's Mailjet secret
+  api_keys?: Record<string, string>;  // Additional service keys
 }
-
-# Create email campaign
-state = {
-    'user_input': 'Create a marketing email for our new product launch',
-    'user_id': 'user_123',
-    'consent_tokens': consent_tokens,
-    'user_email': 'sender@example.com',
-    'receiver_email': ['customer1@example.com', 'customer2@example.com']
-}
-
-# Execute workflow
-result = agent.handle(state)
 ```
 
----
+### 📋 **Response Model**
+```typescript
+interface MailerPandaResponse {
+  status: "success" | "completed" | "error";
+  user_id: string;
+  mode: string;
+  
+  // Campaign results
+  campaign_id?: string;
+  email_template?: Record<string, string>;
+  
+  // Human-in-the-loop
+  requires_approval?: boolean;
+  approval_status?: string;
+  feedback_required?: boolean;
+  
+  // Email sending results
+  emails_sent?: number;
+  send_status?: Array<Record<string, any>>;
+  
+  // Vault and trust links
+  vault_storage_key?: string;
+  trust_links?: string[];
+  
+  // Error and processing info
+  errors?: string[];
+  processing_time: number;
+}
+```
 
-## 📋 Workflow Stages
+### 🎮 **Frontend Integration Examples**
 
-### 1. 🔒 Consent Validation
-- Validates user consent for each operation
-- Enforces scope-based permissions
+#### **React Email Campaign Manager**
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const EmailCampaignManager = ({ userApiKeys, userTokens }) => {
+  const [campaignInput, setCampaignInput] = useState('');
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [pendingApproval, setPendingApproval] = useState(null);
+
+  const createCampaign = async (campaignDescription, mode = 'interactive') => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8002/agents/mailerpanda/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: "current_user",
+          user_input: campaignDescription,
+          mode: mode,
+          consent_tokens: userTokens,
+          
+          // Dynamic API keys from user
+          google_api_key: userApiKeys.google,
+          mailjet_api_key: userApiKeys.mailjet.key,
+          mailjet_api_secret: userApiKeys.mailjet.secret,
+          
+          require_approval: true,
+          use_ai_generation: true
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.status === 'completed' || result.status === 'success') {
+        if (result.requires_approval) {
+          setPendingApproval(result);
+        } else {
+          setCampaigns(prev => [...prev, result]);
+        }
+        return result;
+      } else {
+        throw new Error(result.errors?.join(', ') || 'Campaign creation failed');
+      }
+    } catch (error) {
+      console.error('Campaign creation failed:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const approveCampaign = async (campaignId) => {
+    const response = await fetch('http://localhost:8002/agents/mailerpanda/approve', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: "current_user",
+        campaign_id: campaignId,
+        approval_decision: "approved"
+      })
+    });
+    
+    const result = await response.json();
+    if (result.status === 'success') {
+      setPendingApproval(null);
+      setCampaigns(prev => [...prev, result]);
+    }
+  };
+
+  return (
+    <div className="email-campaign-manager">
+      <div className="campaign-creator">
+        <textarea
+          value={campaignInput}
+          onChange={(e) => setCampaignInput(e.target.value)}
+          placeholder="Describe your email campaign (e.g., 'Create a welcome email for new subscribers')"
+          rows={4}
+        />
+        <button 
+          onClick={() => createCampaign(campaignInput)}
+          disabled={loading || !campaignInput.trim()}
+        >
+          {loading ? 'Creating...' : 'Create Campaign'}
+        </button>
+      </div>
+
+      {pendingApproval && (
+        <div className="approval-required">
+          <h3>Campaign Approval Required</h3>
+          <div className="email-preview">
+            <h4>{pendingApproval.email_template?.subject}</h4>
+            <div dangerouslySetInnerHTML={{ 
+              __html: pendingApproval.email_template?.html 
+            }} />
+          </div>
+          <button onClick={() => approveCampaign(pendingApproval.campaign_id)}>
+            Approve & Send
+          </button>
+          <button onClick={() => setPendingApproval(null)}>
+            Reject
+          </button>
+        </div>
+      )}
+
+      <div className="campaigns-list">
+        {campaigns.map(campaign => (
+          <div key={campaign.campaign_id} className="campaign-card">
+            <h3>Campaign: {campaign.campaign_id}</h3>
+            <p>Emails sent: {campaign.emails_sent}</p>
+            <p>Status: {campaign.status}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+#### **Vue.js Integration with Real-time Updates**
+```vue
+<template>
+  <div class="mailerpanda-dashboard">
+    <div class="campaign-controls">
+      <select v-model="selectedMode">
+        <option value="interactive">Interactive</option>
+        <option value="demo">Demo</option>
+        <option value="headless">Headless</option>
+      </select>
+      
+      <input
+        v-model="campaignDescription"
+        placeholder="Describe your email campaign..."
+        @keydown.enter="createCampaign"
+      />
+      
+      <button @click="createCampaign" :disabled="loading">
+        {{ loading ? 'Creating...' : 'Create Campaign' }}
+      </button>
+    </div>
+    
+    <div class="real-time-status" v-if="currentCampaign">
+      <h3>Campaign in Progress</h3>
+      <div class="progress-bar">
+        <div 
+          class="progress-fill" 
+          :style="{ width: campaignProgress + '%' }"
+        ></div>
+      </div>
+      <p>{{ currentCampaign.status_message }}</p>
+    </div>
+    
+    <div class="campaign-history">
+      <h3>Recent Campaigns</h3>
+      <div 
+        v-for="campaign in campaignHistory" 
+        :key="campaign.campaign_id"
+        class="campaign-item"
+      >
+        <span>{{ campaign.campaign_id }}</span>
+        <span>{{ campaign.emails_sent }} emails</span>
+        <span class="status" :class="campaign.status">
+          {{ campaign.status }}
+        </span>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      campaignDescription: '',
+      selectedMode: 'interactive',
+      loading: false,
+      currentCampaign: null,
+      campaignProgress: 0,
+      campaignHistory: [],
+      websocket: null
+    };
+  },
+  mounted() {
+    this.initWebSocket();
+  },
+  methods: {
+    async createCampaign() {
+      if (!this.campaignDescription.trim()) return;
+      
+      this.loading = true;
+      try {
+        const response = await this.$http.post('/agents/mailerpanda/execute', {
+          user_id: this.$store.state.user.id,
+          user_input: this.campaignDescription,
+          mode: this.selectedMode,
+          consent_tokens: this.$store.state.tokens.email,
+          
+          // Dynamic API keys
+          google_api_key: this.$store.state.userApiKeys.google,
+          mailjet_api_key: this.$store.state.userApiKeys.mailjet.key,
+          mailjet_api_secret: this.$store.state.userApiKeys.mailjet.secret,
+          
+          require_approval: this.selectedMode === 'interactive'
+        });
+        
+        if (response.data.status === 'completed') {
+          this.campaignHistory.unshift(response.data);
+          this.campaignDescription = '';
+        }
+        
+      } catch (error) {
+        this.$toast.error('Campaign creation failed: ' + error.message);
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    initWebSocket() {
+      this.websocket = new WebSocket('ws://localhost:8002/ws/mailerpanda');
+      
+      this.websocket.onmessage = (event) => {
+        const update = JSON.parse(event.data);
+        
+        if (update.type === 'campaign_progress') {
+          this.campaignProgress = update.progress;
+          this.currentCampaign = update.campaign;
+        } else if (update.type === 'campaign_completed') {
+          this.campaignHistory.unshift(update.campaign);
+          this.currentCampaign = null;
+          this.campaignProgress = 0;
+        }
+      };
+    }
+  },
+  
+  beforeDestroy() {
+    if (this.websocket) {
+      this.websocket.close();
+    }
+  }
+};
+</script>
+```
 - Ensures privacy compliance
 
 ### 2. 🤖 AI Content Generation

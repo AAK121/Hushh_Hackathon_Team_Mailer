@@ -45,35 +45,66 @@ class MassMailerAgent:
     Advanced AI-powered mass mailer agent with complete HushMCP integration,
     including consent validation, vault storage, trust links, and operons.
     """
-    def __init__(self):
+    def __init__(self, api_keys: Dict[str, str] = None):
+        """Initialize the mass mailer agent with dynamic API key support."""
+        # Store dynamic API keys
+        self.api_keys = api_keys or {}
+        
         self.agent_id = manifest["id"]
         self.version = manifest["version"]
         
-        # Load Mailjet API keys from environment variables
-        self.mailjet_api_key = os.environ.get("MAILJET_API_KEY")
-        self.mailjet_api_secret = os.environ.get("MAILJET_API_SECRET")
+        # Initialize email service with dynamic API keys
+        self._initialize_email_service()
         
-        if not all([self.mailjet_api_key, self.mailjet_api_secret]):
-            raise ValueError("MAILJET_API_KEY and MAILJET_API_SECRET must be set in the .env file.")
-            
-        self.mailjet = Client(auth=(self.mailjet_api_key, self.mailjet_api_secret), version='v3.1')
-        
-        # Initialize Gemini LLM
-        google_api_key = os.environ.get("GOOGLE_API_KEY")
-        if not google_api_key:
-            raise ValueError("GOOGLE_API_KEY must be set in the .env file for AI content generation.")
-            
-        self.llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            temperature=0.5,
-            google_api_key=google_api_key
-        )
+        # Initialize LLM with dynamic API keys
+        self._initialize_llm()
         
         # Path to the Excel file within the agent's directory
         self.contacts_file_path = os.path.join(os.path.dirname(__file__), 'email_list.xlsx')
         
         # Build LangGraph workflow
         self.graph = self._build_workflow()
+    
+    def _initialize_email_service(self, mailjet_api_key: str = None, mailjet_api_secret: str = None):
+        """Initialize email service with dynamic API key support."""
+        # Priority: passed parameters > dynamic api_keys > environment variables
+        api_key = (
+            mailjet_api_key or 
+            self.api_keys.get('mailjet_api_key') or 
+            os.environ.get("MAILJET_API_KEY")
+        )
+        api_secret = (
+            mailjet_api_secret or 
+            self.api_keys.get('mailjet_api_secret') or 
+            os.environ.get("MAILJET_API_SECRET")
+        )
+        
+        if api_key and api_secret:
+            self.mailjet_api_key = api_key
+            self.mailjet_api_secret = api_secret
+            self.mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+        else:
+            print("⚠️ No Mailjet API keys provided. Email functionality may be limited.")
+            self.mailjet = None
+    
+    def _initialize_llm(self, google_api_key: str = None):
+        """Initialize LLM with dynamic API key support."""
+        # Priority: passed parameter > dynamic api_keys > environment variable
+        api_key = (
+            google_api_key or 
+            self.api_keys.get('google_api_key') or 
+            os.environ.get("GOOGLE_API_KEY")
+        )
+        
+        if api_key:
+            self.llm = ChatGoogleGenerativeAI(
+                model="gemini-2.0-flash",
+                temperature=0.5,
+                google_api_key=api_key
+            )
+        else:
+            print("⚠️ No Google API key provided. AI content generation may be limited.")
+            self.llm = None
 
     def _validate_consent_for_operation(self, consent_tokens: Dict[str, str], operation: str, user_id: str) -> bool:
         """
@@ -758,19 +789,34 @@ Write a professional email based on this input:
             }
         }
 
-    def handle(self, user_id: str, consent_tokens: Dict[str, str], user_input: str, mode: str = "interactive"):
+    def handle(self, user_id: str, consent_tokens: Dict[str, str], user_input: str, mode: str = "interactive", **parameters):
         """
         Enhanced main entry point for the agent with complete HushMCP integration.
+        Supports dynamic API key injection via parameters.
         
         Args:
             user_id: User identifier
             consent_tokens: Dictionary of consent tokens for different scopes
             user_input: User's email campaign description
             mode: Execution mode ('interactive', 'headless', 'demo')
+            **parameters: Additional parameters including dynamic API keys
             
         Returns:
             Dict: Comprehensive results including vault storage and trust links
         """
+        # Process dynamic API keys from parameters
+        if 'google_api_key' in parameters:
+            self._initialize_llm(parameters['google_api_key'])
+        if 'mailjet_api_key' in parameters or 'mailjet_api_secret' in parameters:
+            self._initialize_email_service(
+                parameters.get('mailjet_api_key'),
+                parameters.get('mailjet_api_secret')
+            )
+        if 'api_keys' in parameters:
+            self.api_keys.update(parameters['api_keys'])
+            # Re-initialize services with updated keys
+            self._initialize_llm()
+            self._initialize_email_service()
         print("🚀 Starting HushMCP-Enhanced AI-Powered Email Campaign Agent...")
         print(f"🆔 User ID: {user_id}")
         print(f"🔧 Mode: {mode}")

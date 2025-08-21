@@ -46,6 +46,10 @@ GET /agents/chandufinance/status
 - `vault.read.finance`: Access financial analysis data
 - `agent.finance.analyze`: Perform financial analysis
 
+**Optional API Keys:**
+- `gemini_api_key`: Gemini API key for LLM-powered features (provided dynamically, not hardcoded)
+- `api_keys`: Additional API keys as key-value pairs for extended functionality
+
 ### Execute ChanduFinance Agent
 
 ```bash
@@ -64,7 +68,8 @@ Content-Type: application/json
     "current_savings": 15000.0,
     "risk_tolerance": "moderate",
     "investment_experience": "beginner",
-    "investment_budget": 1500.0
+    "investment_budget": 1500.0,
+    "gemini_api_key": "your_gemini_api_key_here"
 }
 ```
 

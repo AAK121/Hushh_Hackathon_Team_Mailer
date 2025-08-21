@@ -291,9 +291,538 @@ POST /agents/addtocalendar/execute
     "email_token_str": "email_consent_token",
     "calendar_token_str": "calendar_consent_token",
     "google_access_token": "google_oauth_token",
+    "google_api_key": "your_google_api_key",
     "action": "process_emails"
 }
 ```
+
+---
+
+## 🌐 Frontend Integration
+
+### Overview
+
+The AddToCalendar agent provides comprehensive calendar management capabilities through secure API endpoints. Frontend applications can integrate to offer intelligent email-to-calendar event extraction with real-time processing and user consent management.
+
+### API Request/Response Models
+
+#### TypeScript Interfaces
+
+```typescript
+// Request Interface
+interface AddToCalendarRequest {
+  user_id: string;
+  email_token_str: string;
+  calendar_token_str: string;
+  google_access_token: string;
+  google_api_key?: string;  // Optional, can use environment fallback
+  action: 'process_emails' | 'extract_events' | 'create_calendar_events';
+  max_emails?: number;
+  confidence_threshold?: number;
+}
+
+// Response Interface
+interface AddToCalendarResponse {
+  status: 'success' | 'error';
+  message: string;
+  data?: {
+    processed_emails: number;
+    extracted_events: number;
+    created_events: number;
+    events: CalendarEvent[];
+    confidence_scores: number[];
+  };
+  error?: string;
+}
+
+// Calendar Event Interface
+interface CalendarEvent {
+  id: string;
+  summary: string;
+  description?: string;
+  start: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  end: {
+    dateTime: string;
+    timeZone?: string;
+  };
+  location?: string;
+  confidence_score: number;
+  source_email_id?: string;
+  created_at: string;
+}
+
+// Processing Status Interface
+interface ProcessingStatus {
+  status: 'processing' | 'completed' | 'failed';
+  progress: number;
+  current_task: string;
+  estimated_completion: string;
+}
+```
+
+### React Integration Example
+
+```jsx
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const CalendarIntegration = () => {
+  const [events, setEvents] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [stats, setStats] = useState(null);
+
+  // Process emails for calendar events
+  const processEmails = async () => {
+    setProcessing(true);
+    try {
+      const response = await axios.post('/api/agents/addtocalendar/execute', {
+        user_id: 'user_123',
+        email_token_str: localStorage.getItem('email_consent_token'),
+        calendar_token_str: localStorage.getItem('calendar_consent_token'),
+        google_access_token: localStorage.getItem('google_access_token'),
+        google_api_key: process.env.REACT_APP_GOOGLE_API_KEY,
+        action: 'process_emails',
+        max_emails: 50,
+        confidence_threshold: 0.7
+      });
+
+      if (response.data.status === 'success') {
+        setEvents(response.data.data.events);
+        setStats({
+          processed: response.data.data.processed_emails,
+          extracted: response.data.data.extracted_events,
+          created: response.data.data.created_events
+        });
+      }
+    } catch (error) {
+      console.error('Calendar processing failed:', error);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Real-time event extraction
+  const extractEventsFromText = async (emailText) => {
+    try {
+      const response = await axios.post('/api/agents/addtocalendar/execute', {
+        user_id: 'user_123',
+        email_token_str: localStorage.getItem('email_consent_token'),
+        calendar_token_str: localStorage.getItem('calendar_consent_token'),
+        google_access_token: localStorage.getItem('google_access_token'),
+        action: 'extract_events',
+        email_content: emailText
+      });
+
+      return response.data.data.events;
+    } catch (error) {
+      console.error('Event extraction failed:', error);
+      return [];
+    }
+  };
+
+  return (
+    <div className="calendar-integration">
+      <div className="header">
+        <h2>📅 Smart Calendar Manager</h2>
+        <button 
+          onClick={processEmails} 
+          disabled={processing}
+          className="process-btn"
+        >
+          {processing ? '🔄 Processing...' : '📧 Process Emails'}
+        </button>
+      </div>
+
+      {stats && (
+        <div className="stats-panel">
+          <div className="stat-card">
+            <span className="stat-value">{stats.processed}</span>
+            <span className="stat-label">Emails Processed</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-value">{stats.extracted}</span>
+            <span className="stat-label">Events Extracted</span>
+          </div>
+          <div className="stat-card">
+            <span className="stat-value">{stats.created}</span>
+            <span className="stat-label">Calendar Events</span>
+          </div>
+        </div>
+      )}
+
+      <div className="events-grid">
+        {events.map(event => (
+          <div key={event.id} className="event-card">
+            <h3>{event.summary}</h3>
+            <p className="event-time">
+              📅 {new Date(event.start.dateTime).toLocaleString()}
+            </p>
+            {event.location && (
+              <p className="event-location">📍 {event.location}</p>
+            )}
+            <div className="confidence-badge">
+              Confidence: {Math.round(event.confidence_score * 100)}%
+            </div>
+            {event.description && (
+              <p className="event-description">{event.description}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default CalendarIntegration;
+```
+
+### Vue.js Integration Example
+
+```vue
+<template>
+  <div class="calendar-manager">
+    <div class="control-panel">
+      <h2>📅 Calendar Event Manager</h2>
+      <div class="actions">
+        <button @click="processEmails" :disabled="loading">
+          {{ loading ? '🔄 Processing...' : '📧 Extract Events' }}
+        </button>
+        <button @click="refreshCalendar">🔄 Refresh</button>
+      </div>
+    </div>
+
+    <div v-if="processingStats" class="processing-stats">
+      <div class="stat-item">
+        <span class="number">{{ processingStats.processed }}</span>
+        <span class="label">Emails Analyzed</span>
+      </div>
+      <div class="stat-item">
+        <span class="number">{{ processingStats.extracted }}</span>
+        <span class="label">Events Found</span>
+      </div>
+      <div class="stat-item">
+        <span class="number">{{ processingStats.created }}</span>
+        <span class="label">Calendar Events</span>
+      </div>
+    </div>
+
+    <div class="events-timeline">
+      <div v-for="event in sortedEvents" :key="event.id" class="event-item">
+        <div class="event-header">
+          <h3>{{ event.summary }}</h3>
+          <span class="confidence-score" 
+                :class="getConfidenceClass(event.confidence_score)">
+            {{ Math.round(event.confidence_score * 100) }}%
+          </span>
+        </div>
+        <div class="event-details">
+          <p class="datetime">
+            📅 {{ formatDateTime(event.start.dateTime) }}
+          </p>
+          <p v-if="event.location" class="location">
+            📍 {{ event.location }}
+          </p>
+          <p v-if="event.description" class="description">
+            {{ event.description }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'CalendarManager',
+  data() {
+    return {
+      events: [],
+      loading: false,
+      processingStats: null,
+      pollingInterval: null
+    }
+  },
+  computed: {
+    sortedEvents() {
+      return [...this.events].sort((a, b) => 
+        new Date(a.start.dateTime) - new Date(b.start.dateTime)
+      );
+    }
+  },
+  methods: {
+    async processEmails() {
+      this.loading = true;
+      try {
+        const response = await this.$http.post('/api/agents/addtocalendar/execute', {
+          user_id: this.$store.state.user.id,
+          email_token_str: this.$store.getters.getConsentToken('email'),
+          calendar_token_str: this.$store.getters.getConsentToken('calendar'),
+          google_access_token: this.$store.state.auth.googleToken,
+          google_api_key: process.env.VUE_APP_GOOGLE_API_KEY,
+          action: 'process_emails',
+          max_emails: 100,
+          confidence_threshold: 0.6
+        });
+
+        if (response.data.status === 'success') {
+          this.events = response.data.data.events;
+          this.processingStats = {
+            processed: response.data.data.processed_emails,
+            extracted: response.data.data.extracted_events,
+            created: response.data.data.created_events
+          };
+        }
+      } catch (error) {
+        this.$toast.error('Failed to process emails: ' + error.message);
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    getConfidenceClass(score) {
+      if (score >= 0.9) return 'high-confidence';
+      if (score >= 0.7) return 'medium-confidence';
+      return 'low-confidence';
+    },
+
+    formatDateTime(dateTime) {
+      return new Intl.DateTimeFormat('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      }).format(new Date(dateTime));
+    }
+  }
+}
+</script>
+```
+
+### Real-time Processing with WebSockets
+
+```javascript
+// WebSocket connection for real-time calendar updates
+class CalendarWebSocketManager {
+  constructor(userId, apiKey) {
+    this.userId = userId;
+    this.apiKey = apiKey;
+    this.ws = null;
+    this.eventHandlers = new Map();
+  }
+
+  connect() {
+    this.ws = new WebSocket(`ws://localhost:8000/ws/calendar/${this.userId}`);
+    
+    this.ws.onopen = () => {
+      console.log('📅 Calendar WebSocket connected');
+      this.authenticate();
+    };
+
+    this.ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      this.handleMessage(data);
+    };
+
+    this.ws.onclose = () => {
+      console.log('📅 Calendar WebSocket disconnected');
+      // Implement reconnection logic
+      setTimeout(() => this.connect(), 5000);
+    };
+  }
+
+  authenticate() {
+    this.ws.send(JSON.stringify({
+      type: 'auth',
+      user_id: this.userId,
+      google_api_key: this.apiKey,
+      timestamp: Date.now()
+    }));
+  }
+
+  startEmailProcessing(options = {}) {
+    this.ws.send(JSON.stringify({
+      type: 'start_processing',
+      options: {
+        max_emails: options.maxEmails || 50,
+        confidence_threshold: options.confidenceThreshold || 0.7,
+        real_time: true
+      }
+    }));
+  }
+
+  handleMessage(data) {
+    switch (data.type) {
+      case 'processing_progress':
+        this.emit('progress', data.progress);
+        break;
+      case 'event_extracted':
+        this.emit('eventExtracted', data.event);
+        break;
+      case 'calendar_event_created':
+        this.emit('eventCreated', data.event);
+        break;
+      case 'processing_complete':
+        this.emit('complete', data.summary);
+        break;
+      case 'error':
+        this.emit('error', data.error);
+        break;
+    }
+  }
+
+  on(event, handler) {
+    if (!this.eventHandlers.has(event)) {
+      this.eventHandlers.set(event, []);
+    }
+    this.eventHandlers.get(event).push(handler);
+  }
+
+  emit(event, data) {
+    if (this.eventHandlers.has(event)) {
+      this.eventHandlers.get(event).forEach(handler => handler(data));
+    }
+  }
+}
+
+// Usage
+const calendarManager = new CalendarWebSocketManager('user_123', 'google_api_key');
+
+calendarManager.on('eventExtracted', (event) => {
+  console.log('📅 New event extracted:', event);
+  updateUI(event);
+});
+
+calendarManager.on('eventCreated', (event) => {
+  console.log('✅ Calendar event created:', event);
+  showNotification(`Event "${event.summary}" added to calendar`);
+});
+
+calendarManager.connect();
+```
+
+### Security Best Practices
+
+#### Secure API Key Management
+
+```javascript
+// Environment-based configuration
+const config = {
+  // Never expose API keys in frontend code
+  apiBaseUrl: process.env.REACT_APP_API_BASE_URL,
+  
+  // Use backend proxy for sensitive operations
+  useProxy: true,
+  
+  // Implement token refresh logic
+  tokenRefreshUrl: '/api/auth/refresh',
+  
+  // Security headers
+  headers: {
+    'Content-Type': 'application/json',
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+};
+
+// Secure token storage
+class SecureTokenManager {
+  static setConsentToken(scope, token) {
+    // Use secure storage (httpOnly cookies preferred)
+    sessionStorage.setItem(`consent_${scope}`, token);
+  }
+
+  static getConsentToken(scope) {
+    return sessionStorage.getItem(`consent_${scope}`);
+  }
+
+  static clearTokens() {
+    sessionStorage.clear();
+  }
+}
+
+// API key proxy implementation
+const calendarAPI = {
+  async processEmails(userParams) {
+    // Send request to backend proxy
+    // Backend handles API key injection
+    return await fetch('/api/proxy/addtocalendar/execute', {
+      method: 'POST',
+      headers: config.headers,
+      body: JSON.stringify({
+        ...userParams,
+        // API key handled by backend
+      })
+    });
+  }
+};
+```
+
+### Error Handling & Recovery
+
+```javascript
+// Comprehensive error handling
+class CalendarErrorHandler {
+  static handle(error, context = '') {
+    console.error(`📅 Calendar Error [${context}]:`, error);
+
+    switch (error.type) {
+      case 'consent_expired':
+        return this.handleConsentExpired(error);
+      case 'api_quota_exceeded':
+        return this.handleQuotaExceeded(error);
+      case 'network_error':
+        return this.handleNetworkError(error);
+      case 'processing_timeout':
+        return this.handleTimeout(error);
+      default:
+        return this.handleGenericError(error);
+    }
+  }
+
+  static handleConsentExpired(error) {
+    // Redirect to consent renewal
+    window.location.href = '/consent/renew?scope=calendar';
+  }
+
+  static handleQuotaExceeded(error) {
+    // Show quota exceeded message
+    showNotification('API quota exceeded. Please try again later.', 'warning');
+  }
+
+  static handleNetworkError(error) {
+    // Implement retry logic
+    return this.retryWithBackoff(error.originalRequest);
+  }
+
+  static async retryWithBackoff(request, attempt = 1) {
+    const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    
+    try {
+      return await request();
+    } catch (error) {
+      if (attempt < 3) {
+        return this.retryWithBackoff(request, attempt + 1);
+      }
+      throw error;
+    }
+  }
+}
+```
+
+This completes the comprehensive frontend integration documentation for all agents. The AddToCalendar documentation now provides:
+
+1. **Complete TypeScript interfaces** for request/response models
+2. **React and Vue.js integration examples** with real-time processing
+3. **WebSocket support** for live calendar updates
+4. **Security best practices** for API key management
+5. **Error handling and recovery** mechanisms
+6. **Real-world usage patterns** for calendar event management
+
+All four agents now have comprehensive frontend integration guides that demonstrate how to securely integrate with the dynamic API key system while maintaining HushhMCP compliance and privacy standards.
 
 ---
 

@@ -2,6 +2,223 @@
 
 A sophisticated AI agent for managing personal relationships with proactive capabilities, batch operations, and conversational intelligence. Built with full HushhMCP compliance and enhanced LangGraph workflow.
 
+## 🔗 Frontend-Backend Integration
+
+### 📡 **API Endpoint**
+```
+POST http://localhost:8002/agents/relationship_memory/execute
+Content-Type: application/json
+```
+
+### 🔑 **Dynamic API Key Support**
+RelationshipMemory agent supports **dynamic API keys** for secure, user-specific AI functionality:
+
+```javascript
+// Frontend API Call Example
+const response = await fetch('http://localhost:8002/agents/relationship_memory/execute', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    user_id: "user_123",
+    tokens: {
+      "vault.read.contacts": "HCT:user_read_token",
+      "vault.write.contacts": "HCT:user_write_token",
+      "vault.read.email": "HCT:user_email_token"
+    },
+    user_input: "Add a new contact: Jane Doe, email jane@example.com",
+    
+    // Dynamic API keys passed from frontend
+    gemini_api_key: userProvidedGeminiKey,  // User's own Gemini API key
+    api_keys: {
+      custom_ai_service: "additional_api_key"
+    }
+  })
+});
+```
+
+### 🎯 **Request Model**
+```typescript
+interface RelationshipMemoryRequest {
+  // Required fields
+  user_id: string;
+  tokens: Record<string, string>;  // Multiple HushhMCP consent tokens
+  user_input: string;  // Natural language input
+  
+  // Optional fields
+  vault_key?: string;
+  is_startup?: boolean;
+  
+  // Dynamic API keys (NEW!)
+  gemini_api_key?: string;  // Pass user's Gemini API key
+  api_keys?: Record<string, string>;  // Additional service keys
+}
+```
+
+### 📋 **Response Model**
+```typescript
+interface RelationshipMemoryResponse {
+  status: "success" | "error";
+  agent_id: "relationship_memory";
+  user_id: string;
+  message?: string;
+  results?: any;
+  errors?: string[];
+  processing_time: number;
+}
+```
+
+### 🎮 **Frontend Integration Examples**
+
+#### **React Contact Manager**
+```jsx
+import React, { useState, useEffect } from 'react';
+
+const RelationshipManager = ({ userApiKey, userTokens }) => {
+  const [contacts, setContacts] = useState([]);
+  const [inputText, setInputText] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const executeCommand = async (userInput) => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:8002/agents/relationship_memory/execute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: "current_user",
+          tokens: userTokens,
+          user_input: userInput,
+          gemini_api_key: userApiKey  // User's own API key
+        })
+      });
+      
+      const result = await response.json();
+      if (result.status === 'success') {
+        setContacts(result.results?.contacts || []);
+        return result.message;
+      } else {
+        throw new Error(result.errors?.join(', '));
+      }
+    } catch (error) {
+      console.error('Command failed:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+    
+    try {
+      const response = await executeCommand(inputText);
+      setInputText('');
+      // Show success message
+    } catch (error) {
+      // Show error message
+    }
+  };
+
+  return (
+    <div className="relationship-manager">
+      <form onSubmit={handleSubmit}>
+        <input
+          type="text"
+          value={inputText}
+          onChange={(e) => setInputText(e.target.value)}
+          placeholder="Add contact, remember details, or ask questions..."
+          disabled={loading}
+        />
+        <button type="submit" disabled={loading}>
+          {loading ? 'Processing...' : 'Send'}
+        </button>
+      </form>
+      
+      <div className="contacts-list">
+        {contacts.map(contact => (
+          <div key={contact.id} className="contact-card">
+            <h3>{contact.name}</h3>
+            <p>{contact.email}</p>
+            <span className={`priority ${contact.priority}`}>
+              {contact.priority} priority
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+```
+
+#### **Vue.js Integration**
+```vue
+<template>
+  <div class="relationship-dashboard">
+    <div class="command-input">
+      <textarea
+        v-model="commandText"
+        placeholder="Add contact, set reminder, or ask about relationships..."
+        @keydown.ctrl.enter="executeCommand"
+      ></textarea>
+      <button @click="executeCommand" :disabled="loading">
+        {{ loading ? 'Processing...' : 'Execute' }}
+      </button>
+    </div>
+    
+    <div class="results" v-if="lastResult">
+      <h3>{{ lastResult.message }}</h3>
+      <pre>{{ JSON.stringify(lastResult.results, null, 2) }}</pre>
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      commandText: '',
+      lastResult: null,
+      loading: false,
+      userTokens: {
+        'vault.read.contacts': this.$store.state.tokens.readContacts,
+        'vault.write.contacts': this.$store.state.tokens.writeContacts,
+        'vault.read.email': this.$store.state.tokens.readEmail
+      }
+    };
+  },
+  methods: {
+    async executeCommand() {
+      if (!this.commandText.trim()) return;
+      
+      this.loading = true;
+      try {
+        const response = await this.$http.post('/agents/relationship_memory/execute', {
+          user_id: this.$store.state.user.id,
+          tokens: this.userTokens,
+          user_input: this.commandText,
+          gemini_api_key: this.$store.state.userApiKeys.gemini
+        });
+        
+        this.lastResult = response.data;
+        this.commandText = '';
+        
+        if (response.data.status === 'success') {
+          this.$toast.success(response.data.message);
+        }
+      } catch (error) {
+        this.$toast.error('Command failed: ' + error.message);
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+};
+</script>
+```
+
 ## 🚀 Features
 
 ### ✨ Enhanced Capabilities

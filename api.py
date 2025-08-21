@@ -97,6 +97,10 @@ class AddToCalendarRequest(BaseModel):
     confidence_threshold: Optional[float] = Field(0.7, description="Minimum confidence for event extraction")
     max_emails: Optional[int] = Field(50, description="Maximum emails to process")
     
+    # Dynamic API key support
+    google_api_key: Optional[str] = Field(None, description="Dynamic Google API key for AI operations")
+    api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
+    
     @validator('action')
     def validate_action(cls, v):
         allowed_actions = ["comprehensive_analysis", "manual_event", "analyze_only"]
@@ -144,6 +148,12 @@ class MailerPandaRequest(BaseModel):
     # Campaign settings
     require_approval: Optional[bool] = Field(True, description="Whether to require human approval")
     use_ai_generation: Optional[bool] = Field(True, description="Whether to use AI for content generation")
+    
+    # Dynamic API key support
+    google_api_key: Optional[str] = Field(None, description="Dynamic Google API key for AI generation")
+    mailjet_api_key: Optional[str] = Field(None, description="Dynamic Mailjet API key for email sending")
+    mailjet_api_secret: Optional[str] = Field(None, description="Dynamic Mailjet API secret for email sending")
+    api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
     
     @validator('mode')
     def validate_mode(cls, v):
@@ -431,10 +441,17 @@ async def execute_addtocalendar_agent(request: AddToCalendarRequest):
         # Import the agent
         from hushh_mcp.agents.addtocalendar.index import AddToCalendarAgent
         
-        # Initialize agent
-        agent = AddToCalendarAgent()
+        # Extract dynamic API keys for agent initialization
+        api_keys = {}
+        if request.google_api_key:
+            api_keys['google_api_key'] = request.google_api_key
+        if request.api_keys:
+            api_keys.update(request.api_keys)
+            
+        # Initialize agent with dynamic API keys
+        agent = AddToCalendarAgent(api_keys=api_keys)
         
-        # Execute agent
+        # Execute agent with dynamic API keys
         result = agent.handle(
             user_id=request.user_id,
             email_token_str=request.email_token,
@@ -443,7 +460,8 @@ async def execute_addtocalendar_agent(request: AddToCalendarRequest):
             action=request.action,
             manual_event=request.manual_event,
             confidence_threshold=request.confidence_threshold,
-            max_emails=request.max_emails
+            max_emails=request.max_emails,
+            **api_keys  # Pass API keys as keyword arguments
         )
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
@@ -517,8 +535,19 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
         # Import the agent
         from hushh_mcp.agents.mailerpanda.index import MassMailerAgent
         
-        # Initialize agent
-        agent = MassMailerAgent()
+        # Extract dynamic API keys for agent initialization
+        api_keys = {}
+        if request.google_api_key:
+            api_keys['google_api_key'] = request.google_api_key
+        if request.mailjet_api_key:
+            api_keys['mailjet_api_key'] = request.mailjet_api_key
+        if request.mailjet_api_secret:
+            api_keys['mailjet_api_secret'] = request.mailjet_api_secret
+        if request.api_keys:
+            api_keys.update(request.api_keys)
+            
+        # Initialize agent with dynamic API keys
+        agent = MassMailerAgent(api_keys=api_keys)
         
         # Store session for potential human-in-the-loop workflows
         active_sessions[session_id] = {
@@ -528,12 +557,13 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
             "status": "executing"
         }
         
-        # Execute agent
+        # Execute agent with dynamic API keys
         result = agent.handle(
             user_id=request.user_id,
             consent_tokens=request.consent_tokens,
             user_input=request.user_input,
-            mode=request.mode
+            mode=request.mode,
+            **api_keys  # Pass API keys as keyword arguments
         )
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
@@ -724,6 +754,10 @@ class ChanduFinanceRequest(BaseModel):
     # Education parameters
     topic: Optional[str] = Field(None, description="Educational topic")
     complexity: Optional[str] = Field(None, description="Complexity level (beginner/intermediate/advanced)")
+    
+    # API keys and credentials (passed dynamically, not hardcoded)
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for LLM features (optional)")
+    api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys as key-value pairs")
 
 class ChanduFinanceResponse(BaseModel):
     """Response model for ChanduFinance agent execution."""
@@ -818,6 +852,12 @@ async def execute_chandufinance_agent(request: ChanduFinanceRequest):
                 parameters['topic'] = request.topic
             if request.complexity is not None:
                 parameters['complexity'] = request.complexity
+        
+        # Add API keys if provided (not hardcoded)
+        if request.gemini_api_key is not None:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        if request.api_keys is not None:
+            parameters['api_keys'] = request.api_keys
         
         # Execute the agent
         result = run_agent(
@@ -916,6 +956,10 @@ class RelationshipMemoryRequest(BaseModel):
     user_input: str = Field(..., min_length=1, description="Natural language input for relationship management")
     vault_key: Optional[str] = Field(None, description="Specific vault key for data access")
     is_startup: Optional[bool] = Field(False, description="Whether this is a startup/initialization call")
+    
+    # Dynamic API key support
+    gemini_api_key: Optional[str] = Field(None, description="Dynamic Gemini API key for LLM operations")
+    api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
 
 class RelationshipMemoryResponse(BaseModel):
     """Response model for Relationship Memory agent execution."""
@@ -936,13 +980,21 @@ async def execute_relationship_memory_agent(request: RelationshipMemoryRequest):
         # Import and execute the Relationship Memory agent
         from hushh_mcp.agents.relationship_memory.index import run
         
-        # Execute the agent
+        # Extract dynamic API keys for agent initialization
+        api_keys = {}
+        if request.gemini_api_key:
+            api_keys['gemini_api_key'] = request.gemini_api_key
+        if request.api_keys:
+            api_keys.update(request.api_keys)
+            
+        # Execute the agent with dynamic API keys
         result = run(
             user_id=request.user_id,
             tokens=request.tokens,
             user_input=request.user_input,
             vault_key=request.vault_key,
-            is_startup=request.is_startup
+            is_startup=request.is_startup,
+            **api_keys  # Pass API keys as keyword arguments
         )
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
