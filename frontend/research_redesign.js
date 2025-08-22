@@ -1667,6 +1667,13 @@ ${paperText}
         this.updateStatus(message);
         // You can add more success UI here if needed
     }
+
+    escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 }
 
 // Initialize the application
