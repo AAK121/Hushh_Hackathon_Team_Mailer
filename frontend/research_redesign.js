@@ -562,15 +562,6 @@ class ResearchAgentRedesigned {
         const paperViewer = document.getElementById('paperViewer');
         
         const content = `
-            <div class="paper-header fade-in">
-                <h3 class="paper-full-title">${this.escapeHtml(paper.title)}</h3>
-                <div class="paper-full-authors">${paper.authors.map(author => this.escapeHtml(author)).join(', ')}</div>
-                <div class="paper-full-meta">
-                    <span><i class="fas fa-calendar"></i> Published: ${paper.published}</span>
-                    <span><i class="fab fa-arxiv"></i> arXiv: ${paper.arxiv_id}</span>
-                    <span><i class="fas fa-tag"></i> ${paper.categories.join(', ')}</span>
-                </div>
-            </div>
             <div class="pdf-viewer-container fade-in">
                 <div class="pdf-loading" id="pdfLoading">
                     <i class="fas fa-spinner fa-spin"></i>
