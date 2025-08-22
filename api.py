@@ -26,7 +26,7 @@ except ImportError:
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 import uvicorn
 
 # Add the project root to Python path for imports
@@ -101,7 +101,8 @@ class AddToCalendarRequest(BaseModel):
     google_api_key: Optional[str] = Field(None, description="Dynamic Google API key for AI operations")
     api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
     
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         allowed_actions = ["comprehensive_analysis", "manual_event", "analyze_only"]
         if v not in allowed_actions:
@@ -155,7 +156,8 @@ class MailerPandaRequest(BaseModel):
     mailjet_api_secret: Optional[str] = Field(None, description="Dynamic Mailjet API secret for email sending")
     api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
     
-    @validator('mode')
+    @field_validator('mode')
+    @classmethod
     def validate_mode(cls, v):
         allowed_modes = ["interactive", "headless", "demo"]
         if v not in allowed_modes:
@@ -196,7 +198,8 @@ class MailerPandaApprovalRequest(BaseModel):
     action: str = Field(..., description="Approval action")
     feedback: Optional[str] = Field(None, description="User feedback for modifications")
     
-    @validator('action')
+    @field_validator('action')
+    @classmethod
     def validate_action(cls, v):
         allowed_actions = ["approve", "reject", "modify", "regenerate"]
         if v not in allowed_actions:
@@ -1101,7 +1104,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "api:app",
         host="127.0.0.1",
-        port=8002,
+        port=8001,
         reload=False,
         log_level="info"
     )
