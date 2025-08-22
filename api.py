@@ -366,7 +366,12 @@ async def list_agents():
         "endpoints": {
             "execute": "/agents/relationship_memory/execute",
             "proactive": "/agents/relationship_memory/proactive",
-            "status": "/agents/relationship_memory/status"
+            "status": "/agents/relationship_memory/status",
+            "chat_start": "/agents/relationship_memory/chat/start",
+            "chat_message": "/agents/relationship_memory/chat/message",
+            "chat_history": "/agents/relationship_memory/chat/{session_id}/history",
+            "chat_end": "/agents/relationship_memory/chat/{session_id}",
+            "chat_sessions": "/agents/relationship_memory/chat/sessions"
         }
     }
     
@@ -1086,6 +1091,232 @@ async def get_relationship_memory_status():
             "user_input": "Natural language input for relationship management"
         }
     )
+
+# ============================================================================
+# RELATIONSHIP MEMORY AGENT - INTERACTIVE CHAT ENDPOINTS
+# ============================================================================
+
+# In-memory session storage (for production, use Redis or database)
+chat_sessions: Dict[str, Dict[str, Any]] = {}
+
+class ChatSessionRequest(BaseModel):
+    """Request model for starting a new chat session."""
+    user_id: str = Field(..., min_length=1, description="User identifier")
+    tokens: Dict[str, str] = Field(..., description="Dictionary of consent tokens for various scopes")
+    vault_key: Optional[str] = Field(None, description="Specific vault key for data access")
+    session_name: Optional[str] = Field("default", description="Name for the chat session")
+    
+    # Dynamic API key support
+    gemini_api_key: Optional[str] = Field(None, description="Dynamic Gemini API key for LLM operations")
+    api_keys: Optional[Dict[str, str]] = Field(None, description="Additional API keys for various services")
+
+class ChatSessionResponse(BaseModel):
+    """Response model for chat session operations."""
+    status: str
+    session_id: str
+    user_id: str
+    message: str
+    session_info: Optional[Dict[str, Any]] = None
+
+class ChatMessageRequest(BaseModel):
+    """Request model for sending a chat message."""
+    session_id: str = Field(..., min_length=1, description="Chat session ID")
+    message: str = Field(..., min_length=1, description="User message")
+
+class ChatMessageResponse(BaseModel):
+    """Response model for chat messages."""
+    status: str
+    session_id: str
+    user_message: str
+    agent_response: str
+    conversation_count: int
+    processing_time: float
+    timestamp: str
+
+class ChatHistoryResponse(BaseModel):
+    """Response model for chat history."""
+    status: str
+    session_id: str
+    conversation_history: List[Dict[str, Any]]
+    total_messages: int
+
+@app.post("/agents/relationship_memory/chat/start", response_model=ChatSessionResponse)
+async def start_relationship_memory_chat(request: ChatSessionRequest):
+    """Start a new interactive chat session with the Relationship Memory agent."""
+    try:
+        # Generate unique session ID
+        session_id = f"{request.user_id}_{request.session_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        # Initialize session data
+        session_data = {
+            "user_id": request.user_id,
+            "tokens": request.tokens,
+            "vault_key": request.vault_key,
+            "session_name": request.session_name,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "conversation_history": [],
+            "conversation_count": 0,
+            "api_keys": {}
+        }
+        
+        # Store dynamic API keys
+        if request.gemini_api_key:
+            session_data["api_keys"]["gemini_api_key"] = request.gemini_api_key
+        if request.api_keys:
+            session_data["api_keys"].update(request.api_keys)
+        
+        # Store session
+        chat_sessions[session_id] = session_data
+        
+        return ChatSessionResponse(
+            status="success",
+            session_id=session_id,
+            user_id=request.user_id,
+            message=f"Interactive chat session started successfully. Session ID: {session_id}",
+            session_info={
+                "session_name": request.session_name,
+                "created_at": session_data["created_at"],
+                "available_commands": [
+                    "Add contacts: 'add John with email john@example.com'",
+                    "Add memories: 'remember that Sarah loves photography'",
+                    "Set reminders: 'remind me to call Mike tomorrow'",
+                    "Show data: 'show my contacts', 'show memories'",
+                    "Get advice: 'what should I get John for his birthday?'",
+                    "Proactive check: 'proactive check'"
+                ]
+            }
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start chat session: {str(e)}"
+        )
+
+@app.post("/agents/relationship_memory/chat/message", response_model=ChatMessageResponse)
+async def send_relationship_memory_chat_message(request: ChatMessageRequest):
+    """Send a message in an existing chat session."""
+    start_time = datetime.now(timezone.utc)
+    
+    # Check if session exists
+    if request.session_id not in chat_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat session {request.session_id} not found"
+        )
+    
+    session_data = chat_sessions[request.session_id]
+    
+    try:
+        # Import and execute the Relationship Memory agent
+        from hushh_mcp.agents.relationship_memory.index import run
+        
+        # Execute the agent with session context
+        result = run(
+            user_id=session_data["user_id"],
+            tokens=session_data["tokens"],
+            user_input=request.message,
+            vault_key=session_data["vault_key"],
+            is_startup=False,
+            **session_data["api_keys"]  # Pass stored API keys
+        )
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        timestamp = datetime.now(timezone.utc).isoformat()
+        
+        # Extract agent response
+        agent_response = result.get("message", "No response from agent")
+        
+        # Update conversation history
+        session_data["conversation_count"] += 1
+        conversation_entry = {
+            "id": session_data["conversation_count"],
+            "timestamp": timestamp,
+            "user_message": request.message,
+            "agent_response": agent_response,
+            "agent_result": result,
+            "processing_time": processing_time
+        }
+        session_data["conversation_history"].append(conversation_entry)
+        
+        # Keep only last 50 messages to prevent memory bloat
+        if len(session_data["conversation_history"]) > 50:
+            session_data["conversation_history"] = session_data["conversation_history"][-50:]
+        
+        return ChatMessageResponse(
+            status="success",
+            session_id=request.session_id,
+            user_message=request.message,
+            agent_response=agent_response,
+            conversation_count=session_data["conversation_count"],
+            processing_time=processing_time,
+            timestamp=timestamp
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process chat message: {str(e)}"
+        )
+
+@app.get("/agents/relationship_memory/chat/{session_id}/history", response_model=ChatHistoryResponse)
+async def get_relationship_memory_chat_history(session_id: str):
+    """Get the conversation history for a chat session."""
+    if session_id not in chat_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat session {session_id} not found"
+        )
+    
+    session_data = chat_sessions[session_id]
+    
+    return ChatHistoryResponse(
+        status="success",
+        session_id=session_id,
+        conversation_history=session_data["conversation_history"],
+        total_messages=session_data["conversation_count"]
+    )
+
+@app.delete("/agents/relationship_memory/chat/{session_id}")
+async def end_relationship_memory_chat(session_id: str):
+    """End a chat session and clean up resources."""
+    if session_id not in chat_sessions:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chat session {session_id} not found"
+        )
+    
+    session_data = chat_sessions.pop(session_id)
+    
+    return {
+        "status": "success",
+        "message": f"Chat session {session_id} ended successfully",
+        "session_summary": {
+            "total_messages": session_data["conversation_count"],
+            "duration": f"Started at {session_data['created_at']}",
+            "user_id": session_data["user_id"]
+        }
+    }
+
+@app.get("/agents/relationship_memory/chat/sessions")
+async def list_relationship_memory_chat_sessions():
+    """List all active chat sessions."""
+    sessions_info = []
+    for session_id, session_data in chat_sessions.items():
+        sessions_info.append({
+            "session_id": session_id,
+            "user_id": session_data["user_id"],
+            "session_name": session_data["session_name"],
+            "created_at": session_data["created_at"],
+            "conversation_count": session_data["conversation_count"],
+            "last_activity": session_data["conversation_history"][-1]["timestamp"] if session_data["conversation_history"] else session_data["created_at"]
+        })
+    
+    return {
+        "status": "success",
+        "active_sessions": len(sessions_info),
+        "sessions": sessions_info
+    }
 
 # ============================================================================
 # MAIN APPLICATION
