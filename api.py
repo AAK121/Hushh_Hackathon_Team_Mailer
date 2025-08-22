@@ -23,7 +23,7 @@ try:
 except ImportError:
     print("python-dotenv not installed, using system environment variables")
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
@@ -79,6 +79,16 @@ class AgentStatusResponse(BaseModel):
     status: str
     required_scopes: List[str]
     required_inputs: Dict[str, Any]
+
+class AgentResponse(BaseModel):
+    """Standard response model for agent operations."""
+    status: str
+    agent_id: str
+    user_id: str
+    session_id: Optional[str] = None
+    results: Optional[Dict[str, Any]] = None
+    errors: Optional[List[str]] = None
+    processing_time: Optional[float] = None
 
 # ============================================================================
 # ADDTOCALENDAR AGENT MODELS
@@ -287,6 +297,24 @@ def get_agent_requirements(agent_id: str) -> Dict[str, Any]:
                 "is_startup": "Whether this is a startup/initialization call (default: False)"
             }
         }
+    elif agent_id == "agent_research":
+        return {
+            "required_tokens": ["consent_tokens (dict)"],
+            "required_scopes": [
+                "custom.temporary", "vault.read.file", "vault.write.file"
+            ],
+            "additional_requirements": {
+                "query": "Natural language research query for arXiv search",
+                "user_id": "User identifier"
+            },
+            "optional_parameters": {
+                "paper_file": "PDF file for upload and processing",
+                "text_snippet": "Text snippet for AI processing",
+                "instruction": "Processing instruction for snippets",
+                "editor_id": "Editor identifier for note management",
+                "content": "Note content for saving"
+            }
+        }
     else:
         return {"error": "Unknown agent"}
 
@@ -372,6 +400,23 @@ async def list_agents():
             "chat_history": "/agents/relationship_memory/chat/{session_id}/history",
             "chat_end": "/agents/relationship_memory/chat/{session_id}",
             "chat_sessions": "/agents/relationship_memory/chat/sessions"
+        }
+    }
+    
+    # Research agent info
+    agents["agent_research"] = {
+        "name": "Research Agent",
+        "version": "1.0.0",
+        "description": "AI-powered academic research assistant with arXiv integration and intelligent paper analysis",
+        "status": "available",
+        "requirements": get_agent_requirements("agent_research"),
+        "endpoints": {
+            "search_arxiv": "/agents/research/search/arxiv",
+            "upload": "/agents/research/upload",
+            "summary": "/agents/research/paper/{paper_id}/summary",
+            "process_snippet": "/agents/research/paper/{paper_id}/process/snippet",
+            "save_notes": "/agents/research/session/notes",
+            "status": "/agents/research/status"
         }
     }
     
@@ -1317,6 +1362,633 @@ async def list_relationship_memory_chat_sessions():
         "active_sessions": len(sessions_info),
         "sessions": sessions_info
     }
+# RESEARCH AGENT ENDPOINTS
+# ============================================================================
+
+class ArxivSearchRequest(BaseModel):
+    """Request model for arXiv search."""
+    user_id: str = Field(..., description="User identifier")
+    consent_tokens: Dict[str, str] = Field(..., description="Consent tokens for required scopes")
+    query: str = Field(..., description="Natural language research query")
+
+class SnippetProcessRequest(BaseModel):
+    """Request model for snippet processing."""
+    user_id: str = Field(..., description="User identifier")
+    consent_tokens: Dict[str, str] = Field(..., description="Consent tokens for required scopes")
+    text: str = Field(..., description="Text snippet to process")
+    instruction: str = Field(..., description="Processing instruction")
+
+class NotesRequest(BaseModel):
+    """Request model for saving notes."""
+    user_id: str = Field(..., description="User identifier")
+    consent_tokens: Dict[str, str] = Field(..., description="Consent tokens for required scopes")
+    paper_id: str = Field(..., description="Paper identifier")
+    editor_id: str = Field(..., description="Editor identifier")
+    content: str = Field(..., description="Note content")
+
+@app.post("/agents/research/search/arxiv", response_model=AgentResponse)
+async def research_search_arxiv(request: ArxivSearchRequest):
+    """
+    Search arXiv papers using natural language query optimization.
+    
+    The research agent will convert natural language queries into optimized
+    arXiv search terms for better results.
+    """
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Validate consent tokens
+        required_scopes = [ConsentScope.CUSTOM_TEMPORARY]
+        for scope in required_scopes:
+            scope_key = scope.value
+            if scope_key not in request.consent_tokens:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing consent token for scope: {scope_key}"
+                )
+            
+            token = request.consent_tokens[scope_key]
+            is_valid, error_msg, token_obj = validate_token(token, scope)
+            if not is_valid:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Invalid consent token for scope: {scope_key} - {error_msg}"
+                )
+        
+        # Execute search
+        result = await research_agent.search_arxiv(
+            user_id=request.user_id,
+            consent_tokens=request.consent_tokens,
+            query=request.query
+        )
+        
+        return {
+            "status": "success" if result["success"] else "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "session_id": result["session_id"],
+            "results": {
+                "query": result.get("query"),
+                "papers": result.get("results", []),
+                "total_found": result.get("total_papers", 0)
+            },
+            "errors": [result["error"]] if result.get("error") else [],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.post("/agents/research/upload")
+async def research_upload_paper(
+    user_id: str,
+    consent_tokens: str,  # JSON string
+    file: UploadFile = File(...)
+):
+    """Upload PDF paper for processing."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        import json
+        consent_tokens_dict = json.loads(consent_tokens)
+        
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Validate file type
+        if not file.filename.lower().endswith('.pdf'):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Only PDF files are supported"
+            )
+        
+        # Validate consent tokens
+        required_scopes = [ConsentScope.VAULT_READ_FILE, ConsentScope.VAULT_WRITE_FILE]
+        for scope in required_scopes:
+            scope_key = scope.value
+            if scope_key not in consent_tokens_dict:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing consent token for scope: {scope_key}"
+                )
+        
+        # Generate paper ID
+        import uuid
+        paper_id = f"paper_{uuid.uuid4().hex[:12]}"
+        
+        # Process upload
+        result = await research_agent.process_pdf_upload(
+            user_id=user_id,
+            consent_tokens=consent_tokens_dict,
+            paper_id=paper_id,
+            pdf_file=file
+        )
+        
+        return {
+            "status": "success" if result["success"] else "error",
+            "agent_id": "research_agent",
+            "user_id": user_id,
+            "session_id": result["session_id"],
+            "results": {
+                "paper_id": result.get("paper_id"),
+                "text_length": result.get("text_extracted", 0)
+            },
+            "errors": [result["error"]] if result.get("error") else [],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "research_agent",
+            "user_id": user_id,
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.get("/agents/research/paper/{paper_id}/summary", response_model=AgentResponse)
+async def research_get_summary(
+    paper_id: str,
+    user_id: str,
+    consent_tokens: str  # JSON string of tokens
+):
+    """Generate AI-powered summary of research paper."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        import json
+        consent_tokens_dict = json.loads(consent_tokens)
+        
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Validate consent tokens
+        required_scopes = [ConsentScope.VAULT_READ_FILE, ConsentScope.VAULT_WRITE_FILE, ConsentScope.CUSTOM_TEMPORARY]
+        for scope in required_scopes:
+            scope_key = scope.value
+            if scope_key not in consent_tokens_dict:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing consent token for scope: {scope_key}"
+                )
+        
+        # Generate summary
+        result = await research_agent.generate_paper_summary(
+            user_id=user_id,
+            consent_tokens=consent_tokens_dict,
+            paper_id=paper_id
+        )
+        
+        return {
+            "status": "success" if result["success"] else "error",
+            "agent_id": "research_agent",
+            "user_id": user_id,
+            "session_id": result["session_id"],
+            "results": {
+                "paper_id": result.get("paper_id"),
+                "summary": result.get("summary")
+            },
+            "errors": [result["error"]] if result.get("error") else [],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "research_agent", 
+            "user_id": user_id,
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.post("/agents/research/paper/{paper_id}/process/snippet", response_model=AgentResponse)
+async def research_process_snippet(
+    paper_id: str,
+    request: SnippetProcessRequest
+):
+    """Process text snippet with custom instruction."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Validate consent tokens
+        required_scopes = [ConsentScope.CUSTOM_TEMPORARY]
+        for scope in required_scopes:
+            scope_key = scope.value
+            if scope_key not in request.consent_tokens:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing consent token for scope: {scope_key}"
+                )
+        
+        # Process snippet
+        result = await research_agent.process_text_snippet(
+            user_id=request.user_id,
+            consent_tokens=request.consent_tokens,
+            paper_id=paper_id,
+            snippet=request.text,
+            instruction=request.instruction
+        )
+        
+        return {
+            "status": "success" if result["success"] else "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "session_id": result["session_id"],
+            "results": {
+                "paper_id": result.get("paper_id"),
+                "original_snippet": result.get("original_snippet"),
+                "instruction": result.get("instruction"),
+                "processed_result": result.get("processed_result")
+            },
+            "errors": [result["error"]] if result.get("error") else [],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.post("/agents/research/session/notes", response_model=AgentResponse)
+async def research_save_notes(request: NotesRequest):
+    """Save notes to vault storage."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Validate consent tokens
+        required_scopes = [ConsentScope.VAULT_WRITE_FILE]
+        for scope in required_scopes:
+            scope_key = scope.value
+            if scope_key not in request.consent_tokens:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Missing consent token for scope: {scope_key}"
+                )
+        
+        # Save notes
+        result = await research_agent.save_session_notes(
+            user_id=request.user_id,
+            consent_tokens=request.consent_tokens,
+            paper_id=request.paper_id,
+            editor_id=request.editor_id,
+            content=request.content
+        )
+        
+        return {
+            "status": "success" if result["success"] else "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "session_id": result["session_id"],
+            "results": {
+                "paper_id": result.get("paper_id"),
+                "editor_id": result.get("editor_id"),
+                "content_length": result.get("content_length")
+            },
+            "errors": [result["error"]] if result.get("error") else [],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        return {
+            "status": "error",
+            "agent_id": "research_agent",
+            "user_id": request.user_id,
+            "errors": [str(e)],
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.get("/agents/research/status", response_model=AgentStatusResponse)
+async def get_research_agent_status():
+    """Get Research agent status and requirements."""
+    return AgentStatusResponse(
+        agent_id="agent_research",
+        name="Research Agent",
+        version="1.0.0",
+        status="available",
+        required_scopes=[
+            "custom.temporary", "vault.read.file", "vault.write.file"
+        ],
+        required_inputs={
+            "query": "Natural language research query for arXiv search",
+            "paper_file": "PDF file for upload and processing",
+            "text_snippet": "Text snippet for AI processing",
+            "instruction": "Processing instruction for snippets"
+        }
+    )
+
+# ============================================================================
+# SIMPLIFIED RESEARCH ENDPOINTS FOR FRONTEND
+# ============================================================================
+
+class SimpleSearchRequest(BaseModel):
+    """Simplified search request for frontend."""
+    query: str = Field(..., description="Search query")
+    user_id: str = Field(default="demo_user", description="User ID")
+
+class SimpleChatRequest(BaseModel):
+    """Simplified chat request for frontend."""
+    message: str = Field(..., description="Chat message")
+    paper_id: str = Field(..., description="Paper ID")
+    user_id: str = Field(default="demo_user", description="User ID")
+    conversation_history: List[Dict[str, str]] = Field(default=[], description="Chat history")
+
+@app.get("/test/arxiv")
+async def test_arxiv_direct():
+    """Test arXiv API directly without workflow."""
+    try:
+        import requests
+        import feedparser
+        
+        query = "machine learning"
+        base_url = "http://export.arxiv.org/api/query?"
+        search_query = f"search_query=all:{query}"
+        params = f"{search_query}&start=0&max_results=5&sortBy=relevance&sortOrder=descending"
+        
+        print(f"Testing arXiv API with query: {query}")
+        response = requests.get(f"{base_url}{params}", timeout=10)
+        
+        if response.status_code != 200:
+            return {"error": f"arXiv API error: {response.status_code}"}
+        
+        feed = feedparser.parse(response.content)
+        papers = []
+        
+        for entry in feed.entries:
+            arxiv_id = entry.id.split('/abs/')[-1] if '/abs/' in entry.id else entry.id
+            authors = []
+            if hasattr(entry, 'authors'):
+                authors = [author.name for author in entry.authors]
+            
+            paper = {
+                "id": arxiv_id,
+                "title": entry.title.replace('\n', ' ').strip(),
+                "authors": authors,
+                "summary": entry.summary.replace('\n', ' ').strip()[:300] + "...",
+                "published": getattr(entry, 'published', '')[:10],
+                "arxiv_id": arxiv_id
+            }
+            papers.append(paper)
+        
+        return {
+            "status": "success",
+            "query": query,
+            "papers": papers,
+            "total": len(papers)
+        }
+        
+    except Exception as e:
+        return {"error": f"Test failed: {str(e)}"}
+
+@app.post("/research/search")
+async def simple_research_search(request: SimpleSearchRequest):
+    """
+    Simplified research search endpoint for frontend integration.
+    Uses direct arXiv API call for immediate results.
+    """
+    print(f"🔍 Starting search for: {request.query}")
+    
+    try:
+        import requests
+        import feedparser
+        
+        query = request.query.replace(" ", "+")  # URL encode spaces
+        
+        # Direct arXiv API call with timeout
+        base_url = "http://export.arxiv.org/api/query?"
+        search_query = f"search_query=all:{query}"
+        params = f"{search_query}&start=0&max_results=10&sortBy=relevance&sortOrder=descending"
+        
+        print(f"🌐 Calling arXiv API: {base_url}{params}")
+        response = requests.get(f"{base_url}{params}", timeout=15)
+        print(f"✅ arXiv API responded with status: {response.status_code}")
+        
+        if response.status_code != 200:
+            raise Exception(f"arXiv API error: {response.status_code}")
+        
+        # Parse XML response
+        print("📝 Parsing XML response...")
+        feed = feedparser.parse(response.content)
+        print(f"📊 Found {len(feed.entries)} entries")
+        
+        papers = []
+        for i, entry in enumerate(feed.entries):
+            print(f"Processing entry {i+1}...")
+            
+            # Extract authors
+            authors = []
+            if hasattr(entry, 'authors'):
+                authors = [author.name for author in entry.authors]
+            elif hasattr(entry, 'author'):
+                authors = [entry.author]
+            
+            # Extract arXiv ID
+            arxiv_id = entry.id.split('/abs/')[-1] if '/abs/' in entry.id else entry.id
+            
+            # Extract categories
+            categories = []
+            if hasattr(entry, 'tags'):
+                categories = [tag.term for tag in entry.tags]
+            
+            paper = {
+                "id": arxiv_id,
+                "title": entry.title.replace('\n', ' ').strip(),
+                "authors": authors,
+                "summary": entry.summary.replace('\n', ' ').strip(),
+                "published": getattr(entry, 'published', '')[:10] if hasattr(entry, 'published') else "Unknown",
+                "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
+                "arxiv_id": arxiv_id,
+                "categories": categories[:3]  # Limit categories
+            }
+            papers.append(paper)
+        
+        print(f"🎉 Successfully processed {len(papers)} papers")
+        
+        result = {
+            "query": request.query,
+            "papers": papers,
+            "metadata": {
+                "total_found": len(papers),
+                "search_time": 0.5,
+                "optimized_query": request.query
+            }
+        }
+        
+        print(f"📤 Returning result with {len(papers)} papers")
+        return result
+            
+    except requests.exceptions.Timeout:
+        print("⏰ arXiv API timeout")
+        return {
+            "query": request.query,
+            "papers": [],
+            "metadata": {
+                "total_found": 0,
+                "search_time": 0.0,
+                "optimized_query": request.query,
+                "error": "Search timed out"
+            }
+        }
+    except Exception as e:
+        print(f"❌ Search error: {e}")
+        return {
+            "query": request.query,
+            "papers": [],
+            "metadata": {
+                "total_found": 0,
+                "search_time": 0.0,
+                "optimized_query": request.query,
+                "error": str(e)
+            }
+        }
+
+@app.post("/research/chat")
+async def simple_research_chat(request: SimpleChatRequest):
+    """
+    Simplified chat endpoint for frontend integration.
+    Automatically handles consent tokens for demo purposes.
+    """
+    try:
+        # Import research agent
+        from hushh_mcp.agents.research_agent.index import research_agent
+        
+        # Create temporary consent tokens for demo
+        consent_tokens = {
+            "custom.temporary": "demo_token",
+            "vault.read.file": "demo_token",
+            "vault.write.file": "demo_token"
+        }
+        
+        # Execute chat with research agent
+        result = await research_agent.chat_about_paper(
+            user_id=request.user_id,
+            consent_tokens=consent_tokens,
+            paper_id=request.paper_id,
+            message=request.message,
+            conversation_history=request.conversation_history
+        )
+        
+        if result["success"]:
+            return {
+                "response": result.get("response", "I'm sorry, I couldn't process your message."),
+                "paper_id": request.paper_id,
+                "conversation_id": result.get("session_id")
+            }
+        else:
+            return {
+                "response": "I'm sorry, I encountered an error processing your message. Please try again.",
+                "paper_id": request.paper_id,
+                "error": result.get("error")
+            }
+            
+    except Exception as e:
+        print(f"Chat error: {e}")
+        return {
+            "response": "I'm sorry, I encountered a technical error. Please try again later.",
+            "paper_id": request.paper_id,
+            "error": str(e)
+        }
+
+@app.get("/research/paper/{paper_id}/content")
+async def get_paper_content(paper_id: str):
+    """
+    Fetch and extract content from a paper PDF.
+    Returns the full text content of the paper.
+    """
+    print(f"📄 Fetching content for paper: {paper_id}")
+    
+    try:
+        import requests
+        import PyPDF2
+        from io import BytesIO
+        
+        # Construct PDF URL
+        pdf_url = f"https://arxiv.org/pdf/{paper_id}.pdf"
+        print(f"🌐 Downloading PDF from: {pdf_url}")
+        
+        # Download PDF with timeout
+        response = requests.get(pdf_url, timeout=30)
+        
+        if response.status_code != 200:
+            raise Exception(f"Failed to download PDF: {response.status_code}")
+        
+        print(f"✅ PDF downloaded, size: {len(response.content)} bytes")
+        
+        # Extract text from PDF
+        pdf_file = BytesIO(response.content)
+        pdf_reader = PyPDF2.PdfReader(pdf_file)
+        
+        text_content = ""
+        total_pages = len(pdf_reader.pages)
+        print(f"📖 Extracting text from {total_pages} pages...")
+        
+        for page_num in range(total_pages):
+            try:
+                page = pdf_reader.pages[page_num]
+                page_text = page.extract_text()
+                text_content += f"\n--- Page {page_num + 1} ---\n{page_text}\n"
+            except Exception as e:
+                print(f"⚠️ Error extracting page {page_num + 1}: {e}")
+                text_content += f"\n--- Page {page_num + 1} ---\n[Error extracting text from this page]\n"
+        
+        print(f"✅ Extracted {len(text_content)} characters from PDF")
+        
+        # Clean up the text
+        cleaned_text = text_content.replace('\x00', '').strip()
+        
+        return {
+            "paper_id": paper_id,
+            "content": cleaned_text,
+            "pages": total_pages,
+            "content_length": len(cleaned_text),
+            "pdf_url": pdf_url,
+            "status": "success"
+        }
+        
+    except requests.exceptions.Timeout:
+        print("⏰ PDF download timed out")
+        return {
+            "paper_id": paper_id,
+            "content": "Error: PDF download timed out. The paper may be too large or the server is slow.",
+            "error": "timeout",
+            "status": "error"
+        }
+    except Exception as e:
+        print(f"❌ Error fetching paper content: {e}")
+        return {
+            "paper_id": paper_id,
+            "content": f"Error loading paper content: {str(e)}",
+            "error": str(e),
+            "status": "error"
+        }
 
 # ============================================================================
 # MAIN APPLICATION
@@ -1331,6 +2003,7 @@ if __name__ == "__main__":
     print("   - MailerPanda Agent: /agents/mailerpanda/")
     print("   - ChanduFinance Agent: /agents/chandufinance/")
     print("   - Relationship Memory Agent: /agents/relationship_memory/")
+    print("   - Research Agent: /agents/research/")
     
     uvicorn.run(
         "api:app",
