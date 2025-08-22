@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Agent Backend Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background-color: #0056b3; }
+        textarea { width: 100%; height: 150px; margin: 10px 0; }
+        .endpoint-section { border: 1px solid #ddd; padding: 15px; margin: 15px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Research Agent Backend Test</h1>
+        <p>This page tests the Research Agent API endpoints.</p>
+        
+        <div class="endpoint-section">
+            <h3>1. Health Check</h3>
+            <button onclick="testHealth()">Test Health</button>
+            <div id="health-result"></div>
+        </div>
+
+        <div class="endpoint-section">
+            <h3>2. Agent Discovery</h3>
+            <button onclick="testAgents()">Test Agent Discovery</button>
+            <div id="agents-result"></div>
+        </div>
+
+        <div class="endpoint-section">
+            <h3>3. Research Agent Status</h3>
+            <button onclick="testResearchStatus()">Test Research Agent Status</button>
+            <div id="research-status-result"></div>
+        </div>
+
+        <div class="endpoint-section">
+            <h3>4. ArXiv Search (Mock Test)</h3>
+            <p>Note: This test uses mock tokens and may fail due to consent validation.</p>
+            <input type="text" id="search-query" placeholder="Enter research query..." value="machine learning healthcare">
+            <br>
+            <button onclick="testArxivSearch()">Test ArXiv Search</button>
+            <div id="arxiv-result"></div>
+        </div>
+
+        <div class="endpoint-section">
+            <h3>API Response Log</h3>
+            <textarea id="response-log" readonly></textarea>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8001';
+        
+        function log(message) {
+            const logArea = document.getElementById('response-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logArea.value += `[${timestamp}] ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+
+        function showResult(elementId, isSuccess, message) {
+            const element = document.getElementById(elementId);
+            element.className = `test-result ${isSuccess ? 'success' : 'error'}`;
+            element.innerHTML = message;
+        }
+
+        async function testHealth() {
+            try {
+                log('Testing /health endpoint...');
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('health-result', true, `✅ Health check passed! Status: ${data.status}`);
+                    log(`SUCCESS: Health check - ${JSON.stringify(data)}`);
+                } else {
+                    showResult('health-result', false, `❌ Health check failed: ${response.status}`);
+                    log(`ERROR: Health check failed - ${response.status}`);
+                }
+            } catch (error) {
+                showResult('health-result', false, `❌ Connection error: ${error.message}`);
+                log(`ERROR: Health check - ${error.message}`);
+            }
+        }
+
+        async function testAgents() {
+            try {
+                log('Testing /agents endpoint...');
+                const response = await fetch(`${API_BASE}/agents`);
+                const data = await response.json();
+                
+                if (response.ok && data.agents && data.agents.agent_research) {
+                    const researchAgent = data.agents.agent_research;
+                    showResult('agents-result', true, 
+                        `✅ Research Agent found! Name: ${researchAgent.name}, Version: ${researchAgent.version}`);
+                    log(`SUCCESS: Agents discovery - Found ${data.total_agents} agents`);
+                } else {
+                    showResult('agents-result', false, '❌ Research Agent not found in agents list');
+                    log(`ERROR: Research agent not found - ${JSON.stringify(data)}`);
+                }
+            } catch (error) {
+                showResult('agents-result', false, `❌ Connection error: ${error.message}`);
+                log(`ERROR: Agents discovery - ${error.message}`);
+            }
+        }
+
+        async function testResearchStatus() {
+            try {
+                log('Testing /agents/research/status endpoint...');
+                const response = await fetch(`${API_BASE}/agents/research/status`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('research-status-result', true, 
+                        `✅ Research Agent status: ${data.status} - ${data.name} v${data.version}`);
+                    log(`SUCCESS: Research status - ${JSON.stringify(data)}`);
+                } else {
+                    showResult('research-status-result', false, `❌ Status check failed: ${response.status}`);
+                    log(`ERROR: Research status failed - ${response.status}`);
+                }
+            } catch (error) {
+                showResult('research-status-result', false, `❌ Connection error: ${error.message}`);
+                log(`ERROR: Research status - ${error.message}`);
+            }
+        }
+
+        async function testArxivSearch() {
+            try {
+                const query = document.getElementById('search-query').value;
+                log(`Testing arXiv search with query: "${query}"...`);
+                
+                // Mock consent tokens (these will likely fail validation)
+                const mockTokens = {
+                    "custom.temporary": "HCT:mock_temp_token_test_user",
+                    "vault.read.file": "HCT:mock_read_token_test_user",
+                    "vault.write.file": "HCT:mock_write_token_test_user"
+                };
+
+                const payload = {
+                    user_id: "test_user_123",
+                    consent_tokens: mockTokens,
+                    query: query
+                };
+
+                const response = await fetch(`${API_BASE}/agents/research/search/arxiv`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.status === 'success') {
+                    const results = data.results || {};
+                    const papers = results.papers || [];
+                    showResult('arxiv-result', true, 
+                        `✅ ArXiv search successful! Found ${papers.length} papers. Query: "${results.query}"`);
+                    log(`SUCCESS: ArXiv search - Found ${papers.length} papers`);
+                } else {
+                    // Expected to fail due to mock tokens, but at least we can see the error
+                    const errorMsg = data.errors ? data.errors.join(', ') : data.error || 'Unknown error';
+                    showResult('arxiv-result', false, 
+                        `⚠️ ArXiv search failed (expected with mock tokens): ${errorMsg}`);
+                    log(`EXPECTED ERROR: ArXiv search - ${errorMsg}`);
+                }
+            } catch (error) {
+                showResult('arxiv-result', false, `❌ Connection error: ${error.message}`);
+                log(`ERROR: ArXiv search - ${error.message}`);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('response-log').value = '';
+        }
+
+        // Auto-run health check on page load
+        window.onload = function() {
+            log('Research Agent Backend Test Page Loaded');
+            testHealth();
+        };
+    </script>
+</body>
+</html>
