@@ -1,0 +1,377 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
+
+.app-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 2rem;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: #333;
+}
+
+.card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  padding: 2rem;
+  width: 100%;
+  max-width: 600px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeIn 0.5s ease-in-out;
+  margin: 0 1rem;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card h2 {
+  margin: 0;
+  color: #1a202c;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1.5rem;
+}
+
+.card p {
+  margin: 0;
+  color: #4a5568;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* File Input */
+.file-input-wrapper {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  width: 100%;
+}
+
+.btn-file {
+  border: 1px solid #d1d5db;
+  color: #374151;
+  background-color: white;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  text-align: center;
+}
+
+.btn-file:hover {
+  background-color: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.file-input-wrapper input[type=file] {
+  font-size: 100px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+/* Checkbox Group */
+.checkbox-group {
+  margin: 1rem 0;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+  transition: all 0.2s ease-in-out;
+  font-size: 0.95rem;
+  color: #374151;
+}
+
+.checkbox-label:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+.checkbox-label:has(input:checked) {
+  background-color: #eff6ff;
+  border-color: #4f46e5;
+  color: #1e40af;
+}
+
+.checkmark {
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+
+/* Input Group */
+.input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.main-input {
+  flex-grow: 1;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.main-input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+.input-group button {
+  border: none;
+  background-color: #4f46e5;
+  color: white;
+  border-radius: 8px;
+  width: 50px;
+  height: 50px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.input-group button:hover {
+  background-color: #4338ca;
+}
+
+.input-group button:disabled {
+  background-color: #a5b4fc;
+  cursor: not-allowed;
+}
+
+/* Email Display */
+.email-display {
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: left;
+}
+
+.email-display p {
+  text-align: left;
+  margin-bottom: 0.5rem;
+}
+
+.email-content {
+  margin-top: 1rem;
+  white-space: pre-wrap; /* This preserves newlines from the string */
+  line-height: 1.6;
+  color: #374151;
+}
+
+.email-display strong {
+  color: #111827;
+  font-weight: 600;
+}
+
+/* Suggestion Box */
+.suggestion-box {
+  width: 100%;
+  min-height: 100px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+
+.suggestion-box:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Button Groups */
+.button-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.button-group button {
+  flex-grow: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  min-width: 120px;
+}
+
+/* Button Styles */
+button.btn-approve {
+  background-color: #10b981;
+  color: white;
+}
+
+button.btn-approve:hover {
+  background-color: #059669;
+  transform: translateY(-1px);
+}
+
+button.btn-suggest {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+button.btn-suggest:hover {
+  background-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+button.btn-secondary {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+button.btn-secondary:hover {
+  background-color: #d1d5db;
+  transform: translateY(-1px);
+}
+
+button.btn-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+button.btn-danger:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+.btn-back {
+  background-color: #6b7280;
+  color: white;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease-in-out;
+  align-self: flex-start;
+}
+
+.btn-back:hover {
+  background-color: #4b5563;
+  transform: translateY(-1px);
+}
+
+/* Confirmation Card */
+.confirmation-card {
+  border-left: 4px solid #f59e0b;
+}
+
+.confirmation-card h2 {
+  color: #92400e;
+}
+
+/* Button disabled states */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+button:disabled:hover {
+  transform: none !important;
+}
+
+/* Responsive design */
+@media (max-width: 640px) {
+  .app-container {
+    padding-top: 1rem;
+  }
+  
+  .card {
+    margin: 0 0.5rem;
+    padding: 1.5rem;
+  }
+  
+  .button-group {
+    flex-direction: column;
+  }
+  
+  .button-group button {
+    width: 100%;
+  }
+  
+  .input-group {
+    flex-direction: column;
+  }
+  
+  .input-group button {
+    width: 100%;
+    height: 44px;
+  }
+}
+
+/* Loading state animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.loading {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Success state */
+.card h2:has-text("✅") {
+  color: #10b981;
+}
+
+/* Focus styles for accessibility */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid #4f46e5;
+  outline-offset: 2px;
+}

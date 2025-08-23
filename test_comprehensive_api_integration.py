@@ -251,7 +251,7 @@ class APIIntegrationTester:
         payload = {
             "user_id": TEST_USER_ID,
             "user_input": "Create a welcome email campaign for new customers",
-            "mode": "demo",
+            "mode": "interactive",
             "consent_tokens": {
                 "vault.read.email": INTEGRATION_TOKENS["vault.read.email"],
                 "vault.write.email": INTEGRATION_TOKENS["vault.write.email"],

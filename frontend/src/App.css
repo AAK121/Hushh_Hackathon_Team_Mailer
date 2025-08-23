@@ -1,0 +1,597 @@
+/* Inter font import */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+/* Reset and base styles */
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Email content styling */
+.prose {
+  line-height: 1.7;
+}
+
+.prose p {
+  margin-bottom: 1rem;
+}
+
+/* Animation classes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* Focus styles */
+.focus\:ring-2:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Button hover effects */
+.hover\:shadow-md:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Loading animation */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Custom utilities */
+.min-w-0 {
+  min-width: 0;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Glow Button Styles */
+.glow-button {
+  --bg-color: #0F0E47;
+  --text-color: #f1f5f9;
+  --glow-primary: #8686AC;
+  --glow-secondary: #505081;
+  --glow-accent: #272757;
+
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  padding: 14px 30px;
+  height: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 25px;
+  cursor: pointer;
+  outline: none;
+  white-space: nowrap;
+  user-select: none;
+  appearance: none;
+  background: var(--bg-color);
+  color: var(--text-color);
+  margin: 1px;
+  position: relative;
+  border: none;
+  transition: all 0.15s ease;
+  gap: 8px;
+}
+
+.glow-button__border {
+  position: absolute;
+  border-radius: 1000px;
+  top: -2px;
+  bottom: -2px;
+  right: -2px;
+  left: -2px;
+  z-index: -1;
+  background: var(--glow-secondary);
+  overflow: hidden;
+}
+
+.glow-button__border-light {
+  background: var(--glow-primary);
+  z-index: 2;
+  filter: blur(15px);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.5s ease;
+  opacity: 0;
+}
+
+.glow-button__glow {
+  position: absolute;
+  background: var(--glow-accent);
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: -10;
+  overflow: hidden;
+  opacity: 0.4;
+  transition: opacity 0.5s ease;
+  filter: blur(15px);
+  -webkit-filter: blur(15px);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+}
+
+.glow-button__glow-light {
+  background: var(--glow-secondary);
+  z-index: 3;
+  opacity: 0;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.5s ease;
+}
+
+.glow-button:hover .glow-button__glow {
+  opacity: 1;
+}
+
+.glow-button:hover .glow-button__glow-light {
+  opacity: 1;
+}
+
+.glow-button:hover .glow-button__border-light {
+  opacity: 1;
+}
+
+.glow-button--disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.glow-button--disabled:hover .glow-button__glow {
+  opacity: 0.4;
+}
+
+.glow-button--disabled:hover .glow-button__glow-light {
+  opacity: 0;
+}
+
+.glow-button--disabled:hover .glow-button__border-light {
+  opacity: 0;
+}
+
+/* Color variants */
+.glow-button--emerald {
+  --glow-primary: #10b981;
+  --glow-secondary: #059669;
+  --glow-accent: #34d399;
+}
+
+.glow-button--purple {
+  --glow-primary: #8b5cf6;
+  --glow-secondary: #7c3aed;
+  --glow-accent: #a78bfa;
+}
+
+.glow-button--amber {
+  --glow-primary: #f59e0b;
+  --glow-secondary: #d97706;
+  --glow-accent: #fbbf24;
+}
+
+/* Neumorphic Button Styles */
+.button-67 {
+  align-items: center;
+  background: rgba(245, 245, 250, 0.1);
+  border: 0;
+  border-radius: 8px;
+  box-shadow: -10px -10px 30px 0 rgba(255, 255, 255, 0.1), 10px 10px 30px 0 rgba(29, 13, 202, 0.1);
+  box-sizing: border-box;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  font-family: "Cascadia Code", Consolas, Monaco, "Andale Mono", "Ubuntu Mono", monospace;
+  font-size: 1rem;
+  justify-content: center;
+  line-height: 1.5rem;
+  padding: 15px;
+  position: relative;
+  text-align: left;
+  transition: .2s;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  white-space: pre;
+  width: 100%;
+  word-break: normal;
+  word-spacing: normal;
+  backdrop-filter: blur(10px);
+}
+
+.button-67:hover {
+  background: rgba(248, 248, 255, 0.15);
+  box-shadow: -15px -15px 30px 0 rgba(255, 255, 255, 0.15), 15px 15px 30px 0 rgba(29, 13, 202, 0.15);
+  transform: translateY(-1px);
+}
+
+@media (min-width: 768px) {
+  .button-67 {
+    padding: 20px;
+  }
+}
+
+/* Slider styles for AI Calendar Agent */
+.slider {
+  background: linear-gradient(to right, var(--primary-medium) 0%, var(--primary-light) 100%);
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: 2px solid var(--primary-medium);
+  box-shadow: 0 0 0 1px #ffffff, 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.slider::-moz-range-thumb {
+  height: 20px;
+  width: 20px;
+  border-radius: 50%;
+  background: #ffffff;
+  cursor: pointer;
+  border: 2px solid var(--primary-medium);
+  box-shadow: 0 0 0 1px #ffffff, 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Modern OAuth Form Styles */
+.oauth-form {
+  --background: #8686AC;
+  --input-focus: #272757;
+  --font-color: #f1f5f9;
+  --font-color-sub: #8686AC;
+  --bg-color: rgba(39, 39, 87, 0.2);
+  --main-color: #f1f5f9;
+  padding: 40px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 20px;
+  border-radius: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  max-width: 400px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.oauth-form > .form-title {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 28px;
+  margin-bottom: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.oauth-form > .form-title > span {
+  font-family: system-ui, -apple-system, sans-serif;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 400;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+.oauth-separator {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.oauth-separator > div {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+.oauth-separator > span {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: system-ui, -apple-system, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.oauth-button {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 20px;
+  width: 100%;
+  height: 50px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.oauth-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.1));
+  z-index: -1;
+  transition: all 0.3s ease;
+  border-radius: 12px;
+}
+
+.oauth-button:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.oauth-button:hover::before {
+  width: 100%;
+}
+
+.oauth-button:active {
+  transform: translateY(0);
+}
+
+.oauth-form > .oauth-input {
+  width: 100%;
+  height: 50px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  font-weight: 500;
+  color: #000000;
+  padding: 0 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.oauth-form > .oauth-input:focus {
+  border-color: var(--primary-light);
+  box-shadow: 0 0 0 3px rgba(134, 134, 172, 0.2);
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.oauth-form > .oauth-input::placeholder {
+  color: rgba(0, 0, 0, 0.6);
+  font-weight: 400;
+}
+
+.oauth-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Primary action button */
+.oauth-button--primary {
+  background: linear-gradient(135deg, var(--primary-medium), var(--primary-dark));
+  border: 2px solid var(--primary-medium);
+  color: #ffffff;
+  font-weight: 700;
+  margin-top: 10px;
+}
+
+.oauth-button--primary:hover {
+  background: linear-gradient(135deg, var(--primary-dark), var(--primary-main));
+  border-color: var(--primary-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(80, 80, 129, 0.3);
+}
+
+/* Google button specific styling */
+.oauth-button--google:hover {
+  background-color: rgba(66, 133, 244, 0.1);
+  border-color: rgba(66, 133, 244, 0.3);
+}
+
+/* GitHub button specific styling */
+.oauth-button--github:hover {
+  background-color: rgba(36, 41, 46, 0.2);
+  border-color: rgba(36, 41, 46, 0.4);
+}
+
+/* Sidebar Button Hover Effects - Based on provided CSS */
+.sidebar-button {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 250ms;
+}
+
+.sidebar-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background-color: #212121;
+  z-index: -1;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  transition: all 250ms;
+  border-radius: inherit;
+}
+
+.sidebar-button:hover {
+  color: #e8e8e8;
+}
+
+.sidebar-button:hover::before {
+  width: 100%;
+}
+
+/* Mass Mailing Button Hover Effect */
+.mass-mailing-button {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 250ms;
+}
+
+.mass-mailing-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(135deg, #d97706, #dc2626);
+  z-index: -1;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  transition: all 250ms;
+  border-radius: inherit;
+}
+
+.mass-mailing-button:hover {
+  color: #e8e8e8;
+}
+
+.mass-mailing-button:hover::before {
+  width: 100%;
+}
+
+/* AI Calendar Agent Button Hover Effect */
+.ai-calendar-button {
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  transition: all 250ms;
+}
+
+.ai-calendar-button::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(135deg, #1e40af, #7c3aed);
+  z-index: -1;
+  -webkit-box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  box-shadow: 4px 8px 19px -3px rgba(0, 0, 0, 0.27);
+  transition: all 250ms;
+  border-radius: inherit;
+}
+
+.ai-calendar-button:hover {
+  color: #e8e8e8;
+}
+
+.ai-calendar-button:hover::before {
+  width: 100%;
+}
+
+/* Responsive design */
+@media (max-width: 480px) {
+  .oauth-form {
+    padding: 30px 20px;
+    margin: 20px;
+  }
+  
+  .oauth-button {
+    height: 45px;
+    font-size: 14px;
+  }
+  
+  .oauth-form > .oauth-input {
+    height: 45px;
+    font-size: 14px;
+  }
+}

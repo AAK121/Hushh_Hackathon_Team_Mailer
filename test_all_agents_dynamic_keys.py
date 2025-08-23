@@ -109,7 +109,7 @@ def run_comprehensive_dynamic_api_test():
     mailerpanda_payload = {
         "user_id": TEST_USER_ID,
         "user_input": "Create a welcome email campaign",
-        "mode": "demo",
+        "mode": "interactive",
         "consent_tokens": {
             "vault.read.email": TEST_TOKEN,
             "vault.write.email": TEST_TOKEN

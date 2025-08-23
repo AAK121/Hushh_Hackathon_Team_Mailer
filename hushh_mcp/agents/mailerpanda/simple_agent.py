@@ -79,8 +79,6 @@ def run(user_id: str, consent_tokens: Dict[str, str], user_input: str, mode: str
         
         if mode == "interactive":
             return agent.interactive_mode(user_input, **kwargs)
-        elif mode == "demo":
-            return agent.demo_mode(user_input, **kwargs) 
         elif mode == "headless":
             return agent.headless_mode(user_input, **kwargs)
         else:

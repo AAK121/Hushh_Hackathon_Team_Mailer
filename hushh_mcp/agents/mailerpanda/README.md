@@ -1,10 +1,10 @@
 # 📧 MailerPanda Agent
 
-**Version:** 3.0.0  
+**Version:** 3.1.0  
 **Agent ID:** `agent_mailerpanda`  
 **Framework:** HushhMCP v1.0  
 
-> 🐼 Advanced AI-powered mass mailer agent with complete privacy-first architecture, consent validation, and cross-agent communication capabilities.
+> 🐼 Advanced AI-powered mass mailer agent with complete privacy-first architecture, consent validation, cross-agent communication capabilities, and intelligent description-based email personalization.
 
 ## 🔗 Frontend-Backend Integration
 
@@ -355,6 +355,52 @@ export default {
 - Uses Gemini 2.0 Flash for intelligent composition
 - Context-aware email generation
 - Maintains brand consistency
+
+### 2.1. ✨ NEW: Description-Based Email Personalization
+**Version 3.1.0 Feature**
+
+Intelligently customizes emails based on individual contact descriptions in Excel files:
+
+#### 📊 **Excel File Enhancement**
+```
+| name     | email              | company_name | description                           |
+|----------|-------------------|--------------|---------------------------------------|
+| John     | john@company.com  | TechCorp     | Long-time customer, prefers technical details |
+| Sarah    | sarah@startup.io  | StartupX     | New to our services, needs gentle introduction |
+| Michael  | mike@enterprise.com| BigCorp      | Executive level, keep it brief and business-focused |
+```
+
+#### 🎯 **How It Works**
+1. **Detection**: Automatically detects `description` column in Excel files
+2. **AI Personalization**: Uses Gemini AI to customize base template for each contact
+3. **Context Integration**: Incorporates individual descriptions naturally into emails
+4. **Fallback**: Uses standard template for contacts without descriptions
+5. **Consent Validation**: Full HushMCP consent validation for AI personalization
+
+#### 🔧 **Frontend Integration**
+```javascript
+const response = await fetch('/agents/mailerpanda/execute', {
+  method: 'POST',
+  body: JSON.stringify({
+    user_id: "user_123",
+    user_input: "Create welcome emails for new customers",
+    mode: "interactive",
+    // Excel file with descriptions will be automatically detected
+    consent_tokens: {
+      "vault.read.email": "HCT:token",
+      "vault.write.email": "HCT:token", 
+      "content_generation": "HCT:token"  // Required for personalization
+    }
+  })
+});
+```
+
+#### 📋 **Benefits**
+- **Higher Engagement**: Personalized content increases open and click rates
+- **Relevant Messaging**: Context-aware content for different customer types
+- **Efficiency**: Automatic personalization without manual effort
+- **Flexibility**: Works alongside existing placeholder system
+- **Privacy-First**: Full consent validation for AI operations
 
 ### 3. 👥 Human Approval
 - Interactive review and approval process

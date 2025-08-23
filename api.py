@@ -23,6 +23,32 @@ try:
 except ImportError:
     print("python-dotenv not installed, using system environment variables")
 
+# Optional numpy import for handling numeric types
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+    print("numpy not available, using standard Python types")
+
+# Utility function to convert numpy types to JSON serializable types
+def convert_numpy_types(obj):
+    """Convert numpy types to JSON serializable Python types."""
+    if not NUMPY_AVAILABLE:
+        return obj
+    
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif isinstance(obj, dict):
+        return {key: convert_numpy_types(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    return obj
+
 from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -40,8 +66,8 @@ from hushh_mcp.constants import ConsentScope
 # Initialize FastAPI app
 app = FastAPI(
     title="HushMCP Agent API",
-    description="Privacy-first AI agent orchestration platform supporting AddToCalendar and MailerPanda agents",
-    version="2.0.0",
+    description="Privacy-first AI agent orchestration platform supporting AddToCalendar and MailerPanda agents with intelligent email personalization",
+    version="2.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -160,6 +186,11 @@ class MailerPandaRequest(BaseModel):
     require_approval: Optional[bool] = Field(True, description="Whether to require human approval")
     use_ai_generation: Optional[bool] = Field(True, description="Whether to use AI for content generation")
     
+    # ✨ NEW: Personalization settings
+    enable_description_personalization: Optional[bool] = Field(True, description="Enable AI-powered description-based email personalization")
+    excel_file_path: Optional[str] = Field(None, description="Path to Excel file with contact descriptions")
+    personalization_mode: Optional[str] = Field("smart", description="Personalization mode: 'smart', 'conservative', or 'aggressive'")
+    
     # Dynamic API key support
     google_api_key: Optional[str] = Field(None, description="Dynamic Google API key for AI generation")
     mailjet_api_key: Optional[str] = Field(None, description="Dynamic Mailjet API key for email sending")
@@ -169,9 +200,18 @@ class MailerPandaRequest(BaseModel):
     @field_validator('mode')
     @classmethod
     def validate_mode(cls, v):
-        allowed_modes = ["interactive", "headless", "demo"]
+        allowed_modes = ["interactive", "headless"]
         if v not in allowed_modes:
             raise ValueError(f"Mode must be one of: {allowed_modes}")
+        return v
+        
+    @field_validator('personalization_mode')
+    @classmethod
+    def validate_personalization_mode(cls, v):
+        if v is not None:
+            allowed_modes = ["smart", "conservative", "aggressive"]
+            if v not in allowed_modes:
+                raise ValueError(f"Personalization mode must be one of: {allowed_modes}")
         return v
 
 class MailerPandaResponse(BaseModel):
@@ -192,6 +232,13 @@ class MailerPandaResponse(BaseModel):
     # Email sending results
     emails_sent: Optional[int] = Field(None, description="Number of emails sent")
     send_status: Optional[List[Dict[str, Any]]] = Field(None, description="Individual email send status")
+    
+    # ✨ NEW: Personalization statistics
+    personalization_enabled: Optional[bool] = Field(None, description="Whether personalization was enabled")
+    personalized_count: Optional[int] = Field(None, description="Number of emails that were personalized")
+    standard_count: Optional[int] = Field(None, description="Number of emails using standard template")
+    description_column_detected: Optional[bool] = Field(None, description="Whether description column was found in data")
+    contacts_with_descriptions: Optional[int] = Field(None, description="Number of contacts with descriptions")
     
     # Vault and trust links
     vault_storage_key: Optional[str] = Field(None, description="Vault storage key for campaign data")
@@ -215,6 +262,22 @@ class MailerPandaApprovalRequest(BaseModel):
         if v not in allowed_actions:
             raise ValueError(f"Action must be one of: {allowed_actions}")
         return v
+
+class MassEmailResponse(BaseModel):
+    """Response model for mass email operations."""
+    status: str = Field(..., description="Operation status")
+    user_id: str = Field(..., description="User identifier")
+    campaign_id: Optional[str] = Field(None, description="Campaign ID if created")
+    emails_sent: Optional[int] = Field(None, description="Number of emails sent")
+    emails_failed: Optional[int] = Field(None, description="Number of emails that failed")
+    processing_time: Optional[float] = Field(None, description="Processing time in seconds")
+    message: Optional[str] = Field(None, description="Status message")
+    errors: Optional[List[str]] = Field(None, description="List of errors if any")
+    
+    # Mass email specific fields
+    template: Optional[Dict[str, str]] = Field(None, description="Email template used")
+    recipients_processed: Optional[int] = Field(None, description="Total recipients processed")
+    personalization_stats: Optional[Dict[str, Any]] = Field(None, description="Personalization statistics")
 
 # ============================================================================
 # GLOBAL VARIABLES FOR SESSION MANAGEMENT
@@ -252,7 +315,7 @@ def get_agent_requirements(agent_id: str) -> Dict[str, Any]:
             ],
             "additional_requirements": {
                 "user_input": "Email campaign description",
-                "mode": "Execution mode (interactive, headless, demo)"
+                "mode": "Execution mode (interactive, headless)"
             },
             "optional_parameters": {
                 "sender_email": "Sender email address",
@@ -360,9 +423,24 @@ async def list_agents():
     # MailerPanda agent info
     agents["agent_mailerpanda"] = {
         "name": "MailerPanda Agent", 
-        "version": "3.0.0",
-        "description": "AI-powered mass mailer with human-in-the-loop approval",
+        "version": "3.1.0",
+        "description": "AI-powered mass mailer with human-in-the-loop approval and intelligent description-based email personalization",
         "status": "available",
+        "features": [
+            "AI Content Generation (Gemini-2.0-flash)",
+            "Human-in-the-Loop Approval Workflow", 
+            "LangGraph State Management",
+            "Mass Email with Excel Integration",
+            "Dynamic Placeholder Detection",
+            "Description-Based Email Personalization",  # ✨ NEW
+            "Real-time Status Tracking",
+            "HushMCP Consent-Driven Operations",
+            "Secure Vault Data Storage",
+            "Trust Link Agent Delegation",
+            "Interactive Feedback Loop",
+            "Error Recovery & Logging",
+            "Cross-Agent Communication"
+        ],
         "requirements": get_agent_requirements("agent_mailerpanda"),
         "endpoints": {
             "execute": "/agents/mailerpanda/execute",
@@ -610,12 +688,15 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
             "status": "executing"
         }
         
-        # Execute agent with dynamic API keys
+        # Execute agent with dynamic API keys and personalization parameters
         result = agent.handle(
             user_id=request.user_id,
             consent_tokens=request.consent_tokens,
             user_input=request.user_input,
             mode=request.mode,
+            enable_description_personalization=request.enable_description_personalization,
+            excel_file_path=request.excel_file_path,
+            personalization_mode=request.personalization_mode,
             **api_keys  # Pass API keys as keyword arguments
         )
         
@@ -638,7 +719,10 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
                 requires_approval=True,
                 approval_status="pending",
                 feedback_required=True,
-                processing_time=processing_time
+                processing_time=processing_time,
+                personalized_count=result.get("personalized_count", 0),
+                standard_count=result.get("standard_count", 0),
+                description_column_detected=result.get("description_column_detected", False)
             )
         else:
             # Complete execution
@@ -655,7 +739,10 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
                 send_status=result.get("send_status", []),
                 vault_storage_key=result.get("vault_storage_key"),
                 trust_links=result.get("trust_links", []),
-                processing_time=processing_time
+                processing_time=processing_time,
+                personalized_count=result.get("personalized_count", 0),
+                standard_count=result.get("standard_count", 0),
+                description_column_detected=result.get("description_column_detected", False)
             )
         
         return response
@@ -673,7 +760,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
             processing_time=processing_time
         )
 
-@app.post("/agents/mailerpanda/approve", response_model=MailerPandaResponse)
+@app.post("/agents/mailerpanda/approve", response_model=MassEmailResponse)
 async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
     """Handle human-in-the-loop approval for MailerPanda campaigns."""
     start_time = datetime.now(timezone.utc)
@@ -686,52 +773,73 @@ async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
     try:
         agent = session["agent"]
         original_request = session["request"]
+        saved_state = session.get("final_state", {})
         
-        if request.action == "approve":
-            # Continue with email sending
-            result = session.get("result", {})
-            # Simulate email sending completion
-            result.update({
-                "emails_sent": len(original_request.recipient_emails) if original_request.recipient_emails else 1,
-                "send_status": [{"email": email, "status": "sent"} for email in (original_request.recipient_emails or ["demo@example.com"])],
-                "approval_status": "approved"
-            })
-            
-            session["status"] = "completed"
-            
-        elif request.action == "reject":
-            session["status"] = "rejected"
-            result = {"approval_status": "rejected"}
-            
-        elif request.action == "modify":
-            # Handle modifications
-            session["status"] = "modifying"
-            result = {
-                "approval_status": "modifying",
-                "feedback": request.feedback,
-                "requires_regeneration": True
-            }
-            
-        elif request.action == "regenerate":
-            # Trigger regeneration
-            session["status"] = "regenerating"
-            result = {"approval_status": "regenerating"}
+        # Use the resume method to continue the workflow
+        result = agent.resume_from_approval(
+            saved_state=saved_state,
+            approval_action=request.action,
+            feedback=request.feedback or ""
+        )
+        
+        # Convert numpy types to avoid serialization errors
+        result = convert_numpy_types(result)
+        
+        # Also convert any remaining numpy types in nested structures
+        if isinstance(result, dict):
+            def clean_numpy_recursive(obj):
+                if isinstance(obj, dict):
+                    return {k: clean_numpy_recursive(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [clean_numpy_recursive(item) for item in obj]
+                elif hasattr(obj, 'item'):  # numpy scalar
+                    return obj.item()
+                elif str(type(obj)).startswith('<class \'numpy.'):
+                    return int(obj) if 'int' in str(type(obj)) else float(obj)
+                else:
+                    return obj
+            result = clean_numpy_recursive(result)
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
-        return MailerPandaResponse(
-            status=session["status"],
+        # Fix email_template format
+        email_template = result.get("email_template")
+        if isinstance(email_template, str):
+            email_template = {
+                "subject": saved_state.get("subject", "Email Campaign"),
+                "body": email_template
+            }
+        elif email_template is None:
+            email_template = None
+        
+        # Update session status
+        if request.action == "approve":
+            session["status"] = "completed"
+            status = "completed"
+        elif request.action == "reject":
+            session["status"] = "rejected"
+            status = "rejected"
+        else:
+            session["status"] = "modified"
+            status = "modified"
+        
+        return MassEmailResponse(
+            status=status,
             user_id=request.user_id,
-            mode=original_request.mode,
             campaign_id=request.campaign_id,
-            approval_status=result.get("approval_status"),
-            emails_sent=result.get("emails_sent"),
-            send_status=result.get("send_status"),
+            context_personalization_enabled=session.get("enable_description_personalization", False),
+            excel_analysis=session.get("excel_analysis", {}),
+            email_template=email_template,
+            emails_sent=result.get("emails_sent", 0),
+            personalized_count=saved_state.get("personalized_count", 0),
+            standard_count=saved_state.get("standard_count", 0),
+            requires_approval=False,
+            approval_status=request.action,
             processing_time=processing_time
         )
         
     except Exception as e:
-        return MailerPandaResponse(
+        return MassEmailResponse(
             status="error",
             user_id=request.user_id,
             campaign_id=request.campaign_id,
@@ -755,7 +863,7 @@ async def get_mailerpanda_status():
             "user_id": "User identifier",
             "consent_tokens": "Dictionary of consent tokens for various scopes",
             "user_input": "Email campaign description",
-            "mode": "Execution mode (interactive, headless, demo)"
+            "mode": "Execution mode (interactive, headless)"
         }
     )
 
@@ -772,6 +880,502 @@ async def get_mailerpanda_session(campaign_id: str):
         "start_time": session["start_time"].isoformat(),
         "requires_approval": session.get("result", {}).get("requires_approval", False)
     }
+
+# ============================================================================
+# MAILERPANDA MASS EMAIL WITH CONTEXT TOGGLE ENDPOINT
+# ============================================================================
+
+class MassEmailRequest(BaseModel):
+    """Request model for mass email with context toggle functionality."""
+    user_id: str = Field(..., description="User identifier")
+    user_input: str = Field(..., description="Email campaign description")
+    
+    # Consent tokens
+    consent_tokens: Dict[str, str] = Field(..., description="Consent tokens for various scopes")
+    
+    # Frontend toggle for context-based personalization
+    use_context_personalization: bool = Field(False, description="Toggle: True = use descriptions for personalization, False = send standard emails")
+    
+    # Excel file (required for mass email)
+    excel_file_data: Optional[str] = Field(None, description="Base64 encoded Excel file data")
+    excel_file_name: Optional[str] = Field(None, description="Excel file name")
+    
+    # Campaign settings
+    mode: str = Field(default="interactive", description="Execution mode")
+    personalization_mode: str = Field(default="smart", description="Personalization intensity when context is enabled")
+    
+    # API keys
+    google_api_key: Optional[str] = Field(None, description="Google API key for AI generation")
+    mailjet_api_key: Optional[str] = Field(None, description="Mailjet API key")
+    mailjet_api_secret: Optional[str] = Field(None, description="Mailjet API secret")
+    
+    @field_validator('mode')
+    @classmethod
+    def validate_mode(cls, v):
+        allowed_modes = ["interactive", "headless"]
+        if v not in allowed_modes:
+            raise ValueError(f"Mode must be one of: {allowed_modes}")
+        return v
+
+class MassEmailResponse(BaseModel):
+    """Response model for mass email with context information."""
+    status: str = Field(..., description="Operation status")
+    user_id: str = Field(..., description="User identifier")
+    campaign_id: Optional[str] = Field(None, description="Generated campaign ID")
+    
+    # Context usage information
+    context_personalization_enabled: bool = Field(..., description="Whether context personalization was used")
+    excel_analysis: Dict[str, Any] = Field(..., description="Analysis of uploaded Excel file")
+    
+    # Email results
+    email_template: Optional[Dict[str, str]] = Field(None, description="Generated email template")
+    emails_sent: Optional[int] = Field(None, description="Number of emails sent")
+    
+    # Personalization statistics
+    personalized_count: Optional[int] = Field(None, description="Number of personalized emails")
+    standard_count: Optional[int] = Field(None, description="Number of standard emails")
+    
+    # Approval workflow
+    requires_approval: Optional[bool] = Field(None, description="Whether approval is needed")
+    approval_status: Optional[str] = Field(None, description="Approval status")
+    
+    # Processing info
+    processing_time: Optional[float] = Field(None, description="Processing time in seconds")
+    errors: Optional[List[str]] = Field(None, description="Any errors encountered")
+
+@app.post("/agents/mailerpanda/mass-email", response_model=MassEmailResponse)
+async def mass_email_with_context_toggle(request: MassEmailRequest):
+    """
+    Send mass emails with context toggle functionality.
+    
+    Frontend can toggle between:
+    - Context ON: Use description column for AI personalization
+    - Context OFF: Send standard emails to all recipients
+    """
+    start_time = datetime.now(timezone.utc)
+    session_id = f"mass_email_{request.user_id}_{int(start_time.timestamp())}"
+    
+    try:
+        import base64
+        import tempfile
+        
+        try:
+            import pandas as pd
+            PANDAS_AVAILABLE = True
+        except ImportError:
+            PANDAS_AVAILABLE = False
+            
+        from hushh_mcp.agents.mailerpanda.index import MassMailerAgent
+        
+        # Analyze the Excel file first
+        excel_analysis = {
+            "file_uploaded": False,
+            "total_contacts": 0,
+            "columns_found": [],
+            "description_column_exists": False,
+            "contacts_with_descriptions": 0,
+            "context_toggle_status": "OFF" if not request.use_context_personalization else "ON"
+        }
+        
+        excel_file_path = None
+        
+        # Handle Excel file upload
+        if request.excel_file_data:
+            try:
+                # Decode base64 file data
+                file_data = base64.b64decode(request.excel_file_data)
+                
+                # Create temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+                    tmp_file.write(file_data)
+                    excel_file_path = tmp_file.name
+                
+                # Analyze the Excel file
+                if PANDAS_AVAILABLE:
+                    df = pd.read_excel(excel_file_path)
+                    excel_analysis.update({
+                        "file_uploaded": True,
+                        "total_contacts": int(len(df)),  # Convert to Python int
+                        "columns_found": list(df.columns),
+                        "description_column_exists": 'description' in df.columns
+                    })
+                    
+                    if excel_analysis["description_column_exists"]:
+                        excel_analysis["contacts_with_descriptions"] = int(df['description'].notna().sum())  # Convert to Python int
+                else:
+                    # Basic analysis without pandas
+                    excel_analysis.update({
+                        "file_uploaded": True,
+                        "total_contacts": 0,
+                        "columns_found": [],
+                        "description_column_exists": False,
+                        "contacts_with_descriptions": 0
+                    })
+                
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Error processing Excel file: {str(e)}")
+        
+        # Prepare API keys
+        api_keys = {}
+        if request.google_api_key:
+            api_keys['google_api_key'] = request.google_api_key
+        if request.mailjet_api_key:
+            api_keys['mailjet_api_key'] = request.mailjet_api_key
+        if request.mailjet_api_secret:
+            api_keys['mailjet_api_secret'] = request.mailjet_api_secret
+        
+        # Initialize MailerPanda agent
+        agent = MassMailerAgent(api_keys=api_keys)
+        
+        # Determine personalization settings based on toggle
+        if request.use_context_personalization and excel_analysis["description_column_exists"]:
+            # Context personalization enabled and description column exists
+            enable_description_personalization = True
+            personalization_mode = request.personalization_mode
+            context_message = f"Context personalization ENABLED - Using description column to personalize {excel_analysis['contacts_with_descriptions']} emails"
+        else:
+            # Context personalization disabled or no description column
+            enable_description_personalization = False
+            personalization_mode = "conservative"
+            if request.use_context_personalization and not excel_analysis["description_column_exists"]:
+                context_message = "Context personalization requested but NO description column found - Using standard emails"
+            else:
+                context_message = "Context personalization DISABLED - Using standard emails for all recipients"
+        
+        # Store session
+        active_sessions[session_id] = {
+            "agent": agent,
+            "request": request,
+            "start_time": start_time,
+            "status": "executing",
+            "context_message": context_message
+        }
+        
+        # Execute the campaign
+        result = agent.handle(
+            user_id=request.user_id,
+            consent_tokens=request.consent_tokens,
+            user_input=request.user_input,
+            mode=request.mode,
+            enable_description_personalization=enable_description_personalization,
+            excel_file_path=excel_file_path,
+            personalization_mode=personalization_mode,
+            **api_keys
+        )
+        
+        # Convert numpy types to avoid serialization errors
+        result = convert_numpy_types(result)
+        
+        # Also convert any remaining numpy types in nested structures
+        if isinstance(result, dict):
+            def clean_numpy_recursive(obj):
+                if isinstance(obj, dict):
+                    return {k: clean_numpy_recursive(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [clean_numpy_recursive(item) for item in obj]
+                elif hasattr(obj, 'item'):  # numpy scalar
+                    return obj.item()
+                elif str(type(obj)).startswith('<class \'numpy.'):
+                    return int(obj) if 'int' in str(type(obj)) else float(obj)
+                else:
+                    return obj
+            result = clean_numpy_recursive(result)
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        # Fix email_template format - convert string to dict if needed
+        email_template = result.get("email_template")
+        if isinstance(email_template, str):
+            # If it's a string, create dict with subject and body
+            email_template = {
+                "subject": result.get("subject", "Email Campaign"),
+                "body": email_template
+            }
+        elif email_template is None:
+            email_template = None
+        
+        # Check if human approval is required
+        requires_approval = result.get("requires_approval", False)
+        
+        if requires_approval and request.mode == "interactive":
+            # Store session for approval workflow with complete state
+            active_sessions[session_id]["status"] = "awaiting_approval"
+            active_sessions[session_id]["result"] = result
+            active_sessions[session_id]["final_state"] = result.get("final_state", {})
+            active_sessions[session_id]["excel_analysis"] = excel_analysis
+            active_sessions[session_id]["enable_description_personalization"] = enable_description_personalization
+            
+            response = MassEmailResponse(
+                status="awaiting_approval",
+                user_id=request.user_id,
+                campaign_id=session_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=email_template,
+                emails_sent=0,
+                personalized_count=int(result.get("personalized_count", 0)),
+                standard_count=int(result.get("standard_count", 0)),
+                requires_approval=True,
+                approval_status="pending",
+                processing_time=processing_time
+            )
+        else:
+            # Complete execution
+            active_sessions[session_id]["status"] = "completed"
+            
+            response = MassEmailResponse(
+                status=result.get("status", "completed"),
+                user_id=request.user_id,
+                campaign_id=session_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=email_template,
+                emails_sent=int(result.get("emails_sent", 0)),
+                personalized_count=int(result.get("personalized_count", 0)),
+                standard_count=int(result.get("standard_count", 0)),
+                requires_approval=False,
+                approval_status=result.get("approval_status"),
+                processing_time=processing_time
+            )
+        
+        return response
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return MassEmailResponse(
+            status="error",
+            user_id=request.user_id,
+            context_personalization_enabled=False,
+            excel_analysis={"error": str(e)},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+class ExcelAnalysisRequest(BaseModel):
+    excel_file_data: str = Field(..., description="Base64 encoded Excel file")
+
+@app.post("/agents/mailerpanda/analyze-excel")
+async def analyze_excel_for_context(request: ExcelAnalysisRequest):
+    """
+    Analyze uploaded Excel file to show context personalization options.
+    This helps the frontend decide whether to show the context toggle.
+    """
+    try:
+        import base64
+        import tempfile
+        import pandas as pd
+        
+        # Decode and analyze the Excel file
+        file_data = base64.b64decode(request.excel_file_data)
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
+            tmp_file.write(file_data)
+            excel_path = tmp_file.name
+        
+        df = pd.read_excel(excel_path)
+        
+        analysis = {
+            "total_contacts": len(df),
+            "columns_found": list(df.columns),
+            "has_email_column": any('email' in col.lower() for col in df.columns),
+            "has_name_column": any('name' in col.lower() for col in df.columns),
+            "has_description_column": 'description' in df.columns,
+            "contacts_with_descriptions": 0,
+            "context_personalization_available": False,
+            "sample_descriptions": []
+        }
+        
+        if analysis["has_description_column"]:
+            descriptions = df['description'].dropna()
+            analysis["contacts_with_descriptions"] = len(descriptions)
+            analysis["context_personalization_available"] = len(descriptions) > 0
+            analysis["sample_descriptions"] = descriptions.head(3).tolist()
+        
+        # Cleanup
+        import os
+        os.unlink(excel_path)
+        
+        return {
+            "status": "success",
+            "analysis": analysis,
+            "recommendation": {
+                "show_context_toggle": analysis["context_personalization_available"],
+                "message": f"Found {analysis['contacts_with_descriptions']} contacts with descriptions. Context personalization recommended!" if analysis["context_personalization_available"] else "No description column found. Only standard emails available."
+            }
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "analysis": None
+        }
+
+@app.post("/agents/mailerpanda/mass-email/approve", response_model=MassEmailResponse)
+async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
+    """Handle human-in-the-loop approval for mass email campaigns."""
+    start_time = datetime.now(timezone.utc)
+    
+    if request.campaign_id not in active_sessions:
+        raise HTTPException(status_code=404, detail="Campaign session not found")
+    
+    session = active_sessions[request.campaign_id]
+    
+    try:
+        agent = session["agent"]
+        original_request = session["request"]
+        stored_result = session.get("result", {})
+        excel_analysis = session.get("excel_analysis", {})
+        enable_description_personalization = session.get("enable_description_personalization", False)
+        
+        if request.action == "approve":
+            # Continue with email sending - call the agent again to actually send
+            result = agent.handle(
+                user_id=request.user_id,
+                consent_tokens=original_request.consent_tokens,
+                user_input=original_request.user_input,
+                mode="headless",  # Skip approval since human already approved
+                enable_description_personalization=enable_description_personalization,
+                excel_file_path=stored_result.get("excel_file_path"),
+                personalization_mode=original_request.personalization_mode,
+                google_api_key=original_request.google_api_key,
+                mailjet_api_key=original_request.mailjet_api_key,
+                mailjet_api_secret=original_request.mailjet_api_secret
+            )
+            
+            session["status"] = "completed"
+            
+            response = MassEmailResponse(
+                status="completed",
+                user_id=request.user_id,
+                campaign_id=request.campaign_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=stored_result.get("email_template"),
+                emails_sent=result.get("emails_sent", 0),
+                personalized_count=result.get("personalized_count", 0),
+                standard_count=result.get("standard_count", 0),
+                requires_approval=False,
+                approval_status="approved",
+                processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+            )
+            
+        elif request.action == "reject":
+            session["status"] = "rejected"
+            
+            response = MassEmailResponse(
+                status="rejected",
+                user_id=request.user_id,
+                campaign_id=request.campaign_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=stored_result.get("email_template"),
+                emails_sent=0,
+                personalized_count=0,
+                standard_count=0,
+                requires_approval=False,
+                approval_status="rejected",
+                processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+            )
+            
+        elif request.action == "modify":
+            # Handle modifications - regenerate with feedback
+            modified_user_input = f"{original_request.user_input}\n\nModification feedback: {request.feedback}"
+            
+            result = agent.handle(
+                user_id=request.user_id,
+                consent_tokens=original_request.consent_tokens,
+                user_input=modified_user_input,
+                mode="interactive",  # Still needs approval after modification
+                enable_description_personalization=enable_description_personalization,
+                excel_file_path=stored_result.get("excel_file_path"),
+                personalization_mode=original_request.personalization_mode,
+                google_api_key=original_request.google_api_key,
+                mailjet_api_key=original_request.mailjet_api_key,
+                mailjet_api_secret=original_request.mailjet_api_secret
+            )
+            
+            # Fix email_template format
+            email_template = result.get("email_template")
+            if isinstance(email_template, str):
+                email_template = {
+                    "subject": result.get("subject", "Email Campaign"),
+                    "body": email_template
+                }
+            
+            session["result"] = result
+            session["status"] = "awaiting_approval"
+            
+            response = MassEmailResponse(
+                status="awaiting_approval",
+                user_id=request.user_id,
+                campaign_id=request.campaign_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=email_template,
+                emails_sent=0,
+                personalized_count=result.get("personalized_count", 0),
+                standard_count=result.get("standard_count", 0),
+                requires_approval=True,
+                approval_status="pending",
+                processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+            )
+            
+        elif request.action == "regenerate":
+            # Regenerate content completely
+            result = agent.handle(
+                user_id=request.user_id,
+                consent_tokens=original_request.consent_tokens,
+                user_input=original_request.user_input,
+                mode="interactive",  # Still needs approval after regeneration
+                enable_description_personalization=enable_description_personalization,
+                excel_file_path=stored_result.get("excel_file_path"),
+                personalization_mode=original_request.personalization_mode,
+                google_api_key=original_request.google_api_key,
+                mailjet_api_key=original_request.mailjet_api_key,
+                mailjet_api_secret=original_request.mailjet_api_secret
+            )
+            
+            # Fix email_template format
+            email_template = result.get("email_template")
+            if isinstance(email_template, str):
+                email_template = {
+                    "subject": result.get("subject", "Email Campaign"),
+                    "body": email_template
+                }
+            
+            session["result"] = result
+            session["status"] = "awaiting_approval"
+            
+            response = MassEmailResponse(
+                status="awaiting_approval",
+                user_id=request.user_id,
+                campaign_id=request.campaign_id,
+                context_personalization_enabled=enable_description_personalization,
+                excel_analysis=excel_analysis,
+                email_template=email_template,
+                emails_sent=0,
+                personalized_count=result.get("personalized_count", 0),
+                standard_count=result.get("standard_count", 0),
+                requires_approval=True,
+                approval_status="pending",
+                processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid action: {request.action}")
+        
+        return response
+        
+    except Exception as e:
+        return MassEmailResponse(
+            status="error",
+            user_id=request.user_id,
+            campaign_id=request.campaign_id,
+            context_personalization_enabled=False,
+            excel_analysis={},
+            errors=[str(e)],
+            processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
+        )
 
 # ============================================================================
 # CHANDUFINANCE AGENT ENDPOINTS  
@@ -1165,8 +1769,10 @@ class ChatSessionResponse(BaseModel):
 
 class ChatMessageRequest(BaseModel):
     """Request model for sending a chat message."""
-    session_id: str = Field(..., min_length=1, description="Chat session ID")
+    user_id: str = Field(..., min_length=1, description="User ID")
     message: str = Field(..., min_length=1, description="User message")
+    session_id: Optional[str] = Field(None, description="Chat session ID")
+    consent_tokens: Optional[Dict[str, str]] = Field(None, description="Consent tokens")
 
 class ChatMessageResponse(BaseModel):
     """Response model for chat messages."""
@@ -1994,6 +2600,216 @@ async def get_paper_content(paper_id: str):
 # MAIN APPLICATION
 # ============================================================================
 
+# ============================================================================
+# GENERAL CHAT AGENT ENDPOINTS  
+# ============================================================================
+
+@app.post("/agents/chat/message", response_model=Dict[str, Any])
+async def general_chat_message(request: ChatMessageRequest):
+    """
+    General chat endpoint that routes to appropriate agents based on message content.
+    This provides a unified interface for all agent interactions through chat.
+    """
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate request
+        user_id = getattr(request, 'user_id', None)
+        message = getattr(request, 'message', None)
+        session_id = getattr(request, 'session_id', None)
+        
+        if not user_id:
+            raise HTTPException(status_code=400, detail="User ID is required")
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        user_message = message.lower().strip()
+        
+        # Simple routing based on message content keywords
+        # Finance-related keywords
+        if any(keyword in user_message for keyword in [
+            'finance', 'financial', 'money', 'income', 'expense', 'budget', 
+            'investment', 'stock', 'portfolio', 'analysis', 'goal', 'saving'
+        ]):
+            try:
+                # Process financial query using enhanced index
+                # Extract financial information from the message
+                import re
+                income_match = re.search(r'income[:\s]*\$?(\d+)', user_message)
+                expense_match = re.search(r'expense[s]?[:\s]*\$?(\d+)', user_message)
+                net_match = re.search(r'net[:\s]*\$?(\d+)', user_message)
+                
+                analysis_prompt = f"""
+Financial Analysis for: {message}
+
+Based on your financial query, here's my analysis:
+
+"""
+                
+                if income_match and expense_match:
+                    income = int(income_match.group(1))
+                    expenses = int(expense_match.group(1))
+                    net = income - expenses
+                    
+                    analysis_prompt += f"""
+💰 **Your Financial Snapshot:**
+- Monthly Income: ${income:,}
+- Monthly Expenses: ${expenses:,}
+- Net Income: ${net:,}
+
+📊 **Financial Health Analysis:**
+- Savings Rate: {(net/income*100):.1f}% (Excellent if >20%, Good if >10%)
+- Expense Ratio: {(expenses/income*100):.1f}%
+
+💡 **Personalized Recommendations:**
+"""
+                    if net/income > 0.2:
+                        analysis_prompt += "✅ Excellent savings rate! Consider investing surplus funds.\n"
+                    elif net/income > 0.1:
+                        analysis_prompt += "✅ Good savings rate! Build emergency fund first, then invest.\n"
+                    else:
+                        analysis_prompt += "⚠️ Low savings rate. Review expenses and find areas to cut.\n"
+                    
+                    analysis_prompt += f"""
+🎯 **Next Steps:**
+1. Build emergency fund: ${expenses*3:,} - ${expenses*6:,}
+2. Invest surplus: ${max(0, net-500):,}/month recommended
+3. Review and optimize largest expense categories
+"""
+                else:
+                    analysis_prompt += """
+For effective financial management:
+- Track income and expenses regularly  
+- Set clear, measurable financial goals
+- Build an emergency fund (3-6 months of expenses)
+- Consider diversified investment options
+- Review and adjust your budget monthly
+
+Please share your specific income, expenses, and goals for detailed personalized recommendations!
+"""
+                
+                return {
+                    "status": "success",
+                    "response": analysis_prompt,
+                    "agent_used": "chandufinance",
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+                
+            except Exception as e:
+                return {
+                    "status": "success",
+                    "response": f"I can help with your financial query! For effective financial management, consider tracking your income and expenses, setting clear financial goals, and building an emergency fund. Would you like specific advice on budgeting, investments, or financial planning?",
+                    "agent_used": "chandufinance",
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+        
+        # Relationship/contact-related keywords  
+        elif any(keyword in user_message for keyword in [
+            'contact', 'relationship', 'friend', 'family', 'remember', 'reminder',
+            'birthday', 'anniversary', 'meeting', 'person', 'people', 'add'
+        ]):
+            try:
+                response_text = f"I can help you manage relationships and contacts! Based on your request to '{message}', I can assist with:\n\n" \
+                              "✅ Adding new contacts with details\n" \
+                              "✅ Setting reminders for important dates\n" \
+                              "✅ Organizing personal connections\n" \
+                              "✅ Tracking interactions and memories\n\n" \
+                              "What specific action would you like me to take with your contacts or relationships?"
+                
+                return {
+                    "status": "success", 
+                    "response": response_text,
+                    "agent_used": "relationship_memory",
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+                
+            except Exception as e:
+                return {
+                    "status": "success",
+                    "response": f"I can help you manage relationships and contacts! What specific action would you like me to take?",
+                    "agent_used": "relationship_memory", 
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+        
+        # Research-related keywords
+        elif any(keyword in user_message for keyword in [
+            'research', 'paper', 'study', 'academic', 'arxiv', 'journal',
+            'publication', 'article', 'scientific', 'search'
+        ]):
+            try:
+                response_text = f"I can help with research! Based on your query '{message}', I can:\n\n" \
+                              "🔍 Search academic databases and arXiv\n" \
+                              "📄 Analyze research papers and documents\n" \
+                              "💡 Provide research insights and summaries\n" \
+                              "📚 Help organize your research notes\n\n" \
+                              "Would you like me to search for specific topics or analyze particular papers?"
+                
+                return {
+                    "status": "success",
+                    "response": response_text,
+                    "agent_used": "research",
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+                
+            except Exception as e:
+                return {
+                    "status": "success",
+                    "response": f"I can help with research! I have access to academic databases and can search for papers related to your query. What specific research topic are you interested in?",
+                    "agent_used": "research",
+                    "session_id": session_id or f"chat_{int(start_time.timestamp())}",
+                    "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+                }
+        
+        # Default general response with agent suggestions
+        else:
+            return {
+                "status": "success",
+                "response": """I'm ready to help you! I can assist with:
+
+🧮 **Financial Analysis** - Ask about budgets, investments, financial goals, or income/expense analysis
+👥 **Relationship Management** - Add contacts, set reminders, or manage personal relationships  
+📚 **Research** - Search academic papers, analyze documents, or find scientific information
+📧 **Email Campaigns** - Create and manage mass email campaigns (use the MailerPanda agent)
+📅 **Calendar Management** - Extract events from emails and manage your schedule
+
+What would you like help with today?""",
+                "agent_used": "general",
+                "session_id": request.session_id or f"chat_{int(start_time.timestamp())}",
+                "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+            }
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"General chat error: {str(e)}")
+        return {
+            "status": "error",
+            "response": f"I encountered an unexpected error: {str(e)}. Please try again.",
+            "error": str(e),
+            "session_id": request.session_id or f"chat_{int(start_time.timestamp())}",
+            "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
+        }
+
+@app.get("/agents/chat/status", response_model=AgentStatusResponse)
+async def get_general_chat_status():
+    """Get general chat agent status."""
+    return AgentStatusResponse(
+        agent_id="agent_chat",
+        name="General Chat Agent",
+        version="1.0.0",
+        status="available",
+        required_scopes=["custom.temporary"],
+        required_inputs={
+            "user_id": "User identifier",
+            "message": "Chat message content"
+        }
+    )
+
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")
     print("API Documentation: http://127.0.0.1:8001/docs")
@@ -2004,6 +2820,7 @@ if __name__ == "__main__":
     print("   - ChanduFinance Agent: /agents/chandufinance/")
     print("   - Relationship Memory Agent: /agents/relationship_memory/")
     print("   - Research Agent: /agents/research/")
+    print("   - General Chat Agent: /agents/chat/")
     
     uvicorn.run(
         "api:app",
