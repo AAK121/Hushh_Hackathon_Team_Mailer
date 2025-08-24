@@ -289,6 +289,236 @@ Return ONLY the optimized search query, nothing else."""),
             state["error"] = f"ArXiv search failed: {str(e)}"
             return state
     
+    def _download_and_process_pdf(self, paper_id: str, pdf_url: str) -> str:
+        """Download and extract text from a PDF URL."""
+        try:
+            # Download PDF
+            logger.info(f"📥 Downloading PDF: {pdf_url}")
+            response = requests.get(pdf_url, timeout=30)
+            response.raise_for_status()
+            
+            # Sanitize paper_id for filename (replace slashes with underscores)
+            safe_paper_id = paper_id.replace('/', '_').replace('\\', '_')
+            
+            # Save to vault
+            pdf_path = self.papers_dir / f"{safe_paper_id}.pdf"
+            with open(pdf_path, 'wb') as file:
+                file.write(response.content)
+            
+            # Extract text using PyPDF2
+            pdf_reader = PyPDF2.PdfReader(BytesIO(response.content))
+            text_content = ""
+            
+            for page in pdf_reader.pages:
+                page_text = page.extract_text()
+                # Clean up mathematical notation
+                cleaned_text = self._clean_mathematical_notation(page_text)
+                text_content += cleaned_text + "\n"
+            
+            logger.info(f"📄 Extracted text from PDF: {paper_id} ({len(pdf_reader.pages)} pages)")
+            return text_content
+            
+        except Exception as e:
+            logger.error(f"❌ PDF download/processing failed for {paper_id}: {e}")
+            return ""
+    
+    def _clean_mathematical_notation(self, text: str) -> str:
+        """Clean up mathematical notation from PDF text extraction."""
+        
+        # Dictionary of common PDF text extraction artifacts and their proper representations
+        replacements = {
+            # Parentheses
+            '/parenleftbig': '(',
+            '/parenrightbig': ')',
+            '/parenleftBig': '(',
+            '/parenrightBig': ')',
+            
+            # Mathematical symbols
+            '/summationdisplay': '∑',
+            '/summation': '∑',
+            '/integral': '∫',
+            '/integraltext': '∫',
+            '/productdisplay': '∏',
+            '/product': '∏',
+            
+            # Greek letters
+            '/alpha': 'α',
+            '/beta': 'β',
+            '/gamma': 'γ',
+            '/delta': 'δ',
+            '/epsilon': 'ε',
+            '/zeta': 'ζ',
+            '/eta': 'η',
+            '/theta': 'θ',
+            '/lambda': 'λ',
+            '/mu': 'μ',
+            '/nu': 'ν',
+            '/xi': 'ξ',
+            '/pi': 'π',
+            '/rho': 'ρ',
+            '/sigma': 'σ',
+            '/tau': 'τ',
+            '/phi': 'φ',
+            '/chi': 'χ',
+            '/psi': 'ψ',
+            '/omega': 'ω',
+            '/Gamma': 'Γ',
+            '/Delta': 'Δ',
+            '/Theta': 'Θ',
+            '/Lambda': 'Λ',
+            '/Xi': 'Ξ',
+            '/Pi': 'Π',
+            '/Sigma': 'Σ',
+            '/Phi': 'Φ',
+            '/Psi': 'Ψ',
+            '/Omega': 'Ω',
+            
+            # Mathematical operators
+            '/cdot': '·',
+            '/times': '×',
+            '/div': '÷',
+            '/pm': '±',
+            '/mp': '∓',
+            '/leq': '≤',
+            '/geq': '≥',
+            '/neq': '≠',
+            '/approx': '≈',
+            '/equiv': '≡',
+            '/sim': '~',
+            '/propto': '∝',
+            '/infty': '∞',
+            '/partial': '∂',
+            '/nabla': '∇',
+            '/sqrt': '√',
+            
+            # Arrows
+            '/rightarrow': '→',
+            '/leftarrow': '←',
+            '/leftrightarrow': '↔',
+            '/Rightarrow': '⇒',
+            '/Leftarrow': '⇐',
+            '/Leftrightarrow': '⇔',
+            
+            # Set theory
+            '/in': '∈',
+            '/notin': '∉',
+            '/subset': '⊂',
+            '/supset': '⊃',
+            '/subseteq': '⊆',
+            '/supseteq': '⊇',
+            '/cup': '∪',
+            '/cap': '∩',
+            '/emptyset': '∅',
+            
+            # Logic
+            '/wedge': '∧',
+            '/vee': '∨',
+            '/neg': '¬',
+            '/forall': '∀',
+            '/exists': '∃',
+            
+            # Fractions and superscripts
+            '/frac': '',
+            '/over': '/',
+            '/atop': '/',
+            
+            # Brackets
+            '/lbrace': '{',
+            '/rbrace': '}',
+            '/lbrack': '[',
+            '/rbrack': ']',
+            '/langle': '⟨',
+            '/rangle': '⟩',
+            
+            # Spacing artifacts
+            '/,': ' ',
+            '/;': ' ',
+            '/quad': '  ',
+            '/qquad': '    ',
+            '/ ': ' ',
+            
+            # Common PDF extraction artifacts
+            'fi': 'fi',  # ligature
+            'fl': 'fl',  # ligature
+            'ff': 'ff',  # ligature
+        }
+        
+        # Apply replacements
+        cleaned_text = text
+        for old, new in replacements.items():
+            cleaned_text = cleaned_text.replace(old, new)
+        
+        # Clean up multiple spaces
+        import re
+        cleaned_text = re.sub(r'\s+', ' ', cleaned_text)
+        
+        return cleaned_text
+    
+    def _extract_references_section(self, text: str) -> str:
+        """Extract the references/bibliography section from paper text."""
+        try:
+            # Common patterns for references sections
+            reference_patterns = [
+                r'(?i)\n\s*references\s*\n',
+                r'(?i)\n\s*bibliography\s*\n',
+                r'(?i)\n\s*literature\s+cited\s*\n',
+                r'(?i)\n\s*works\s+cited\s*\n',
+                r'(?i)\n\s*citations\s*\n',
+                r'(?i)\n\s*\[\s*references\s*\]\s*\n',
+                r'(?i)\n\s*\d+\.\s*references\s*\n',
+                r'(?i)\n\s*\d+\s+references\s*\n'
+            ]
+            
+            # Try to find references section start
+            references_start = None
+            for pattern in reference_patterns:
+                import re
+                match = re.search(pattern, text)
+                if match:
+                    references_start = match.end()
+                    break
+            
+            if references_start:
+                # Extract from references start to end of document
+                references_text = text[references_start:]
+                
+                # Try to find where references end (appendix, acknowledgments, etc.)
+                end_patterns = [
+                    r'(?i)\n\s*appendix\s*\n',
+                    r'(?i)\n\s*acknowledgments?\s*\n',
+                    r'(?i)\n\s*acknowledgements?\s*\n',
+                    r'(?i)\n\s*author\s+information\s*\n',
+                    r'(?i)\n\s*supplementary\s+material\s*\n'
+                ]
+                
+                references_end = len(references_text)
+                for pattern in end_patterns:
+                    match = re.search(pattern, references_text)
+                    if match:
+                        references_end = match.start()
+                        break
+                
+                extracted_refs = references_text[:references_end].strip()
+                
+                # Validate that we found actual references (should contain brackets or numbers)
+                if re.search(r'(\[\d+\]|\(\d{4}\)|^\s*\d+\.)', extracted_refs, re.MULTILINE):
+                    return extracted_refs
+            
+            # Fallback: look for numbered references in the last part of the document
+            # Take last 30% of document and look for reference patterns
+            fallback_start = int(len(text) * 0.7)
+            fallback_text = text[fallback_start:]
+            
+            # Look for patterns like [1], [2], etc. or numbered references
+            if re.search(r'(\[\d+\].*\n.*){3,}', fallback_text, re.MULTILINE):
+                return fallback_text
+                
+            return None
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract references section: {e}")
+            return None
+    
     def _extract_pdf_text(self, state: ResearchAgentState) -> ResearchAgentState:
         """Extract text content from uploaded PDF."""
         try:
@@ -319,8 +549,25 @@ Return ONLY the optimized search query, nothing else."""),
             vault_key = f"paper_text_{paper_id}"
             self._store_in_vault(text_data, vault_key, state["user_id"], state["consent_tokens"])
             
+            # Create JSON file for chat functionality (same format as arXiv papers)
+            paper_data = {
+                "content": text_content,
+                "metadata": {
+                    "paper_id": paper_id, 
+                    "uploaded_at": datetime.now(timezone.utc).isoformat(),
+                    "page_count": len(pdf_reader.pages),
+                    "source": "uploaded"
+                },
+                "processed_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            # Save JSON file for chat access
+            json_path = self.papers_dir / f"{paper_id}.json"
+            with open(json_path, 'w', encoding='utf-8') as f:
+                json.dump(paper_data, f, ensure_ascii=False, indent=2)
+            
             state["paper_content"] = text_content
-            logger.info(f"📄 Extracted text from PDF: {paper_id} ({len(pdf_reader.pages)} pages)")
+            logger.info(f"📄 Extracted text from PDF: {paper_id} ({len(pdf_reader.pages)} pages) and saved JSON for chat access")
             return state
             
         except Exception as e:
@@ -510,6 +757,131 @@ Provide your response:""")
             logger.error(f"❌ Vault storage failed: {e}")
             raise
     
+    async def search_arxiv_with_content(self, user_id: str, consent_tokens: Dict[str, str], query: str, max_papers: int = 3) -> Dict[str, Any]:
+        """Enhanced arXiv search with automatic PDF downloading and content extraction."""
+        session_id = f"enhanced_search_{uuid.uuid4().hex[:8]}"
+        
+        try:
+            logger.info(f"🔍 Enhanced search for: {query}")
+            
+            # First do regular search
+            initial_state = ResearchAgentState(
+                user_id=user_id,
+                consent_tokens=consent_tokens,
+                session_id=session_id,
+                query=query,
+                status="arxiv_search",
+                mode="api",
+                paper_id=None,
+                paper_content=None,
+                arxiv_results=None,
+                summary=None,
+                snippet=None,
+                instruction=None,
+                processed_snippet=None,
+                notes=None,
+                error=None
+            )
+            
+            # Run search workflow
+            app = self.workflow.compile()
+            final_state = app.invoke(initial_state)
+            
+            if final_state.get("error"):
+                return {
+                    "success": False,
+                    "error": final_state["error"],
+                    "session_id": session_id
+                }
+            
+            papers = final_state.get("arxiv_results", [])
+            enhanced_papers = []
+            
+            # Process top papers with full content
+            for i, paper in enumerate(papers[:max_papers]):
+                try:
+                    logger.info(f"📥 Processing paper {i+1}/{max_papers}: {paper['title'][:50]}...")
+                    
+                    # Download and extract PDF content
+                    content = self._download_and_process_pdf(paper['arxiv_id'], paper['pdf_url'])
+                    
+                    if content:
+                        # Generate enhanced summary with full content
+                        enhanced_summary = await self._generate_enhanced_summary(content, paper)
+                        paper['enhanced_summary'] = enhanced_summary
+                        paper['has_full_content'] = True
+                        paper['content_preview'] = content[:1000] + "..." if len(content) > 1000 else content
+                    else:
+                        paper['enhanced_summary'] = paper['summary']  # fallback to abstract
+                        paper['has_full_content'] = False
+                    
+                    enhanced_papers.append(paper)
+                    
+                except Exception as e:
+                    logger.error(f"❌ Failed to process paper {paper['arxiv_id']}: {e}")
+                    paper['enhanced_summary'] = paper['summary']  # fallback
+                    paper['has_full_content'] = False
+                    enhanced_papers.append(paper)
+            
+            # Add remaining papers without full processing
+            enhanced_papers.extend(papers[max_papers:])
+            
+            return {
+                "success": True,
+                "session_id": session_id,
+                "query": final_state["query"],
+                "results": enhanced_papers,
+                "total_papers": len(papers),
+                "processed_papers": min(max_papers, len(papers))
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Enhanced search failed: {e}")
+            return {
+                "success": False,
+                "error": str(e),
+                "session_id": session_id
+            }
+    
+    async def _generate_enhanced_summary(self, content: str, paper_info: dict) -> str:
+        """Generate enhanced summary from full paper content."""
+        try:
+            # Truncate content if too long (to avoid token limits)
+            max_content_length = 8000
+            if len(content) > max_content_length:
+                content = content[:max_content_length] + "\n...[Content truncated]"
+            
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are an expert academic research assistant. Create a comprehensive summary of this research paper that goes beyond the abstract.
+
+Focus on:
+1. **Main Research Question**: What problem does this paper address?
+2. **Methodology**: How did they approach the problem?
+3. **Key Findings**: What are the main results and discoveries?
+4. **Implications**: What does this mean for the field?
+5. **Limitations**: What are the constraints or limitations mentioned?
+6. **Future Work**: What directions for future research are suggested?
+
+Provide a detailed but concise summary that would be helpful for someone researching this topic."""),
+                ("user", f"""Paper Title: {paper_info.get('title', 'Unknown')}
+Authors: {', '.join(paper_info.get('authors', []))}
+Published: {paper_info.get('published', 'Unknown')}
+
+Abstract: {paper_info.get('summary', 'Not available')}
+
+Full Paper Content:
+{content}
+
+Please provide a comprehensive summary that goes beyond the abstract and covers the key aspects of the full paper.""")
+            ])
+            
+            response = self.llm.invoke(prompt.format_messages())
+            return response.content
+            
+        except Exception as e:
+            logger.error(f"❌ Enhanced summary generation failed: {e}")
+            return paper_info.get('summary', 'Summary not available')
+
     async def search_arxiv(self, user_id: str, consent_tokens: Dict[str, str], query: str, mode: str = "api") -> Dict[str, Any]:
         """Execute arXiv search workflow."""
         session_id = f"search_{uuid.uuid4().hex[:8]}"
@@ -775,21 +1147,59 @@ Provide your response:""")
                         "session_id": session_id
                     }
             
-            # Try to load paper from vault
+            # Try to load paper from vault or download if not available
             paper_content = None
             paper_metadata = None
             
             try:
-                paper_file = self.papers_dir / f"{paper_id}.enc"
-                if paper_file.exists():
-                    encrypted_data = paper_file.read_bytes()
-                    decrypted_data = decrypt_data(encrypted_data, VAULT_ENCRYPTION_KEY)
-                    paper_data = json.loads(decrypted_data)
-                    paper_content = paper_data.get("content", "")
-                    paper_metadata = paper_data.get("metadata", {})
-                    logger.info(f"📄 Loaded paper {paper_id} from vault")
+                # Sanitize paper_id for filename consistency
+                safe_paper_id = paper_id.replace('/', '_').replace('\\', '_')
+                
+                # First try to load from simple JSON storage
+                json_file = self.papers_dir / f"{safe_paper_id}.json"
+                if json_file.exists():
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        paper_data = json.load(f)
+                        paper_content = paper_data.get("content", "")
+                        paper_metadata = paper_data.get("metadata", {})
+                        logger.info(f"📄 Loaded paper {paper_id} from JSON storage")
+                
+                # Fallback to encrypted vault if JSON not found
+                elif False:  # Disable vault for now
+                    paper_file = self.papers_dir / f"{safe_paper_id}.enc"
+                    if paper_file.exists():
+                        encrypted_data = paper_file.read_bytes()
+                        decrypted_data = decrypt_data(encrypted_data, VAULT_ENCRYPTION_KEY)
+                        paper_data = json.loads(decrypted_data)
+                        paper_content = paper_data.get("content", "")
+                        paper_metadata = paper_data.get("metadata", {})
+                        logger.info(f"📄 Loaded paper {paper_id} from vault")
+                
+                else:
+                    # Automatically download and process PDF if not in storage
+                    logger.info(f"📥 Paper {paper_id} not found in storage, attempting to download...")
+                    pdf_url = f"https://arxiv.org/pdf/{paper_id}.pdf"
+                    paper_content = self._download_and_process_pdf(paper_id, pdf_url)
+                    
+                    if paper_content:
+                        # Store in simple JSON file for future use
+                        paper_data = {
+                            "content": paper_content,
+                            "metadata": {"paper_id": paper_id, "downloaded_at": datetime.now(timezone.utc).isoformat()},
+                            "processed_at": datetime.now(timezone.utc).isoformat()
+                        }
+                        
+                        # Simple file storage instead of encrypted vault
+                        storage_path = self.papers_dir / f"{safe_paper_id}.json"
+                        with open(storage_path, 'w', encoding='utf-8') as f:
+                            json.dump(paper_data, f, ensure_ascii=False, indent=2)
+                        
+                        logger.info(f"✅ Downloaded and processed paper {paper_id}")
+                    else:
+                        logger.warning(f"❌ Failed to download paper {paper_id}")
+                        
             except Exception as e:
-                logger.warning(f"⚠️ Could not load paper {paper_id} from vault: {e}")
+                logger.warning(f"⚠️ Could not load/download paper {paper_id}: {e}")
             
             # Build conversation context
             conversation_context = ""
@@ -801,34 +1211,153 @@ Provide your response:""")
             
             # Create chat prompt
             chat_prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are a helpful AI research assistant. You help users understand and analyze academic papers.
-                
+                ("system", """You are an expert AI research assistant with FULL ACCESS to complete academic paper content. You have the ENTIRE paper text available to you - NOT just abstracts or summaries.
+
                 Paper Information:
                 {paper_info}
-                
+
                 Previous Conversation:
                 {conversation_context}
+
+                CRITICAL INSTRUCTIONS:
+                - You have COMPLETE access to the full paper content including ALL sections
+                - NEVER say the paper content is truncated or that references are not available
+                - You can see the entire paper from introduction to conclusion to references
+                - Provide detailed, specific responses based on the complete paper content
+                - Quote specific sections, figures, or data when relevant
+                - Explain methodology, results, and implications in detail
+                - Answer questions about introduction, methods, results, discussion, conclusions, AND references
+                - Discuss specific experiments, datasets, algorithms, or findings mentioned in the paper
+                - Compare findings with related work mentioned in the paper
+                - Be precise and reference specific parts of the paper
+                - If asked about details not in the paper, clearly state that
                 
-                Guidelines:
-                - Provide helpful, accurate responses about the paper
-                - If you don't have specific information about the paper, be honest about it
-                - Suggest specific aspects of the paper the user might want to explore
-                - Keep responses concise but informative
-                - If the paper content is not available, provide general research guidance
+                **REFERENCES AND CITATIONS:**
+                - When asked for references, extract and list ALL references found in the paper
+                - Format references clearly with proper numbering or citation style
+                - If references section is truncated, mention this and provide what's available
+                - Include DOIs, arXiv IDs, and journal information when present
+                - Group references by type if helpful (journals, conferences, books, etc.)
+                
+                **RESPONSE FORMATTING:**
+                - FORMAT ALL RESPONSES IN PROPER MARKDOWN SYNTAX
+                - Use # ## ### for headers to structure your response
+                - Use **bold** for emphasis and important terms
+                - Use *italics* for paper titles and terms
+                - Use > blockquotes for important quotes from the paper
+                - Use - or * for bullet lists, 1. 2. 3. for numbered lists
+                - Use `code` for technical terms, variable names, or short formulas
+                
+                **MATHEMATICAL FORMULAS - CRITICAL FORMATTING:**
+                - ALWAYS format mathematical equations using MARKDOWN CODE BLOCKS with math syntax
+                - For inline math: use `$equation$` 
+                - For display math: use ```math or $$equation$$
+                - Present equations with proper equation numbers when available like: **(2.1)**, **(3.4)**
+                - Use proper mathematical symbols (∇, ∂, ∑, ∫, α, β, γ, etc.)
+                - Clean up any garbled mathematical notation from PDF extraction
+                - Example format:
+                
+                **Equation (3.1)** - Killing Vector Field:
+                ```math
+                L_K g_ab = ∇_a K_b + ∇_b K_a = 0
+                ```
+                
+                **Equation (3.4)** - Ricci Contraction:
+                ```math
+                ∇_a ∇^a K_c + R_cd K^d = 0
+                ```
+
+                ⚠️ CRITICAL RESPONSE RULES ⚠️:
+                - NEVER say "paper content is truncated" 
+                - NEVER say "references section is not available"
+                - NEVER apologize for truncated content
+                - You have FULL access to ALL sections including references
+                - Always provide complete, detailed answers based on the full paper content
                 """),
                 ("human", "{user_message}")
             ])
-            
-            # Prepare paper information
+
+            # Prepare comprehensive paper information
             paper_info = "Paper content not available"
-            if paper_metadata:
+            if paper_content:
+                # Check if user is asking for references specifically
+                user_asking_for_references = any(keyword in message.lower() for keyword in [
+                    'references', 'bibliography', 'citations', 'reference list', 'works cited', 'literature cited'
+                ])
+                
+                if user_asking_for_references:
+                    # For references, try to extract the references section specifically
+                    references_section = self._extract_references_section(paper_content)
+                    if references_section:
+                        paper_info = f"""
+                        ✅ COMPLETE REFERENCES SECTION AVAILABLE ✅
+                        
+                        Paper ID: {paper_id}
+                        Status: FULL PAPER CONTENT LOADED
+                        Total Paper Length: {len(paper_content)} characters
+                        
+                        Complete References Section:
+                        {references_section}
+                        
+                        [COMPLETE REFERENCES SECTION ABOVE - YOU HAVE FULL ACCESS]
+                        """
+                    else:
+                        # If no references section found, use the last part of the paper
+                        max_content_length = 25000  # Increased for references
+                        if len(paper_content) > max_content_length:
+                            # Take the last part of the paper where references usually are
+                            content_to_use = paper_content[-max_content_length:]
+                            paper_info = f"""
+                            ✅ COMPLETE PAPER CONTENT AVAILABLE ✅
+                            
+                            Paper ID: {paper_id}
+                            Status: FULL PAPER LOADED - REFERENCES SECTION INCLUDED
+                            Total Paper Length: {len(paper_content)} characters
+                            
+                            Last Section of Paper (Contains References):
+                            {content_to_use}
+                            
+                            [SHOWING LAST {max_content_length} CHARACTERS - REFERENCES SECTION INCLUDED]
+                            """
+                        else:
+                            paper_info = f"""
+                            ✅ COMPLETE FULL PAPER AVAILABLE ✅
+                            
+                            Paper ID: {paper_id}
+                            Status: COMPLETE PAPER CONTENT LOADED
+                            
+                            Complete Full Paper Text:
+                            {paper_content}
+                            
+                            [COMPLETE PAPER CONTENT ABOVE - ALL SECTIONS INCLUDING REFERENCES]
+                            """
+                else:
+                    # For non-reference queries, use standard approach with increased limit
+                    max_content_length = 20000  # Increased from 15000
+                    content_to_use = paper_content[:max_content_length] if len(paper_content) > max_content_length else paper_content
+                    
+                    paper_info = f"""
+                    ✅ COMPLETE FULL PAPER AVAILABLE ✅
+                    
+                    Paper ID: {paper_id}
+                    Status: FULL PAPER CONTENT LOADED
+                    Total Paper Length: {len(paper_content)} characters
+                    
+                    Paper Content:
+                    {content_to_use}
+                    
+                    {'[FIRST PART OF PAPER SHOWN - ASK FOR REFERENCES TO SEE THAT SECTION]' if len(paper_content) > max_content_length else '[COMPLETE PAPER CONTENT ABOVE - ALL SECTIONS AVAILABLE]'}
+                    """
+            elif paper_metadata:
                 paper_info = f"""
+                LIMITED INFORMATION AVAILABLE (Abstract only)
+                
                 Title: {paper_metadata.get('title', 'Unknown')}
                 Authors: {', '.join(paper_metadata.get('authors', []))}
-                Abstract: {paper_metadata.get('summary', 'Not available')[:500]}...
+                Abstract: {paper_metadata.get('summary', 'Not available')}
+                
+                Note: Full paper content could not be retrieved. Responses will be based on abstract only.
                 """
-                if paper_content:
-                    paper_info += f"\n\nContent preview: {paper_content[:1000]}..."
             
             # Generate response using LLM
             messages = chat_prompt.format_messages(

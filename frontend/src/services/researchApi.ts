@@ -184,6 +184,46 @@ class ResearchApiService {
 
     return await response.json();
   }
+
+  /**
+   * Upload PDF for processing
+   */
+  async uploadPDF(file: File, userId: string = 'demo_user'): Promise<{
+    status: string;
+    paper_id: string;
+    text_length: number;
+    session_id: string;
+  }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('user_id', userId);
+    formData.append('consent_tokens', JSON.stringify({
+      'vault:read:file': 'demo_token',
+      'vault:write:file': 'demo_token'
+    }));
+
+    const response = await fetch(`${this.baseUrl}/agents/research/upload`, {
+      method: 'POST',
+      body: formData
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.status !== 'success') {
+      throw new Error(result.errors?.[0] || 'Upload processing failed');
+    }
+
+    return {
+      status: result.status,
+      paper_id: result.results.paper_id,
+      text_length: result.results.text_length,
+      session_id: result.session_id
+    };
+  }
 }
 
 // Export singleton instance

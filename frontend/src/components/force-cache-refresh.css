@@ -1,0 +1,10 @@
+/* Force CSS Cache Refresh */
+.chat-messages {
+    /* This comment forces a CSS update - delete this line after testing */
+    border: 1px solid transparent !important;
+}
+
+.test-scrollbar-visibility {
+    width: 20px !important;
+    background: red !important;
+}

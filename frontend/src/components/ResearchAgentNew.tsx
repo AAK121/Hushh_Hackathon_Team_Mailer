@@ -1,8 +1,13 @@
 import React, { useRef, useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 import './ResearchAgentNew.css';
+import './force-cache-refresh.css';
+import './scrollbar-override.css';
 import { researchAgentApi, Paper } from '../services/ResearchAgentApi';
 
 // Chat message interface
@@ -20,6 +25,7 @@ const ResearchAgentNew: React.FC = () => {
   
   // Chat-related state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [originalChatMessages, setOriginalChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   
@@ -34,6 +40,8 @@ const ResearchAgentNew: React.FC = () => {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showEditNotesModal, setShowEditNotesModal] = useState(false);
   const [showNotesListModal, setShowNotesListModal] = useState(false);
+  const [showNoteSelectionModal, setShowNoteSelectionModal] = useState(false);
+  const [pendingAiResponse, setPendingAiResponse] = useState<string>('');
   const [notesFileName, setNotesFileName] = useState('');
   const [currentNotes, setCurrentNotes] = useState('');
   const [editingNotesName, setEditingNotesName] = useState('');
@@ -41,6 +49,11 @@ const ResearchAgentNew: React.FC = () => {
   const [savedNotes, setSavedNotes] = useState<Record<string, string>>({});
   const [selectedNotesName, setSelectedNotesName] = useState<string>('current');
   const [currentNoteMessageId, setCurrentNoteMessageId] = useState<string | null>(null);
+  
+  // Upload-related state
+  const [uploadedPaper, setUploadedPaper] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadedPaperData, setUploadedPaperData] = useState<Paper | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -109,9 +122,9 @@ const ResearchAgentNew: React.FC = () => {
       if (selectedPaper) {
         enhancedMessage = `Context: I'm discussing the paper "${selectedPaper.title}" by ${selectedPaper.authors.join(', ')}. 
 
-Paper Abstract: ${selectedPaper.summary}
+Paper Summary: ${selectedPaper.summary}
 
-ArXiv ID: ${selectedPaper.arxiv_id}
+Paper ID: ${selectedPaper.arxiv_id}
 Categories: ${selectedPaper.categories.join(', ')}
 
 User Question: ${message}`;
@@ -127,9 +140,7 @@ User Question: ${message}`;
         timestamp: new Date()
       };
       addChatMessage(aiMessage);
-
-      // Auto-save AI response to "AI Responses" notes
-      await saveAiResponseToNotes(response.message, message, selectedPaper);
+      // Remove automatic note saving - user will choose manually using save button
       
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -192,9 +203,124 @@ User Question: ${message}`;
     */
   };
 
+  // Handle paper upload
+  const handlePaperUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      alert('Please upload a PDF file only.');
+      return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB.');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadedPaper(file);
+
+    try {
+      // Upload to backend for processing
+      const uploadResult = await researchAgentApi.uploadPDF(file);
+
+      // Create a Paper object from the upload result
+      const uploadedPaperObj: Paper = {
+        id: uploadResult.paper_id,
+        title: file.name.replace('.pdf', ''),
+        authors: ['Uploaded Document'],
+        published: new Date().toISOString().split('T')[0],
+        arxiv_id: uploadResult.paper_id,
+        categories: ['uploaded'],
+        summary: `Uploaded PDF document with ${uploadResult.text_length} characters extracted`,
+        pdf_url: URL.createObjectURL(file)
+      };
+
+      setUploadedPaperData(uploadedPaperObj);
+      setSelectedPaper(uploadedPaperObj);
+
+      // Add system message about successful upload
+      const systemMessage: ChatMessage = {
+        id: generateId(),
+        content: `📄 Successfully uploaded and processed "${file.name}". 
+
+✅ **PDF Analysis Ready**: ${uploadResult.text_length} characters extracted
+✅ **AI Chat Available**: Ask questions about this document
+✅ **Note Saving**: Save responses to your notes
+✅ **Backend Processed**: Full document analysis available
+
+You can now ask detailed questions about the content of this document!`,
+        role: 'system',
+        timestamp: new Date()
+      };
+      addChatMessage(systemMessage);
+
+      // Clear search results since we're now working with uploaded paper
+      setSearchResults([]);
+      setSearchQuery('');
+
+    } catch (error) {
+      console.error('Error uploading paper:', error);
+      alert(`Failed to upload paper: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    } finally {
+      setIsUploading(false);
+      // Clear the input so the same file can be uploaded again if needed
+      event.target.value = '';
+    }
+  };
+
   // Notes functionality
   const handleNotesModalOpen = () => {
     setShowNotesModal(true);
+  };
+
+  // Create a new blank note directly
+  const handleCreateNewNote = async () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
+    const defaultName = `Note_${timestamp}_${Math.random().toString(36).substr(2, 4)}`;
+    
+    const noteName = prompt('Enter a name for your new note:', defaultName);
+    if (!noteName || !noteName.trim()) {
+      return; // User cancelled or entered empty name
+    }
+
+    const finalNoteName = noteName.trim();
+    
+    // Check if note name already exists
+    if (savedNotes[finalNoteName]) {
+      alert('A note with this name already exists. Please choose a different name.');
+      return;
+    }
+
+    try {
+      // Create blank note using updateNote (which saves exactly what we give it)
+      await researchAgentApi.updateNote(finalNoteName, '');
+      
+      // Update local state
+      setSavedNotes(prev => ({
+        ...prev,
+        [finalNoteName]: ''
+      }));
+      
+      // Add success message
+      const successMessage: ChatMessage = {
+        id: generateId(),
+        content: `✅ Created new blank note: "${finalNoteName}"`,
+        role: 'system',
+        timestamp: new Date()
+      };
+      addChatMessage(successMessage);
+      
+      // Reload notes to update UI
+      await loadNotesFromVault();
+      
+    } catch (error) {
+      console.error('Failed to create new note:', error);
+      alert(`Failed to create note: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   };
 
   const handleCreateNotes = async () => {
@@ -203,10 +329,14 @@ User Question: ${message}`;
       return;
     }
 
-    const fileName = `${notesFileName}_${Date.now()}`;
-    const contentToSave = currentNotes.trim() || (selectedPaper ? 
-      `# Research Notes: ${selectedPaper.title}\n\n## Paper Details\n- **Authors:** ${selectedPaper.authors.join(', ')}\n- **Published:** ${selectedPaper.published}\n- **ArXiv ID:** ${selectedPaper.arxiv_id}\n\n## Abstract\n${selectedPaper.summary}\n\n## Notes\n[Add your notes here]\n\n## Key Insights\n[Add key insights here]\n\n## Questions\n[Add questions here]` :
-      '# Research Notes\n\n[Add your notes here]');
+    // Check if note name already exists
+    if (savedNotes[notesFileName]) {
+      alert('A note with this name already exists. Please choose a different name.');
+      return;
+    }
+
+    const fileName = notesFileName; // Remove timestamp to use clean name
+    const contentToSave = currentNotes.trim() || ''; // Always create blank notes
 
     await saveNotesToVault(fileName, contentToSave);
     setCurrentNotes('');
@@ -214,29 +344,40 @@ User Question: ${message}`;
     setSelectedNotesName('current'); // Reset dropdown to current session
     setShowNotesModal(false);
 
-    // Remove notes creation notification - user can see it in the notes counter
-    /*
-    const systemMessage: ChatMessage = {
-      id: generateId(),
-      content: `Created new notes file: "${fileName}". Notes saved to vault.`,
-      role: 'system',
-      timestamp: new Date()
-    };
-    addChatMessage(systemMessage);
-    */
+    // If there's a pending AI response, go back to the note selection modal
+    if (pendingAiResponse) {
+      // Refresh notes to include the newly created note
+      await loadNotesFromVault();
+      setTimeout(() => {
+        setShowNoteSelectionModal(true);
+      }, 100);
+    }
   };
 
   const handleEditNotes = async (notesName: string) => {
+    console.log('✏️ handleEditNotes called for:', notesName);
+
     try {
       setEditingNotesName(notesName);
       
       // Load the note content from the vault
+      console.log('Loading note content from vault...');
       const content = await researchAgentApi.getNote(notesName);
+      console.log('Note content loaded:', {
+        noteName: notesName,
+        contentLength: content?.length || 0,
+        isEmpty: !content || content.trim() === ''
+      });
+      
       setEditingNotesContent(content || savedNotes[notesName] || '');
       
       setShowEditNotesModal(true);
       setShowNotesListModal(false);
+      
+      console.log('Edit modal opened successfully');
+      
     } catch (error) {
+      console.error('Failed to load note for editing:', error);
       const errorMessage: ChatMessage = {
         id: generateId(),
         content: `Failed to load note "${notesName}": ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -263,84 +404,330 @@ User Question: ${message}`;
   };
 
   const handleSaveEditedNotes = async () => {
-    if (!editingNotesName.trim() || !editingNotesContent.trim()) return;
+    console.log('🔧 handleSaveEditedNotes called:', {
+      editingNotesName,
+      editingNotesContentLength: editingNotesContent.length,
+      isEmpty: editingNotesContent.trim() === ''
+    });
+
+    if (!editingNotesName.trim()) {
+      console.warn('Save aborted: missing notes name', {
+        editingNotesName
+      });
+      alert('Please make sure you have a valid note name.');
+      return;
+    }
     
     try {
+      console.log('Saving edited notes:', {
+        noteName: editingNotesName,
+        contentLength: editingNotesContent.length,
+        isEmpty: editingNotesContent.trim() === ''
+      });
+      
+      // Allow saving empty content (user might want to clear the note)
+      const contentToSave = editingNotesContent; // Don't trim, preserve user's intent
+      
       // Update the note using the API
-      await researchAgentApi.updateNote(editingNotesName, editingNotesContent);
+      console.log('🔄 Calling API updateNote...');
+      await researchAgentApi.updateNote(editingNotesName, contentToSave);
+      console.log('✅ API updateNote completed successfully');
       
       // Update local state
       setSavedNotes(prev => ({
         ...prev,
-        [editingNotesName]: editingNotesContent
+        [editingNotesName]: contentToSave
       }));
+      console.log('✅ Local state updated');
 
       // Reload notes from vault to ensure consistency
+      console.log('🔄 Reloading notes from vault...');
       await loadNotesFromVault();
+      console.log('✅ Notes reloaded from vault');
       
       setShowEditNotesModal(false);
       setEditingNotesName('');
       setEditingNotesContent('');
       
-      // Remove notes update success message - user can see the changes
-      /*
+      // Add success message to show user the save worked
       const successMessage: ChatMessage = {
         id: generateId(),
-        content: `✅ Notes "${editingNotesName}" updated successfully!`,
+        content: contentToSave.trim() === '' ? 
+          `✅ Notes "${editingNotesName}" cleared successfully!` :
+          `✅ Notes "${editingNotesName}" updated successfully!`,
         role: 'system',
         timestamp: new Date()
       };
       addChatMessage(successMessage);
-      */
+      
+      console.log('✅ Save operation completed successfully');
       
     } catch (error) {
+      console.error('❌ Failed to save edited notes:', error);
       const errorMessage: ChatMessage = {
         id: generateId(),
-        content: `Failed to update notes: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: `❌ Failed to update notes: ${error instanceof Error ? error.message : 'Unknown error'}`,
         role: 'system',
         timestamp: new Date()
       };
       addChatMessage(errorMessage);
+      
+      // Also show an alert for immediate feedback
+      alert(`Failed to save notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
-  // Save AI response to "AI Responses" notes
-  const saveAiResponseToNotes = async (aiResponse: string, userQuestion: string, paper: Paper | null) => {
+  // Save specific AI response to selected notes (called from message action button)
+  const saveSpecificResponseToNotes = async (messageContent: string, messageId: string) => {
     try {
-      const timestamp = new Date().toLocaleString();
-      const paperContext = paper ? 
-        `Paper: "${paper.title}" by ${paper.authors.join(', ')}\nArXiv ID: ${paper.arxiv_id}\n\n` : 
-        '';
+      console.log('🔄 Preparing to save AI response to notes...');
       
-      const noteEntry = `## ${timestamp}\n\n${paperContext}**Question:** ${userQuestion}\n\n**AI Response:**\n${aiResponse}\n\n---\n\n`;
+      // First refresh notes to get all current notes (including newly created ones)
+      await loadNotesFromVault();
+      console.log('✅ Notes refreshed from vault');
       
-      // Load existing AI Responses notes
+      // Create note entry with just the response content and separator
+      const noteEntry = `${messageContent}\n--- Response ---\n`;
+      
+      // Store the response for note selection modal
+      setPendingAiResponse(noteEntry);
+      setCurrentNoteMessageId(messageId);
+      setShowNoteSelectionModal(true);
+      
+      console.log('✅ Note selection modal opened');
+      
+    } catch (error) {
+      console.error('❌ Failed to prepare AI response for saving:', error);
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        content: `❌ Failed to load notes. Please try again.`,
+        role: 'system',
+        timestamp: new Date()
+      };
+      addChatMessage(errorMessage);
+      
+      alert('Failed to load notes. Please try again.');
+    }
+  };
+
+  // Function to save AI response to selected note(s)
+  const saveAiResponseToSelectedNotes = async (selectedNoteNames: string[]) => {
+    try {
+      console.log('🔄 Starting to save AI response to notes:', selectedNoteNames);
+      console.log('📝 Pending AI response preview:', pendingAiResponse.substring(0, 100) + '...');
+      
+      // Always save to "AI Responses" first
+      console.log('🔄 Getting existing AI Responses notes...');
       const existingAiNotes = await researchAgentApi.getNote('AI Responses') || '';
+      console.log('📋 Existing AI notes length:', existingAiNotes.length);
       
-      // Prepend new entry to existing notes (most recent first)
-      const updatedNotes = noteEntry + existingAiNotes;
+      const updatedAiNotes = existingAiNotes + pendingAiResponse;
+      console.log('🔄 Updating AI Responses notes with total length:', updatedAiNotes.length);
+      await researchAgentApi.updateNote('AI Responses', updatedAiNotes);
+      console.log('✅ Saved to AI Responses successfully');
       
-      // Save back to notes
-      await researchAgentApi.updateNote('AI Responses', updatedNotes);
+      // Also save to user-selected notes
+      for (const noteName of selectedNoteNames) {
+        if (noteName !== 'AI Responses') {
+          console.log(`🔄 Processing note: ${noteName}`);
+          const existingNotes = await researchAgentApi.getNote(noteName) || '';
+          console.log(`📋 Existing notes length for ${noteName}:`, existingNotes.length);
+          const updatedNotes = existingNotes + pendingAiResponse;
+          console.log(`🔄 Calling updateNote for ${noteName} with total length:`, updatedNotes.length);
+          await researchAgentApi.updateNote(noteName, updatedNotes);
+          console.log(`✅ Saved to ${noteName} successfully`);
+        }
+      }
       
-      // Update local saved notes state to reflect the change
-      setSavedNotes(prev => ({
-        ...prev,
-        'AI Responses': updatedNotes
-      }));
+      // Update local saved notes state to reflect the changes
+      console.log('🔄 Updating local state...');
+      setSavedNotes(prev => {
+        console.log('📋 Previous saved notes:', Object.keys(prev));
+        const updated = { ...prev };
+        updated['AI Responses'] = updatedAiNotes;
+        for (const noteName of selectedNoteNames) {
+          if (noteName !== 'AI Responses') {
+            const existingNotes = prev[noteName] || '';
+            updated[noteName] = existingNotes + pendingAiResponse;
+          }
+        }
+        console.log('✅ Updated saved notes:', Object.keys(updated));
+        return updated;
+      });
       
-      console.log('AI response saved to "AI Responses" notes');
+      console.log('AI response saved to selected notes:', selectedNoteNames);
+      
+      // Add success message to chat
+      const successMessage: ChatMessage = {
+        id: generateId(),
+        content: `✅ AI response saved to notes: ${selectedNoteNames.join(', ')}`,
+        role: 'system',
+        timestamp: new Date()
+      };
+      addChatMessage(successMessage);
+      
+      // Reload notes to ensure consistency
+      console.log('🔄 Reloading notes from vault...');
+      await loadNotesFromVault();
+      console.log('✅ Notes reloaded from vault');
+      
+      setPendingAiResponse('');
+      setShowNoteSelectionModal(false);
+      
     } catch (error) {
       console.error('Failed to save AI response to notes:', error);
+      
+      // Add error message to chat
+      const errorMessage: ChatMessage = {
+        id: generateId(),
+        content: `❌ Failed to save AI response to notes: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        role: 'system',
+        timestamp: new Date()
+      };
+      addChatMessage(errorMessage);
+      
+      alert(`Failed to save to notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  };
+
+  // Function to download notes as PDF
+  const downloadNotesAsPDF = async (noteName: string, content: string) => {
+    try {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Please allow popups to download PDF');
+        return;
+      }
+
+      // Create HTML content for PDF
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${noteName} - Research Notes</title>
+          <style>
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+              line-height: 1.6;
+              margin: 40px;
+              color: #333;
+            }
+            h1, h2, h3, h4, h5, h6 {
+              color: #2c3e50;
+              margin-top: 24px;
+              margin-bottom: 12px;
+            }
+            h1 {
+              border-bottom: 2px solid #3498db;
+              padding-bottom: 8px;
+            }
+            p {
+              margin-bottom: 12px;
+            }
+            pre {
+              background-color: #f8f9fa;
+              border: 1px solid #e9ecef;
+              border-radius: 4px;
+              padding: 16px;
+              overflow-x: auto;
+            }
+            code {
+              background-color: #f8f9fa;
+              padding: 2px 4px;
+              border-radius: 3px;
+              font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            }
+            blockquote {
+              border-left: 4px solid #3498db;
+              margin: 0;
+              padding-left: 16px;
+              color: #666;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 40px;
+              border-bottom: 1px solid #ddd;
+              padding-bottom: 20px;
+            }
+            .footer {
+              margin-top: 40px;
+              border-top: 1px solid #ddd;
+              padding-top: 20px;
+              text-align: center;
+              color: #666;
+              font-size: 12px;
+            }
+            @media print {
+              body { margin: 20px; }
+              .no-print { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>${noteName}</h1>
+            <p>Research Notes - Generated on ${new Date().toLocaleDateString()}</p>
+          </div>
+          <div class="content">
+            ${content.replace(/\n/g, '<br>').replace(/#{1,6}\s/g, '<h3>').replace(/<h3>/g, '</p><h3>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>')}
+          </div>
+          <div class="footer">
+            <p>Generated by Research Agent - ${new Date().toLocaleString()}</p>
+          </div>
+          <button class="no-print" onclick="window.print(); window.close();" style="position: fixed; top: 20px; right: 20px; padding: 10px 20px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Download PDF</button>
+        </body>
+        </html>
+      `;
+
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      
+      // Auto-trigger print dialog
+      setTimeout(() => {
+        printWindow.print();
+      }, 500);
+      
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
     }
   };
 
   // Load notes from vault
   const loadNotesFromVault = async () => {
     try {
+      console.log('🔄 Loading notes from vault...');
+      
+      // Debug localStorage content
+      console.log('🗄️ localStorage debugging:');
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('research_notes_')) {
+          const value = localStorage.getItem(key);
+          console.log(`Key: ${key}`, {
+            rawValue: value,
+            parsed: value ? JSON.parse(value) : null
+          });
+        }
+      }
+      
       const notes = await researchAgentApi.loadNotes();
+      console.log('📋 Raw notes loaded:', notes);
+      console.log('📊 Notes summary:', {
+        totalNotes: Object.keys(notes).length,
+        noteNames: Object.keys(notes),
+        noteSizes: Object.keys(notes).map(name => ({
+          name,
+          size: notes[name]?.length || 0,
+          isEmpty: !notes[name] || notes[name].trim() === ''
+        }))
+      });
+      
       setSavedNotes(notes);
-      console.log('Loaded notes from vault:', notes);
+      console.log('✅ Notes loaded and state updated');
       
       // Add a system message when notes are loaded
       if (Object.keys(notes).length > 0) {
@@ -356,8 +743,25 @@ User Question: ${message}`;
         */
       }
     } catch (error) {
-      console.error('Failed to load notes from vault:', error);
+      console.error('❌ Failed to load notes from vault:', error);
     }
+  };
+
+  // Parse note content to extract individual saved responses
+  const parseNoteContent = (noteContent: string): ChatMessage[] => {
+    if (!noteContent.trim()) {
+      return [];
+    }
+
+    // Split by response separators (we'll use a consistent format)
+    const responses = noteContent.split('\n--- Response ---\n').filter(content => content.trim());
+    
+    return responses.map((response, index) => ({
+      id: generateId(),
+      content: response.trim(),
+      role: 'ai' as const,
+      timestamp: new Date(Date.now() - (responses.length - index) * 60000) // Stagger timestamps
+    }));
   };
 
   // Handle notes dropdown selection change
@@ -366,48 +770,62 @@ User Question: ${message}`;
     setSelectedNotesName(selectedValue);
     
     if (selectedValue === 'current') {
-      // Keep current session notes as is
+      // Restore original chat messages (exit note view mode)
+      if (originalChatMessages.length > 0) {
+        setChatMessages(originalChatMessages);
+        setOriginalChatMessages([]); // Clear the backup
+      }
+      setCurrentNoteMessageId(null);
+      setCurrentNotes(''); // Clear note content
       return;
     } else if (selectedValue === 'clear') {
-      // Remove the currently displayed note from chat
-      if (currentNoteMessageId) {
-        setChatMessages(prev => 
-          prev.filter(msg => msg.id !== currentNoteMessageId)
-        );
-        setCurrentNoteMessageId(null);
+      // Clear displayed notes and restore current session chat
+      console.log('🧹 Clearing displayed notes...');
+      
+      // Always restore to original chat messages if they exist
+      if (originalChatMessages.length > 0) {
+        console.log('🔄 Restoring original chat messages');
+        // Filter out system messages from the original messages
+        const filteredMessages = originalChatMessages.filter(msg => msg.role !== 'system');
+        setChatMessages(filteredMessages);
+        setOriginalChatMessages([]);
+      } else {
+        // If no original messages backed up, filter current messages to remove system messages
+        console.log('🧹 Filtering current messages to remove system messages');
+        const filteredMessages = chatMessages.filter(msg => msg.role !== 'system');
+        setChatMessages(filteredMessages);
       }
+      
+      setCurrentNoteMessageId(null);
       setSelectedNotesName('current'); // Reset to current session
+      setCurrentNotes(''); // Clear any note content
+      
+      console.log('✅ Notes cleared, back to current session');
       return;
     } else {
-      // Load the selected saved note and display its content in chat
+      // Load the selected saved note and display ONLY its content (note view mode)
       try {
         const noteContent = await researchAgentApi.getNote(selectedValue);
         setCurrentNotes(noteContent);
         
-        // Display the note content in chat messages - replace previous note if exists
+        // Save current chat messages if not already saved
+        if (originalChatMessages.length === 0) {
+          setOriginalChatMessages(chatMessages);
+        }
+        
+        // Parse note content to extract individual saved responses
         if (noteContent.trim()) {
-          const noteMessageId = generateId();
-          const noteMessage: ChatMessage = {
-            id: noteMessageId,
-            content: noteContent,
-            role: 'ai',
+          const savedResponses = parseNoteContent(noteContent);
+          setChatMessages(savedResponses);
+        } else {
+          // Empty note - show placeholder
+          const emptyNoteMessage: ChatMessage = {
+            id: generateId(),
+            content: `📝 Note "${selectedValue}" is empty. Start saving AI responses to this note!`,
+            role: 'system',
             timestamp: new Date()
           };
-          
-          // If there's a previous note message, replace it
-          if (currentNoteMessageId) {
-            setChatMessages(prev => 
-              prev.map(msg => 
-                msg.id === currentNoteMessageId ? noteMessage : msg
-              )
-            );
-          } else {
-            // No previous note, add as new message
-            addChatMessage(noteMessage);
-          }
-          
-          // Track this note message ID for future replacements
-          setCurrentNoteMessageId(noteMessageId);
+          setChatMessages([emptyNoteMessage]);
         }
       } catch (error) {
         console.error('Failed to load note:', error);
@@ -417,12 +835,21 @@ User Question: ${message}`;
 
   // Handle delete notes
   const handleDeleteNote = async (noteName: string) => {
+    console.log('🗑️ handleDeleteNote called for:', noteName);
+    console.log('📊 Current savedNotes state:', Object.keys(savedNotes));
+    console.log('🔍 Note exists in savedNotes?', savedNotes[noteName] !== undefined);
+
     if (confirm(`Are you sure you want to delete the note "${noteName}"? This action cannot be undone.`)) {
       try {
+        console.log('✅ User confirmed deletion, proceeding...');
+        console.log('🔧 Calling API deleteNote for:', noteName);
+        
         await researchAgentApi.deleteNote(noteName);
+        console.log('✅ API deleteNote completed successfully');
         
         // If the deleted note was currently selected, reset to current session
         if (selectedNotesName === noteName) {
+          console.log('🔄 Resetting selected note to current session');
           setSelectedNotesName('current');
           setCurrentNotes('');
           
@@ -436,11 +863,25 @@ User Question: ${message}`;
         }
         
         // Reload notes to update the list
+        console.log('🔄 Reloading notes from vault...');
         await loadNotesFromVault();
+        console.log('✅ Notes reloaded after deletion');
+
+        // Add success message
+        const successMessage: ChatMessage = {
+          id: generateId(),
+          content: `✅ Note "${noteName}" deleted successfully!`,
+          role: 'system',
+          timestamp: new Date()
+        };
+        addChatMessage(successMessage);
+
       } catch (error) {
-        console.error('Failed to delete note:', error);
-        alert('Failed to delete note. Please try again.');
+        console.error('❌ Failed to delete note:', error);
+        alert(`Failed to delete note: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
+    } else {
+      console.log('❌ User cancelled deletion');
     }
   };
 
@@ -510,8 +951,33 @@ User Question: ${message}`;
   // Initialize AI Responses notes if they don't exist
   const initializeAiResponsesNotes = async () => {
     try {
+      console.log('🔄 Initializing AI Responses notes...');
+      
+      // Test localStorage functionality first
+      try {
+        localStorage.setItem('test_key', 'test_value');
+        const testValue = localStorage.getItem('test_key');
+        localStorage.removeItem('test_key');
+        if (testValue === 'test_value') {
+          console.log('✅ localStorage is working properly');
+        } else {
+          console.error('❌ localStorage test failed');
+          throw new Error('localStorage not functioning properly');
+        }
+      } catch (storageError) {
+        console.error('❌ localStorage error:', storageError);
+        alert('LocalStorage is not available. Notes may not save properly.');
+        return;
+      }
+      
       const existingAiNotes = await researchAgentApi.getNote('AI Responses');
-      if (!existingAiNotes) {
+      console.log('📋 Existing AI Responses notes:', {
+        found: !!existingAiNotes,
+        length: existingAiNotes?.length || 0
+      });
+      
+      if (!existingAiNotes || existingAiNotes.trim() === '') {
+        console.log('📝 Creating initial AI Responses notes...');
         // Create initial AI Responses notes file
         const initialContent = `# AI Responses\n\nThis file automatically stores all AI responses from your research conversations.\n\n---\n\n`;
         await researchAgentApi.updateNote('AI Responses', initialContent);
@@ -522,10 +988,13 @@ User Question: ${message}`;
           'AI Responses': initialContent
         }));
         
-        console.log('AI Responses notes initialized');
+        console.log('✅ AI Responses notes initialized with content:', initialContent.substring(0, 50) + '...');
+      } else {
+        console.log('✅ AI Responses notes already exist');
       }
     } catch (error) {
-      console.error('Failed to initialize AI Responses notes:', error);
+      console.error('❌ Failed to initialize AI Responses notes:', error);
+      alert(`Failed to initialize notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -565,7 +1034,9 @@ User Question: ${message}`;
             {selectedPaper ? (
               <div className="paper-details">
                 <div className="paper-header">
-                  <h3>{selectedPaper.title}</h3>
+                  <h3>
+                    {selectedPaper.title}
+                  </h3>
                   <div className="paper-meta">
                     <p><strong>Authors:</strong> {selectedPaper.authors.join(', ')}</p>
                     <p><strong>Published:</strong> {selectedPaper.published}</p>
@@ -576,6 +1047,15 @@ User Question: ${message}`;
                 <div className="paper-abstract">
                   <h4>Abstract</h4>
                   <p>{selectedPaper.summary}</p>
+                  <div className="paper-actions">
+                    <p><strong>💡 Need full paper analysis?</strong></p>
+                    <p>This shows only the abstract. For detailed analysis of the full paper:</p>
+                    <ol>
+                      <li>Download the PDF: <a href={selectedPaper.pdf_url} target="_blank" rel="noopener noreferrer" className="pdf-link">📄 Download PDF</a></li>
+                      <li>Upload it using the file upload feature</li>
+                      <li>Ask questions about the full content</li>
+                    </ol>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -672,6 +1152,23 @@ User Question: ${message}`;
                 {isSearching ? ' Searching...' : ''}
               </button>
             </div>
+            
+            <div className="upload-section">
+              <div className="upload-divider">OR</div>
+              <label htmlFor="paperUpload" className="upload-btn">
+                <i className="fas fa-upload"></i>
+                {isUploading ? 'Uploading...' : 'Upload PDF'}
+              </label>
+              <input
+                type="file"
+                id="paperUpload"
+                className="upload-input"
+                accept=".pdf"
+                onChange={handlePaperUpload}
+                disabled={isUploading}
+              />
+            </div>
+            
             <div className="paper-selector">
               <select 
                 id="paperDropdown" 
@@ -679,16 +1176,21 @@ User Question: ${message}`;
                 value={selectedPaper?.id || ''}
                 onChange={(e) => {
                   const paperId = e.target.value;
-                  const paper = searchResults.find(p => p.id === paperId);
+                  const paper = searchResults.find(p => p.id === paperId) || uploadedPaperData;
                   if (paper) {
                     handlePaperSelect(paper);
                   }
                 }}
-                disabled={searchResults.length === 0}
+                disabled={searchResults.length === 0 && !uploadedPaperData}
               >
                 <option value="">
-                  {searchResults.length === 0 ? 'Search for papers first...' : 'Select a paper...'}
+                  {searchResults.length === 0 && !uploadedPaperData ? 'Search for papers or upload PDF...' : 'Select a paper...'}
                 </option>
+                {uploadedPaperData && (
+                  <option key={uploadedPaperData.id} value={uploadedPaperData.id}>
+                    📄 {uploadedPaperData.title.length > 50 ? uploadedPaperData.title.substring(0, 50) + '...' : uploadedPaperData.title}
+                  </option>
+                )}
                 {searchResults.map((paper) => (
                   <option key={paper.id} value={paper.id}>
                     {paper.title.length > 60 ? paper.title.substring(0, 60) + '...' : paper.title}
@@ -836,7 +1338,7 @@ User Question: ${message}`;
                       <i className="fas fa-sync-alt"></i>
                     </button>
                   </div>
-                  <button id="newNotesBtn" className="control-btn" onClick={handleNotesModalOpen}>
+                  <button id="newNotesBtn" className="control-btn" onClick={handleCreateNewNote}>
                     <i className="fas fa-plus"></i> New Notes
                   </button>
                   <button 
@@ -861,7 +1363,14 @@ User Question: ${message}`;
             <div className="panel-content">
               {/* Chat Interface */}
               <div className="chat-section">
-                <div id="chatMessages" className="chat-messages">
+                <div 
+                  id="chatMessages" 
+                  className="chat-messages"
+                  style={{
+                    scrollbarWidth: 'thick' as any,
+                    scrollbarColor: '#475569 #e2e8f0'
+                  }}
+                >
                   {chatMessages.length === 0 ? (
                     <div className="welcome-message">
                       <div className="agent-avatar">
@@ -906,8 +1415,8 @@ User Question: ${message}`;
                         </div>
                         <div className="message-content">
                           <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]}
-                            rehypePlugins={[rehypeHighlight]}
+                            remarkPlugins={[remarkGfm, remarkMath]}
+                            rehypePlugins={[rehypeHighlight, rehypeKatex]}
                             components={{
                               code: ({className, children, ...props}: any) => {
                                 const isInline = !className?.includes('language-');
@@ -949,6 +1458,60 @@ User Question: ${message}`;
                             {message.content}
                           </ReactMarkdown>
                         </div>
+                        
+                        {/* Debug info for all messages */}
+                        {message.role === 'ai' && (
+                            <div className="message-actions" style={{
+                            marginTop: '15px',
+                            paddingTop: '10px', 
+                            borderTop: '2px solid #dee2e6',
+                            display: 'flex',
+                            justifyContent: 'flex-end',
+                            backgroundColor: '#f8f9fa',
+                            padding: '10px',
+                            borderRadius: '4px',
+                            position: 'relative',
+                            zIndex: 1000
+                          }}>
+                            <button 
+                              onClick={() => saveSpecificResponseToNotes(message.content, message.id)}
+                              className="save-to-notes-btn"
+                              style={{
+                                backgroundColor: '#007bff',
+                                color: '#ffffff',
+                                border: '2px solid #0056b3',
+                                padding: '12px 24px',
+                                fontSize: '14px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                borderRadius: '6px',
+                                display: 'inline-block',
+                                minWidth: '150px',
+                                minHeight: '40px',
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                                transition: 'all 0.2s ease',
+                                textAlign: 'center' as const,
+                                lineHeight: '1.2',
+                                opacity: 1,
+                                visibility: 'visible' as const,
+                                position: 'relative' as const,
+                                zIndex: 9999
+                              }}
+                              onMouseOver={(e) => {
+                                const target = e.target as HTMLButtonElement;
+                                target.style.backgroundColor = '#0056b3';
+                                target.style.transform = 'translateY(-1px)';
+                              }}
+                              onMouseOut={(e) => {
+                                const target = e.target as HTMLButtonElement;
+                                target.style.backgroundColor = '#007bff';
+                                target.style.transform = 'translateY(0)';
+                              }}
+                            >
+                              SAVE TO NOTES
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -1063,6 +1626,78 @@ User Question: ${message}`;
         </div>
       )}
 
+      {/* Note Selection Modal */}
+      {showNoteSelectionModal && (
+        <div className="modal">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h3><i className="fas fa-save"></i> Save AI Response to Notes</h3>
+              <button className="close-btn" onClick={() => setShowNoteSelectionModal(false)}>
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            <div className="modal-body">
+              <p>Select which notes to save this AI response to:</p>
+              <div className="note-selection-list">
+                {Object.keys(savedNotes).length > 0 ? (
+                  <>
+                    {Object.keys(savedNotes).map(noteName => (
+                      <label key={noteName} className="note-selection-item">
+                        <input 
+                          type="checkbox" 
+                          value={noteName}
+                          defaultChecked={noteName === 'AI Responses'}
+                          disabled={noteName === 'AI Responses'}
+                        />
+                        <span className={noteName === 'AI Responses' ? 'default-note' : ''}>
+                          {noteName} {noteName === 'AI Responses' ? '(Always included)' : ''}
+                        </span>
+                      </label>
+                    ))}
+                    <div className="create-new-note-option">
+                      <button 
+                        className="btn small primary"
+                        onClick={() => {
+                          setShowNoteSelectionModal(false);
+                          setShowNotesModal(true);
+                        }}
+                      >
+                        <i className="fas fa-plus"></i> Create New Note
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="no-notes-section">
+                    <p>No existing notes found.</p>
+                    <button 
+                      className="btn primary"
+                      onClick={() => {
+                        setShowNoteSelectionModal(false);
+                        setShowNotesModal(true);
+                      }}
+                    >
+                      <i className="fas fa-plus"></i> Create Your First Note
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button className="btn primary" onClick={() => {
+                  const checkboxes = document.querySelectorAll('.note-selection-item input[type="checkbox"]:checked');
+                  const selectedNotes = Array.from(checkboxes).map(cb => (cb as HTMLInputElement).value);
+                  saveAiResponseToSelectedNotes(selectedNotes);
+                }}>Save to Selected Notes</button>
+                <button className="btn secondary" onClick={() => {
+                  // Just save to AI Responses only
+                  saveAiResponseToSelectedNotes(['AI Responses']);
+                }}>Save to AI Responses Only</button>
+                <button className="btn secondary" onClick={() => setShowNoteSelectionModal(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Edit Notes Modal */}
       {showEditNotesModal && (
         <div className="modal">
@@ -1113,19 +1748,62 @@ User Question: ${message}`;
                 ) : (
                   Object.keys(savedNotes).map((notesName) => (
                     <div key={notesName} className="notes-item">
-                      <span className="notes-item-name">{notesName}</span>
+                      <span className="notes-item-name">
+                        {notesName}
+                        {notesName === 'AI Responses' && (
+                          <span className="protected-note-indicator"> (Protected)</span>
+                        )}
+                      </span>
                       <div className="notes-item-actions">
+                        {notesName !== 'AI Responses' && (
+                          <>
+                            <button 
+                              className="btn small primary" 
+                              onClick={() => {
+                                console.log('📝 Edit button clicked for:', notesName);
+                                handleEditNotes(notesName);
+                              }}
+                              style={{
+                                pointerEvents: 'auto',
+                                cursor: 'pointer',
+                                zIndex: 1000,
+                                position: 'relative'
+                              }}
+                            >
+                              <i className="fas fa-edit"></i> Edit
+                            </button>
+                            <button 
+                              className="btn small danger" 
+                              onClick={() => {
+                                console.log('�️ Delete button clicked for:', notesName);
+                                handleDeleteNote(notesName);
+                              }}
+                              style={{
+                                pointerEvents: 'auto',
+                                cursor: 'pointer',
+                                zIndex: 1000,
+                                position: 'relative'
+                              }}
+                            >
+                              <i className="fas fa-trash"></i> Delete
+                            </button>
+                          </>
+                        )}
                         <button 
-                          className="btn small primary" 
-                          onClick={() => handleEditNotes(notesName)}
+                          className="btn small secondary" 
+                          onClick={() => {
+                            console.log('� PDF button clicked for:', notesName);
+                            downloadNotesAsPDF(notesName, savedNotes[notesName]);
+                          }}
+                          title="Download as PDF"
+                          style={{
+                            pointerEvents: 'auto',
+                            cursor: 'pointer',
+                            zIndex: 1000,
+                            position: 'relative'
+                          }}
                         >
-                          <i className="fas fa-edit"></i> Edit
-                        </button>
-                        <button 
-                          className="btn small danger" 
-                          onClick={() => handleDeleteNote(notesName)}
-                        >
-                          <i className="fas fa-trash"></i> Delete
+                          <i className="fas fa-download"></i> PDF
                         </button>
                       </div>
                     </div>

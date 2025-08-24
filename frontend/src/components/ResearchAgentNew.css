@@ -62,8 +62,8 @@ body {
 
 .header-content .search-controls{
     /* margin: 0 20px 0 0; */
-    margin-top: -1.5rem;
-    margin-left: 15rem;
+    margin-top: -2rem;
+    margin-left: 12rem;
 }
 .search-controls {
     display: flex;
@@ -72,6 +72,8 @@ body {
     flex-wrap: wrap;
     width: 100%;
     padding: 0.5rem;
+    gap: 1rem;
+    /* justify-content: space-between; */
 }
 
 .search-box {
@@ -119,6 +121,55 @@ body {
 .search-btn:hover {
     background: #2980b9;
     transform: translateY(-2px);
+}
+
+/* Upload Section Styles */
+.upload-section {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0 1rem;
+}
+
+.upload-divider {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 0 0.5rem;
+}
+
+.upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.upload-btn:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+}
+
+.upload-btn:active {
+    transform: translateY(0);
+}
+
+.upload-input {
+    display: none;
+}
+
+.upload-btn i {
+    font-size: 0.9rem;
 }
 
 .paper-selector {
@@ -364,6 +415,29 @@ body {
     overflow-y: auto;
     padding: 20px;
     transition: all 0.3s ease;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #cbd5e0 #f7fafc; /* For Firefox */
+}
+
+.paper-viewer::-webkit-scrollbar {
+    width: 14px; /* Increased from 8px to 14px */
+}
+
+.paper-viewer::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 7px;
+    border: 1px solid #e2e8f0;
+}
+
+.paper-viewer::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 7px;
+    border: 2px solid #f1f5f9;
+    transition: background 0.2s ease;
+}
+
+.paper-viewer::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
 }
 
 /* View-specific containers */
@@ -503,6 +577,29 @@ body {
     overflow-y: auto;
     padding: 30px;
     background: white;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #cbd5e0 #f7fafc; /* For Firefox */
+}
+
+.paper-text-content::-webkit-scrollbar {
+    width: 14px; /* Increased from 8px to 14px */
+}
+
+.paper-text-content::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 7px;
+    border: 1px solid #e2e8f0;
+}
+
+.paper-text-content::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 7px;
+    border: 2px solid #f1f5f9;
+    transition: background 0.2s ease;
+}
+
+.paper-text-content::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
 }
 
 .paper-text-content pre {
@@ -608,10 +705,36 @@ body {
     max-height: calc(100vh - 17.5rem); /* Reduced from 350px to 280px for more chat space */
     min-height: 18.75rem; /* Minimum height for chat messages */
     scroll-behavior: smooth; /* Smooth scrolling */
+    scrollbar-width: thick !important; /* For Firefox - make it thick */
+    scrollbar-color: #64748b #f1f5f9 !important; /* For Firefox - darker thumb, light track */
 }
 
 .chat-messages::-webkit-scrollbar {
-    display: none;
+    width: 16px !important; /* Even larger width for better visibility */
+    height: 16px !important;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+    background: #e2e8f0 !important;
+    border-radius: 8px !important;
+    border: 2px solid #f8fafc !important;
+    margin: 2px !important;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #475569 !important; /* Darker for better visibility */
+    border-radius: 8px !important;
+    border: 2px solid #e2e8f0 !important;
+    transition: background 0.2s ease !important;
+    min-height: 20px !important;
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #334155 !important; /* Even darker on hover */
+}
+
+.chat-messages::-webkit-scrollbar-corner {
+    background: #f8fafc !important;
 }
 
 /* Welcome State - Gemini Style */
@@ -880,8 +1003,8 @@ body {
 }
 
 .message-content ul, .message-content ol {
-    /* margin: 12px 0; */
-    /* padding-left: 25px; */
+    margin: 12px 0;
+    padding-left: 25px;
 }
 
 .message-content li {
@@ -1968,6 +2091,30 @@ body {
     text-align: justify;
 }
 
+.paper-actions {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-left: 4px solid #3498db;
+    border-radius: 0.5rem;
+}
+
+.paper-actions p:first-child {
+    color: #2c3e50;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.paper-actions ol {
+    margin: 0.75rem 0 0 1rem;
+    color: #555;
+}
+
+.paper-actions ol li {
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
 .pdf-link {
     display: inline-block;
     margin-top: 15px;
@@ -2244,6 +2391,29 @@ body {
     line-height: 1.5;
     resize: vertical;
     background: #fafafa;
+    scrollbar-width: thin; /* For Firefox */
+    scrollbar-color: #cbd5e0 #f7fafc; /* For Firefox */
+}
+
+.notes-textarea::-webkit-scrollbar {
+    width: 14px; /* Increased from 8px to 14px */
+}
+
+.notes-textarea::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 7px;
+    border: 1px solid #e2e8f0;
+}
+
+.notes-textarea::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 7px;
+    border: 2px solid #f1f5f9;
+    transition: background 0.2s ease;
+}
+
+.notes-textarea::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
 }
 
 .notes-textarea:focus {
@@ -2368,4 +2538,143 @@ body {
 
 .refresh-notes-btn i {
     font-size: 0.7rem;
+}
+
+/* Note Selection Modal Styles */
+.note-selection-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 12px;
+    background: #f8f9fa;
+    margin: 15px 0;
+}
+
+.note-selection-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    margin: 6px 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.note-selection-item:hover {
+    background: #e9ecef;
+    border-color: #3498db;
+}
+
+.note-selection-item input[type="checkbox"] {
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+.note-selection-item span {
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.note-selection-item .default-note {
+    color: #28a745;
+    font-weight: 500;
+}
+
+.note-selection-item input[type="checkbox"]:disabled {
+    cursor: not-allowed;
+}
+
+/* PDF Download Button Styling */
+.btn.small.secondary {
+    background: #6c757d;
+    color: white;
+    border: 1px solid #6c757d;
+}
+
+.btn.small.secondary:hover {
+    background: #5a6268;
+    border-color: #545b62;
+}
+
+/* Message Actions Styling */
+.message-actions {
+    margin-top: 15px !important;
+    padding: 15px !important;
+    border-top: 2px solid #dee2e6 !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    background-color: #f8f9fa !important;
+    border-radius: 4px !important;
+    position: relative !important;
+    z-index: 1000 !important;
+    min-height: 60px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.save-to-notes-btn {
+    background: #007bff !important;
+    color: white !important;
+    border: 2px solid #0056b3 !important;
+    padding: 12px 24px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: inline-block !important;
+    align-items: center !important;
+    gap: 6px !important;
+    text-decoration: none !important;
+    outline: none !important;
+    font-family: inherit !important;
+    min-width: 150px !important;
+    min-height: 40px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    z-index: 9999 !important;
+    margin: 10px 0 !important;
+}
+
+.save-to-notes-btn:hover {
+    background: #0056b3 !important;
+    border-color: #004085 !important;
+    transform: translateY(-1px) !important;
+    color: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
+.save-to-notes-btn i {
+    font-size: 0.8rem !important;
+    color: white !important;
+    margin-right: 4px !important;
+}
+
+.save-to-notes-btn:active {
+    transform: translateY(0) !important;
+}
+
+/* Create New Note Option in Modal */
+.create-new-note-option {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.no-notes-section {
+    text-align: center;
+    padding: 20px;
+}
+
+.no-notes-section p {
+    margin-bottom: 15px;
+    color: #666;
 }

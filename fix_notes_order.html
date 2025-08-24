@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fix Notes Chronological Order</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Fix AI Responses Notes Order</h1>
+            <p>This tool will reorder your AI Responses notes to be in chronological order (first conversation at the top).</p>
+        </div>
+
+        <div id="status"></div>
+
+        <button class="button" onclick="analyzeNotes()">📊 Analyze Current Notes</button>
+        <button class="button" onclick="fixNotesOrder()">🔧 Fix Chronological Order</button>
+        <button class="button" onclick="viewNotes()">👁️ View Current Notes</button>
+
+        <div id="log" class="log" style="display: none;"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const logElement = document.getElementById('log');
+            logElement.style.display = 'block';
+            logElement.textContent += new Date().toLocaleTimeString() + ': ' + message + '\n';
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function setStatus(message, type = 'success') {
+            const statusElement = document.getElementById('status');
+            statusElement.className = `status ${type}`;
+            statusElement.textContent = message;
+        }
+
+        function clearLog() {
+            const logElement = document.getElementById('log');
+            logElement.textContent = '';
+        }
+
+        function analyzeNotes() {
+            clearLog();
+            log('🔍 Analyzing current notes structure...');
+
+            try {
+                // Find AI Responses notes
+                let aiResponsesContent = '';
+                let foundKey = '';
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('research_notes_')) {
+                        const notes = localStorage.getItem(key);
+                        if (notes) {
+                            const parsedNotes = JSON.parse(notes);
+                            if (parsedNotes['AI Responses']) {
+                                aiResponsesContent = parsedNotes['AI Responses'];
+                                foundKey = key;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!aiResponsesContent) {
+                    setStatus('No AI Responses notes found in localStorage', 'warning');
+                    log('❌ No AI Responses notes found');
+                    return;
+                }
+
+                log(`✅ Found AI Responses notes in key: ${foundKey}`);
+                log(`📄 Content length: ${aiResponsesContent.length} characters`);
+
+                // Parse conversations
+                const sections = aiResponsesContent.split('---').filter(s => s.trim());
+                const conversations = sections.filter(s => s.includes('##') && !s.includes('automatically stores'));
+
+                log(`📊 Found ${conversations.length} conversation sections`);
+
+                // Analyze timestamps
+                conversations.forEach((conv, index) => {
+                    const timestampMatch = conv.match(/## (\d{1,2}\/\d{1,2}\/\d{4}, \d{1,2}:\d{2}:\d{2} [AP]M)/);
+                    if (timestampMatch) {
+                        log(`  ${index + 1}. ${timestampMatch[1]}`);
+                    } else {
+                        log(`  ${index + 1}. No timestamp found`);
+                    }
+                });
+
+                setStatus(`Analysis complete! Found ${conversations.length} conversations`, 'success');
+
+            } catch (error) {
+                setStatus('Error analyzing notes: ' + error.message, 'error');
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function fixNotesOrder() {
+            clearLog();
+            log('🔧 Starting chronological order fix...');
+
+            try {
+                // Find AI Responses notes
+                let aiResponsesContent = '';
+                let foundKey = '';
+                let allNotes = {};
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('research_notes_')) {
+                        const notes = localStorage.getItem(key);
+                        if (notes) {
+                            const parsedNotes = JSON.parse(notes);
+                            if (parsedNotes['AI Responses']) {
+                                aiResponsesContent = parsedNotes['AI Responses'];
+                                foundKey = key;
+                                allNotes = parsedNotes;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!aiResponsesContent) {
+                    setStatus('No AI Responses notes found to fix', 'warning');
+                    log('❌ No AI Responses notes found');
+                    return;
+                }
+
+                log('📄 Processing notes content...');
+
+                // Split into sections
+                const sections = aiResponsesContent.split('---');
+                let headerSection = '';
+                const conversations = [];
+
+                sections.forEach(section => {
+                    const trimmed = section.trim();
+                    if (trimmed && trimmed.includes('##')) {
+                        if (trimmed.includes('AI Responses') && trimmed.includes('automatically stores')) {
+                            headerSection = trimmed;
+                        } else {
+                            conversations.push(trimmed);
+                        }
+                    }
+                });
+
+                log(`📊 Found ${conversations.length} conversations to reorder`);
+
+                // Sort conversations by timestamp
+                conversations.sort((a, b) => {
+                    const getTimestamp = (conv) => {
+                        const match = conv.match(/## (\d{1,2}\/\d{1,2}\/\d{4}, \d{1,2}:\d{2}:\d{2} [AP]M)/);
+                        if (match) {
+                            try {
+                                return new Date(match[1]);
+                            } catch {
+                                return new Date(0);
+                            }
+                        }
+                        return new Date(0);
+                    };
+
+                    return getTimestamp(a) - getTimestamp(b); // Oldest first
+                });
+
+                // Rebuild notes
+                let reorderedContent = headerSection || '# AI Responses\n\nThis file automatically stores all AI responses from your research conversations.';
+                reorderedContent += '\n\n---\n\n';
+
+                conversations.forEach(conv => {
+                    reorderedContent += conv + '\n\n---\n\n';
+                });
+
+                // Save back to localStorage
+                allNotes['AI Responses'] = reorderedContent;
+                localStorage.setItem(foundKey, JSON.stringify(allNotes));
+
+                log('✅ Reordered and saved notes successfully!');
+                log(`📅 Conversations are now in chronological order`);
+
+                // Show first few timestamps for verification
+                log('\n🕐 Verification - First few timestamps:');
+                conversations.slice(0, 3).forEach((conv, index) => {
+                    const match = conv.match(/## (\d{1,2}\/\d{1,2}\/\d{4}, \d{1,2}:\d{2}:\d{2} [AP]M)/);
+                    if (match) {
+                        log(`  ${index + 1}. ${match[1]}`);
+                    }
+                });
+
+                setStatus('✅ Notes successfully reordered in chronological order!', 'success');
+
+            } catch (error) {
+                setStatus('Error fixing notes order: ' + error.message, 'error');
+                log('❌ Error: ' + error.message);
+            }
+        }
+
+        function viewNotes() {
+            clearLog();
+            log('👁️ Viewing current AI Responses notes...');
+
+            try {
+                // Find AI Responses notes
+                let aiResponsesContent = '';
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.startsWith('research_notes_')) {
+                        const notes = localStorage.getItem(key);
+                        if (notes) {
+                            const parsedNotes = JSON.parse(notes);
+                            if (parsedNotes['AI Responses']) {
+                                aiResponsesContent = parsedNotes['AI Responses'];
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!aiResponsesContent) {
+                    setStatus('No AI Responses notes found', 'warning');
+                    log('❌ No AI Responses notes found');
+                    return;
+                }
+
+                log('📄 Current AI Responses content:');
+                log('═'.repeat(50));
+                log(aiResponsesContent.substring(0, 2000) + (aiResponsesContent.length > 2000 ? '\n... (truncated)' : ''));
+                log('═'.repeat(50));
+
+                setStatus('Notes content displayed in log', 'success');
+
+            } catch (error) {
+                setStatus('Error viewing notes: ' + error.message, 'error');
+                log('❌ Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
