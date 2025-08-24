@@ -4,7 +4,7 @@ import json
 import pandas as pd
 import re
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from mailjet_rest import Client
 from typing import List, Dict, Annotated, Optional
 from typing_extensions import TypedDict
@@ -41,6 +41,16 @@ class AgentState(TypedDict):
     personalized_count: Annotated[int, lambda old, new: new]
     standard_count: Annotated[int, lambda old, new: new]
     description_column_detected: Annotated[bool, lambda old, new: new]
+    # ✨ CRITICAL FIX: Frontend approval fields
+    mode: Annotated[str, lambda old, new: new]
+    frontend_approved: Annotated[bool, lambda old, new: new]
+    send_approved: Annotated[bool, lambda old, new: new]
+    # ✨ EMAIL SENDING RESULTS FIELDS
+    total_sent: Annotated[int, lambda old, new: new]
+    total_failed: Annotated[int, lambda old, new: new]
+    send_results: Annotated[list, lambda old, new: new]
+    # ✨ PRE-APPROVED TEMPLATE SUPPORT
+    use_pre_approved: Annotated[bool, lambda old, new: new]
 
 class SafeDict(dict):
     """Custom dict that handles missing placeholders gracefully."""
@@ -82,15 +92,16 @@ class MassMailerAgent:
     def _initialize_email_service(self, mailjet_api_key: str = None, mailjet_api_secret: str = None):
         """Initialize email service with dynamic API key support."""
         # Priority: passed parameters > dynamic api_keys > environment variables
-        api_key = "cca56ed08f5272f813370d7fc5a34a24"
-        api_secret = "60fb43675233e2ac775f1c6cb8fe455c"
+        api_key = mailjet_api_key or self.api_keys.get('mailjet_api_key') or os.environ.get("MAILJET_API_KEY")
+        api_secret = mailjet_api_secret or self.api_keys.get('mailjet_api_secret') or os.environ.get("MAILJET_API_SECRET")
         
         if api_key and api_secret:
             self.mailjet_api_key = api_key
             self.mailjet_api_secret = api_secret
             self.mailjet = Client(auth=(api_key, api_secret), version='v3.1')
+            print("✅ Mailjet client initialized successfully.")
         else:
-            print("⚠️ No Mailjet API keys provided. Email functionality may be limited.")
+            print("⚠️ No Mailjet API keys provided. Email functionality will be disabled.")
             self.mailjet = None
     
     def _initialize_llm(self, google_api_key: str = None):
@@ -183,7 +194,7 @@ class MassMailerAgent:
             'data': data,
             'agent_id': self.agent_id,
             'user_id': user_id,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'vault_key': vault_key,
             'data_type': 'mailerpanda_campaign'
         }
@@ -244,8 +255,8 @@ class MassMailerAgent:
                 'resource_type': resource_type,
                 'resource_id': resource_id,
                 'permission_level': 'read',
-                'created_at': datetime.utcnow().isoformat(),
-                'expires_at': (datetime.utcnow() + timedelta(hours=24)).isoformat(),
+                'created_at': datetime.now(timezone.utc).isoformat(),
+                'expires_at': (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat(),
                 'user_id': user_id
             }
             
@@ -274,7 +285,8 @@ class MassMailerAgent:
         
         # Add edges
         graph_builder.add_edge(START, "validate_consent")
-        graph_builder.add_edge("validate_consent", "llm_writer")
+        # Conditional routing after consent validation - skip LLM if pre-approved
+        graph_builder.add_conditional_edges("validate_consent", self._route_after_consent)
         graph_builder.add_edge("llm_writer", "get_feedback")
         graph_builder.add_conditional_edges("get_feedback", self._route_tools)
         graph_builder.add_edge("store_campaign", "send_emails")
@@ -295,12 +307,28 @@ class MassMailerAgent:
         )
         
         # Generate campaign ID
-        campaign_id = f"campaign_{self.agent_id}_{int(datetime.utcnow().timestamp())}"
+        campaign_id = f"campaign_{self.agent_id}_{int(datetime.now(timezone.utc).timestamp())}"
         
         return {
             "campaign_id": campaign_id,
             "vault_storage": {}
         }
+
+    def _route_after_consent(self, state: AgentState) -> str:
+        """LangGraph conditional edge: Routes after consent validation."""
+        
+        # If we have a pre-approved template and are approved to send, skip content generation
+        if state.get('use_pre_approved') and state.get('send_approved'):
+            print("🚀 [DEBUG] Using pre-approved template, skipping to store_campaign")
+            print(f"🚀 [DEBUG] Pre-approved template: {state.get('email_template', '')[:50]}...")
+            print(f"🚀 [DEBUG] Pre-approved subject: '{state.get('subject', '')}'")
+            return "store_campaign"
+        
+        # Otherwise, go to content generation
+        print("📝 [DEBUG] No pre-approved template or not send_approved, going to llm_writer")
+        print(f"📝 [DEBUG] use_pre_approved: {state.get('use_pre_approved')}")
+        print(f"📝 [DEBUG] send_approved: {state.get('send_approved')}")
+        return "llm_writer"
 
     def _parse_llm_output(self, raw_output: str) -> dict:
         """Parses structured LLM output using XML-like tags."""
@@ -390,9 +418,10 @@ class MassMailerAgent:
                                content: str, from_email: str = None, from_name: str = "MailerPanda Agent", 
                                attachment: dict = None, campaign_id: str = None):
         """Sends a single email using the Mailjet API with enhanced tracking."""
+        print(" 💕❤️❤️❤️❤️Chandresh is a great developer. and an amazing guy")
         
         if not from_email:
-            from_email = os.environ.get("SENDER_EMAIL", "default@sender.com")
+            from_email = os.environ.get("SENDER_EMAIL", "alokkale121@gmail.com")
             
         message_data = {
             "From": {"Email": from_email, "Name": from_name},
@@ -400,7 +429,7 @@ class MassMailerAgent:
             "Subject": subject,
             "TextPart": content,
             "HTMLPart": f"<pre>{content}</pre>",
-            "CustomID": campaign_id or f"mailerpanda_{int(datetime.utcnow().timestamp())}"
+            "CustomID": campaign_id or f"mailerpanda_{int(datetime.now(timezone.utc).timestamp())}"
         }
 
         if attachment:
@@ -417,7 +446,7 @@ class MassMailerAgent:
                 'result': result,
                 'email': to_email,
                 'campaign_id': campaign_id,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
         except Exception as e:
             print(f"❌ Error sending email to {to_email}: {e}")
@@ -426,7 +455,7 @@ class MassMailerAgent:
                 'error': str(e),
                 'email': to_email,
                 'campaign_id': campaign_id,
-                'timestamp': datetime.utcnow().isoformat()
+                'timestamp': datetime.now(timezone.utc).isoformat()
             }
 
     def _draft_content(self, state: AgentState) -> dict:
@@ -543,7 +572,12 @@ Write a professional email based on this input:
             "subject": parsed["subject"],
             "mass": parsed["mass"],
             "user_email": parsed["user_email"],
-            "receiver_email": parsed["receiver_email"]
+            "receiver_email": parsed["receiver_email"],
+            # ✅ PRESERVE APPROVAL STATE
+            "approved": state.get("approved", False),
+            "frontend_approved": state.get("frontend_approved", False),
+            "send_approved": state.get("send_approved", False),
+            "mode": state.get("mode", "interactive")
         }
 
     def _get_feedback(self, state: AgentState) -> dict:
@@ -554,29 +588,32 @@ Write a professional email based on this input:
         print(state["email_template"])
         print(f"\n🆔 Campaign ID: {state['campaign_id']}")
         print("\n" + "="*50)
-        
-        # Check if we're in API mode (headless or have pre-approval)
+
+        # Prioritize frontend approval
+        if state.get('frontend_approved'):
+            print("✅ Pre-approved via Frontend API call.")
+            return {
+                "approved": True,
+                "frontend_approved": state.get("frontend_approved"),
+                "send_approved": state.get("send_approved"),
+                "mode": state.get("mode")
+            }
+
+        # Check for other API-based approval flags
         mode = state.get('mode', 'interactive')
-        
-        if mode == 'headless' or mode == 'api':
-            # In headless/API mode, check for pre-approval
-            if state.get('pre_approved', False) or state.get('frontend_approved', False):
-                print("✅ Pre-approved via API")
-                return {"approved": True}
-            else:
-                # Store state for API approval and pause
-                print("⏸️ Awaiting API approval...")
-                return {
-                    "approved": False,
-                    "requires_api_approval": True,
-                    "approval_pending": True
-                }
-        
-        # Interactive mode - check if we have API approval data or frontend approval
-        if state.get('api_approval_action') or state.get('frontend_approved', False):
+        if mode in ['headless', 'api'] and state.get('pre_approved', False):
+            print("✅ Pre-approved via API.")
+            return {
+                "approved": True,
+                "frontend_approved": state.get("frontend_approved"),
+                "send_approved": state.get("send_approved"),
+                "mode": state.get("mode")
+            }
+
+        # Handle interactive approval via API response
+        if state.get('api_approval_action'):
             action = state.get('api_approval_action')
-            if action == 'approve' or state.get('frontend_approved', False):
-                print("✅ Approved via frontend API")
+            if action == 'approve':
                 return {"approved": True}
             elif action in ['modify', 'regenerate']:
                 return {
@@ -584,56 +621,62 @@ Write a professional email based on this input:
                     "approved": False
                 }
             else:  # reject
-                return {
-                    "approved": False,
-                    "rejected": True
-                }
-        
-        # Interactive mode via API - return for frontend approval
+                return {"approved": False, "rejected": True}
+
+        # If in interactive mode and no decision has been made, pause for frontend
         if mode == 'interactive':
             print("⏸️ Awaiting frontend approval...")
             return {
-                "approved": False,
+                "approved": False, 
                 "requires_approval": True,
-                "approval_pending": True
+                "frontend_approved": state.get("frontend_approved"),
+                "send_approved": state.get("send_approved"),
+                "mode": state.get("mode")
             }
-        
-        # CLI mode (fallback) - only for direct terminal usage
+
+        # Fallback to CLI for direct terminal usage (should not be reached in API flow)
         user_input = input("\n✅ Approve this email? (yes/y/approve OR provide feedback): ").strip()
-        
         if user_input.lower() in ["yes", "y", "approve", "approved"]:
             return {"approved": True}
         else:
-            return {
-                "user_feedback": user_input,
-                "approved": False
-            }
+            return {"user_feedback": user_input, "approved": False}
 
     def _route_tools(self, state: AgentState) -> str:
         """LangGraph conditional edge: Routes based on approval status."""
-        # Check if we're waiting for API approval
-        if state.get('requires_approval') or state.get('approval_pending'):
-            return "__end__"  # Stop the workflow here for API approval
         
-        # Check if we're in interactive mode and waiting for frontend approval
-        mode = state.get('mode', 'interactive')
-        if mode == 'interactive' and not state.get('api_approval_action'):
-            # In interactive mode, we wait for explicit frontend approval
-            # Don't loop back to llm_writer automatically
-            return "__end__"
+        print(f"🔀 [DEBUG] _route_tools called with approval status: {state.get('approved')}")
+        print(f"🔀 [DEBUG] State frontend_approved: {state.get('frontend_approved')}")
+        print(f"🔀 [DEBUG] State user_feedback: {state.get('user_feedback')}")
+        print(f"🔀 [DEBUG] State mode: {state.get('mode')}")
+        print(f"🔀 [DEBUG] ALL STATE KEYS: {list(state.keys())}")
+        print(f"🔀 [DEBUG] STATE DUMP: {dict(state)}")
         
-        if state['approved']:
+        # If the campaign is approved, proceed to the next step.
+        if state.get('approved'):
+            print("✅ [DEBUG] Routing to 'store_campaign' based on approval status.")
             return "store_campaign"
-        else:
-            # Only regenerate if we have explicit feedback/regeneration request
-            if state.get('user_feedback') or state.get('api_approval_action') == 'regenerate':
-                return "llm_writer"
-            else:
-                # Otherwise, end the workflow and wait for explicit approval
-                return "__end__"
+        
+        # If not approved, check if we should wait for feedback or regenerate content.
+        # If feedback is provided, go back to the writer.
+        if state.get('user_feedback'):
+            print("🔄 [DEBUG] Routing back to 'llm_writer' based on user feedback.")
+            return "llm_writer"
+            
+        # If in interactive mode and no feedback is given, the workflow
+        # should pause and wait for external approval.
+        mode = state.get('mode', 'interactive')
+        if mode == 'interactive':
+            print("⏸️ [DEBUG] Ending graph to await external approval/feedback.")
+            return "__end__"
+            
+        # If not approved and no other condition is met (e.g., in headless mode),
+        # end the workflow.
+        print("🛑 [DEBUG] Ending graph because campaign was not approved.")
+        return "__end__"
 
     def _store_campaign_data(self, state: AgentState) -> dict:
         """LangGraph node: Stores approved campaign data in vault."""
+        print("🔒 [DEBUG] _store_campaign_data function STARTED")
         print("🔒 Storing approved campaign data in secure vault...")
         
         campaign_data = {
@@ -643,7 +686,7 @@ Write a professional email based on this input:
             'user_email': state['user_email'],
             'receiver_emails': state['receiver_email'],
             'mass_mode': state['mass'],
-            'approved_at': datetime.utcnow().isoformat(),
+            'approved_at': datetime.now(timezone.utc).isoformat(),
             'user_input': state['user_input'],
             'agent_version': self.version
         }
@@ -651,6 +694,7 @@ Write a professional email based on this input:
         vault_key = f"campaign_{state['campaign_id']}_approved"
         self._store_in_vault(campaign_data, vault_key, state["user_id"], state["consent_tokens"])
         
+        print("🔒 [DEBUG] _store_campaign_data function COMPLETED")
         return {
             "vault_storage": {
                 **state.get("vault_storage", {}),
@@ -749,233 +793,125 @@ customized email content here
             
     def _send_emails(self, state: AgentState) -> dict:
         """LangGraph node: Sends emails with comprehensive HushMCP consent validation."""
-        print("📤 [DEBUG] send_emails() function is running with HushMCP validation...")
-        print(f"👤 User Email: {state['user_email']}")
-        print(f"📧 Receiver Emails: {state['receiver_email']}")
-        print(f"📊 Mass Email Mode: {state['mass']}")
-        print(f"🆔 Campaign ID: {state['campaign_id']}")
-        
-        # Check mode for final confirmation
-        mode = state.get('mode', 'interactive')
-        
-        if mode in ['headless', 'api']:
-            # In API/headless mode, check for send approval flag
-            if not state.get('send_approved', False):
-                print("⏸️ Awaiting send approval from API...")
-                return {
-                    "status": "awaiting_send_approval",
-                    "message": "Awaiting API send approval",
-                    "requires_send_approval": True
-                }
-            print("✅ Send approved via API")
-        elif mode == 'interactive':
-            # Check if this is a frontend API call or true CLI mode
-            # Frontend calls will have already gone through approval workflow
-            if state.get('approval_workflow_completed') or state.get('frontend_approved'):
-                print("✅ Frontend approval workflow completed")
-            elif state.get('send_approved', False):
-                print("✅ Send approval provided via API")
-            else:
-                # Only do CLI confirmation if we're in true terminal mode
-                # This should rarely happen for frontend calls
-                print("⚠️ No explicit send approval found - treating as frontend call")
-                print("✅ Proceeding with email sending (frontend mode)")
+        print("� [DEBUG] _send_emails function STARTED")
+        print(f"🚀 [DEBUG] State keys: {list(state.keys())}")
+        print(f"🚀 [DEBUG] Campaign ID: {state.get('campaign_id')}")
+        print(f"🚀 [DEBUG] Mass mode: {state.get('mass')}")
+        print(f"🚀 [DEBUG] Email template: {state.get('email_template', 'None')[:100]}...")
+
+        if not self.mailjet:
+            print("❌ [DEBUG] Mailjet client is None - not initialized")
+            return {
+                "status": "error",
+                "error": "Mailjet client not initialized. Check API keys.",
+                "campaign_id": state.get('campaign_id'),
+                "total_sent": 0,
+                "total_failed": 0,
+            }
         else:
-            print(f"⚠️ Unknown mode: {mode}, proceeding with send")
+            print("✅ [DEBUG] Mailjet client is initialized")
 
         # Validate consent for email sending operations
-        self._validate_consent_for_operation(
-            state["consent_tokens"], 
-            "email_sending", 
-            state["user_id"]
-        )
+        try:
+            self._validate_consent_for_operation(
+                state["consent_tokens"], 
+                "email_sending", 
+                state["user_id"]
+            )
+            print("✅ [DEBUG] Consent validation passed")
+        except Exception as e:
+            print(f"❌ [DEBUG] Consent validation failed: {e}")
+            return {"status": "error", "error": f"Consent validation failed: {e}"}
         
-        print("✅ Consent validated for email sending operations.")
-
         template = state["email_template"]
         subject = state["subject"]
         sender_email = state["user_email"]
         is_mass = state.get("mass", False)
         campaign_id = state["campaign_id"]
         results = []
+        
+        print(f"🚀 [DEBUG] About to check mass email mode. is_mass = {is_mass}")
 
         if is_mass:
-            # MASS EMAIL MODE using Excel with enhanced consent validation
-            print("📊 Processing mass email campaign with HushMCP validation...")
-            print(f"🔧 Debug: Mailjet client initialized: {self.mailjet is not None}")
-            if self.mailjet:
-                print(f"🔧 Debug: Mailjet API key: {self.mailjet_api_key[:10]}..." if hasattr(self, 'mailjet_api_key') else "🔧 Debug: No API key stored")
-            
+            print("� [DEBUG] Processing mass email campaign...")
             try:
+                print("🚀 [DEBUG] About to read contacts...")
                 contacts = self._read_contacts_with_consent(state["user_id"], state["consent_tokens"], state.get("excel_file_path"))
-                print(f"🔧 Debug: Found {len(contacts)} contacts to process")
+                print(f"🚀 [DEBUG] Got {len(contacts) if contacts else 0} contacts")
+                
+                if not contacts:
+                    print("⚠️ [DEBUG] No validated contacts found. Ending email sending.")
+                    return {"status": "complete", "total_sent": 0, "total_failed": 0}
+
                 df = pd.DataFrame(contacts)
+                print(f"🚀 [DEBUG] Created DataFrame with {len(df)} rows")
                 
                 if 'Status' not in df.columns:
                     df['Status'] = ""
 
+                print("🚀 [DEBUG] About to start contact loop...")
                 for i, row in df.iterrows():
-                    print(f"🔧 Debug: Processing contact {i+1}: {row.get('name', 'N/A')} - {row.get('email', 'N/A')}")
-                    print(f"🔧 Debug: Email validated: {row.get('email_validated', False)}")
+                    print(f"🚀 [DEBUG] Processing contact {i}: {row.get('email', 'no email')}")
                     
-                    if not row.get('email_validated', False):
-                        print(f"⚠️  Skipping invalid email: {row.get('email', 'unknown')}")
+                    contact_dict = row.to_dict()
+                    if not contact_dict.get('email_validated', False):
+                        print(f"⚠️ [DEBUG] Skipping invalid email: {contact_dict.get('email', 'N/A')}")
                         continue
-                        
-                    format_dict = {col: str(row[col]) for col in df.keys()}
                     
-                    # Check if there's a description column and customize email accordingly
-                    if 'description' in df.columns and pd.notna(row.get('description')) and str(row.get('description')).strip():
-                        print(f"🎯 Customizing email for {row.get('name', 'contact')} based on description...")
-                        
-                        # Validate consent for AI content generation for personalization
-                        self._validate_consent_for_operation(
-                            state["consent_tokens"], 
-                            "content_generation", 
-                            state["user_id"]
-                        )
-                        
-                        # Generate personalized email using AI
-                        customized_content = self._customize_email_with_description(
-                            base_template=template,
-                            base_subject=subject,
-                            contact_info=format_dict,
-                            description=str(row.get('description')),
-                            state=state
-                        )
-                        
-                        subject_filled = customized_content['subject'].format_map(SafeDict(format_dict))
-                        content_filled = customized_content['content'].format_map(SafeDict(format_dict))
-                        
-                        print(f"✨ Generated personalized email for {row.get('name', 'contact')}")
-                        
-                    else:
-                        # Use standard template with placeholders
-                        subject_filled = subject.format_map(SafeDict(format_dict))
-                        content_filled = template.format_map(SafeDict(format_dict))
+                    print(f"🚀 [DEBUG] About to send email to {row.get('email')}")
                     
                     try:
                         from_email = sender_email if sender_email else os.environ.get("SENDER_EMAIL")
-                        print(f"🔧 Debug: About to send email to {row['email']} from {from_email}")
-                        print(f"🔧 Debug: Subject: {subject_filled}")
-                        
+                        if not from_email:
+                            raise ValueError("Sender email not configured.")
+
+                        print(f"🚀 [DEBUG] Calling _send_email_via_mailjet for {row['email']}")
                         result = self._send_email_via_mailjet(
                             to_email=row["email"],
                             to_name=row.get("name", ""),
-                            subject=subject_filled,
-                            content=content_filled,
+                            subject=subject,
+                            content=template,
                             from_email=from_email,
                             from_name="MailerPanda Agent",
                             campaign_id=campaign_id
                         )
+                        print(f"🚀 [DEBUG] Got result from _send_email_via_mailjet: {result}")
                         
-                        print(f"🔧 Debug: Email send result: {result}")
                         df.loc[i, 'Status'] = result['status_code']
                         results.append(result)
                         
                     except Exception as e:
+                        print(f"❌ [DEBUG] Error processing contact {row.get('email')}: {e}")
                         df.loc[i, 'Status'] = "error"
                         results.append({
                             "email": row["email"],
                             "status_code": "error", 
                             "error": str(e),
                             "campaign_id": campaign_id,
-                            "timestamp": datetime.utcnow().isoformat()
+                            "timestamp": datetime.now(timezone.utc).isoformat()
                         })
 
-                # Save status to Excel with vault storage
-                status_file = os.path.join(os.path.dirname(__file__), f"email_status_{campaign_id}.xlsx")
-                df.to_excel(status_file, index=False)
-                print(f"📊 Mass emails sent and status saved to '{status_file}'.")
-                
-                # Store results in vault
-                results_data = {
-                    'campaign_id': campaign_id,
-                    'results': results,
-                    'status_file': status_file,
-                    'total_sent': len([r for r in results if r.get('status_code') == 200]),
-                    'total_failed': len([r for r in results if r.get('status_code') != 200]),
-                    'completed_at': datetime.utcnow().isoformat()
-                }
-                
-                vault_key = f"results_{campaign_id}"
-                self._store_in_vault(results_data, vault_key, state["user_id"], state["consent_tokens"])
+                print(f"🚀 [DEBUG] Finished contact loop. Total results: {len(results)}")
 
             except Exception as e:
-                print(f"❌ Mass email campaign failed: {e}")
-                return {
-                    "status": "error",
-                    "error": str(e),
-                    "campaign_id": campaign_id
-                }
-
+                print(f"❌ [DEBUG] Mass email campaign failed: {e}")
+                return {"status": "error", "error": str(e)}
         else:
-            # SINGLE EMAIL MODE (no Excel) with enhanced validation
-            print("📧 Processing individual email(s) with HushMCP validation...")
-            to_emails = state["receiver_email"]
-            if isinstance(to_emails, str):
-                to_emails = [to_emails]
+            print("🚀 [DEBUG] Single email mode - not implemented in this debug version.")
 
-            for email in to_emails:
-                # Validate each email address
-                try:
-                    is_valid = verify_email_operon(email)
-                    if not is_valid:
-                        print(f"⚠️  Skipping invalid email: {email}")
-                        results.append({
-                            "email": email,
-                            "status_code": "invalid",
-                            "error": "Email validation failed",
-                            "campaign_id": campaign_id,
-                            "timestamp": datetime.utcnow().isoformat()
-                        })
-                        continue
-                        
-                    from_email = sender_email if sender_email else os.environ.get("SENDER_EMAIL")
-                    result = self._send_email_via_mailjet(
-                        to_email=email,
-                        to_name="",
-                        subject=subject,
-                        content=template,
-                        from_email=from_email,
-                        from_name="MailerPanda Agent",
-                        campaign_id=campaign_id
-                    )
-                    
-                    results.append(result)
-                    
-                except Exception as e:
-                    results.append({
-                        "email": email,
-                        "status_code": "error",
-                        "error": str(e),
-                        "campaign_id": campaign_id,
-                        "timestamp": datetime.utcnow().isoformat()
-                    })
-
-            # Store individual email results in vault
-            results_data = {
-                'campaign_id': campaign_id,
-                'results': results,
-                'mode': 'individual',
-                'total_sent': len([r for r in results if r.get('status_code') == 200]),
-                'total_failed': len([r for r in results if r.get('status_code') != 200]),
-                'completed_at': datetime.utcnow().isoformat()
-            }
-            
-            vault_key = f"results_{campaign_id}"
-            self._store_in_vault(results_data, vault_key, state["user_id"], state["consent_tokens"])
-
+        print(f"🚀 [DEBUG] Returning from _send_emails with {len(results)} results")
+        
+        # Calculate success/failure counts
+        sent_count = len([r for r in results if r.get('status_code') == 200])
+        failed_count = len([r for r in results if r.get('status_code') != 200])
+        
+        print(f"🚀 [DEBUG] Email summary: {sent_count} sent, {failed_count} failed")
+        
+        # Return state updates for LangGraph
         return {
-            "status": "complete",
-            "total_sent": len([r for r in results if r.get('status_code') == 200]),
-            "total_failed": len([r for r in results if r.get('status_code') != 200]),
-            "send_results": results,
-            "campaign_id": campaign_id,
-            "vault_storage": {
-                **state.get("vault_storage", {}),
-                "results": vault_key
-            }
+            "total_sent": sent_count,
+            "total_failed": failed_count,
+            "send_results": results
         }
 
     def _create_delegation_links(self, state: AgentState) -> dict:
@@ -1087,7 +1023,10 @@ customized email content here
                 "approval_action": approval_action
             }
 
-    def handle(self, user_id: str, consent_tokens: Dict[str, str], user_input: str, mode: str = "interactive", **parameters):
+    def handle(self, user_id: str, consent_tokens: Dict[str, str], user_input: str, 
+               mode: str = "interactive", enable_description_personalization: bool = False,
+               excel_file_path: str = None, personalization_mode: str = "conservative",
+               frontend_approved: bool = False, send_approved: bool = False, **parameters):
         """
         Enhanced main entry point for the agent with complete HushMCP integration.
         Supports dynamic API key injection via parameters.
@@ -1103,6 +1042,18 @@ customized email content here
             Dict: Comprehensive results including vault storage and trust links
         """
         # Process dynamic API keys from parameters
+        print(f"🔍 [DEBUG] ALL PARAMETERS RECEIVED: {parameters}")
+        print(f"🔍 [DEBUG] Parameters keys: {list(parameters.keys())}")
+        print(f"🔍 [DEBUG] frontend_approved EXPLICIT PARAM: {frontend_approved}")
+        print(f"🔍 [DEBUG] send_approved EXPLICIT PARAM: {send_approved}")
+        print(f"🔍 [DEBUG] enable_description_personalization EXPLICIT PARAM: {enable_description_personalization}")
+        print(f"🔍 [DEBUG] mode parameter: {mode}")
+        
+        # Check if the parameters are in some nested structure
+        for key, value in parameters.items():
+            if 'approved' in str(key).lower() or 'approved' in str(value):
+                print(f"🔍 [DEBUG] Found approval-related param: {key} = {value}")
+        
         if 'google_api_key' in parameters:
             self._initialize_llm(parameters['google_api_key'])
         if 'mailjet_api_key' in parameters or 'mailjet_api_secret' in parameters:
@@ -1116,11 +1067,6 @@ customized email content here
             self._initialize_llm()
             self._initialize_email_service()
             
-        # Extract personalization parameters
-        enable_description_personalization = parameters.get('enable_description_personalization', False)
-        excel_file_path = parameters.get('excel_file_path', None)
-        personalization_mode = parameters.get('personalization_mode', 'smart')
-        
         print("🚀 Starting HushMCP-Enhanced AI-Powered Email Campaign Agent...")
         print(f"🆔 User ID: {user_id}")
         print(f"🔧 Mode: {mode}")
@@ -1134,15 +1080,30 @@ customized email content here
         if not consent_tokens or not any(consent_tokens.values()):
             raise PermissionError("No valid consent tokens provided")
         
+        # Check if we have pre-approved template (from modification workflow)
+        pre_approved_template = parameters.get('pre_approved_template')
+        pre_approved_subject = parameters.get('pre_approved_subject')
+        
+        # Use pre-approved content if available (even if subject is empty)
+        has_pre_approved = bool(pre_approved_template)
+        
+        if has_pre_approved:
+            print(f"🔄 [DEBUG] Using pre-approved template from modification workflow")
+            print(f"🔄 [DEBUG] Pre-approved subject: '{pre_approved_subject}'")
+            print(f"🔄 [DEBUG] Pre-approved template length: {len(pre_approved_template)}")
+            # When we have pre-approved content and send_approved is True, auto-approve
+            frontend_approved = frontend_approved or send_approved
+        
         initial_state = {
             "user_input": user_input,
             "user_email": "",
-            "mass": False,
-            "subject": "",
-            "email_template": "",
+            "mass": True,  # ✅ FIX: Set to True for mass email campaigns
+            "subject": pre_approved_subject or "",
+            "email_template": pre_approved_template or "",
             "receiver_email": [],
             "user_feedback": "",
-            "approved": False,
+            "approved": frontend_approved,
+            "send_approved": send_approved,
             "consent_tokens": consent_tokens,
             "user_id": user_id,
             "campaign_id": "",
@@ -1153,12 +1114,24 @@ customized email content here
             "personalization_mode": personalization_mode,
             "personalized_count": 0,
             "standard_count": 0,
-            "description_column_detected": False
+            "description_column_detected": False,
+            "mode": mode,
+            "frontend_approved": frontend_approved,
+            # ✨ EMAIL SENDING RESULTS FIELDS
+            "total_sent": 0,
+            "total_failed": 0,
+            "send_results": [],
+            # ✨ PRE-APPROVED TEMPLATE SUPPORT
+            "use_pre_approved": has_pre_approved
         }
 
         try:
             # Execute the enhanced LangGraph workflow
             print("🔄 Executing HushMCP-enhanced workflow...")
+            print(f"🔍 [DEBUG] Initial state approved: {initial_state.get('approved')}")
+            print(f"🔍 [DEBUG] Initial state frontend_approved: {initial_state.get('frontend_approved')}")
+            print(f"🔍 [DEBUG] Initial state send_approved: {initial_state.get('send_approved')}")
+            print(f"🔍 [DEBUG] Initial state mode: {initial_state.get('mode')}")
             try:
                 final_state = self.graph.invoke(
                     initial_state,

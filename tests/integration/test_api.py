@@ -13,7 +13,7 @@ Tests the FastAPI-based REST API server for HushMCP agents, including:
 import pytest
 import json
 import asyncio
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, patch, AsyncMock
 from typing import Dict, Any
 
@@ -320,8 +320,8 @@ class TestAgentExecution:
             user_id='test_user_123',
             agent_id='agent_addtocalendar',
             scope=ConsentScope.VAULT_READ_EMAIL,
-            issued_at=int(datetime.utcnow().timestamp() * 1000),
-            expires_at=int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000),
+            issued_at=int(datetime.now(timezone.utc).timestamp() * 1000),
+            expires_at=int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp() * 1000),
             signature='test_signature'
         )
     
@@ -333,8 +333,8 @@ class TestAgentExecution:
             user_id='test_user_123',
             agent_id='agent_addtocalendar',
             scope=ConsentScope.VAULT_WRITE_CALENDAR,
-            issued_at=int(datetime.utcnow().timestamp() * 1000),
-            expires_at=int((datetime.utcnow() + timedelta(hours=1)).timestamp() * 1000),
+            issued_at=int(datetime.now(timezone.utc).timestamp() * 1000),
+            expires_at=int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp() * 1000),
             signature='test_signature'
         )
     

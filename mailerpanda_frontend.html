@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MailerPanda - AI-Powered Email Campaigns</title>
+        <title>MailerPanda Agent - AI Email Campaign Manager (Updated: 2025-08-24 04:55)</title>
     <style>
         * {
             margin: 0;
@@ -763,55 +763,75 @@
         // Approve campaign
         async function approveCampaign(campaignId) {
             try {
-                const response = await fetch(`${API_BASE}/agents/mailerpanda/approve`, {
+                // Show approval in progress
+                showAlert('Approving and sending emails...', 'info');
+                
+                // Get the stored form data from the original request
+                const userInput = document.getElementById('userInput').value;
+                const userId = document.getElementById('userId').value;
+                const mode = document.getElementById('mode').value;
+                const googleApiKey = document.getElementById('googleApiKey').value;
+                const mailjetApiKey = document.getElementById('mailjetApiKey').value;
+                const mailjetApiSecret = document.getElementById('mailjetApiSecret').value;
+                const useContextPersonalization = document.getElementById('useContextPersonalization').checked;
+                const personalizationMode = document.getElementById('personalizationMode').value;
+                
+                // Get the Excel file data if it exists
+                let excelFileData = null;
+                const fileInput = document.getElementById('excelFile');
+                if (fileInput.files && fileInput.files[0]) {
+                    excelFileData = await fileToBase64(fileInput.files[0]);
+                }
+                
+                // Get consent tokens from session storage or form
+                const consentTokens = JSON.parse(sessionStorage.getItem('consentTokens') || '{}');
+                
+                // Make a new call to the mass-email endpoint (this will send the emails)
+                const response = await fetch(`${API_BASE}/agents/mailerpanda/mass-email`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        campaign_id: campaignId,
-                        approved: true
+                        user_id: userId,
+                        consent_tokens: consentTokens,
+                        user_input: userInput,
+                        mode: mode,
+                        google_api_key: googleApiKey,
+                        mailjet_api_key: mailjetApiKey,
+                        mailjet_api_secret: mailjetApiSecret,
+                        excel_file_data: excelFileData,
+                        use_context_personalization: useContextPersonalization,
+                        personalization_mode: personalizationMode
                     })
                 });
 
                 const result = await response.json();
                 
                 if (response.ok) {
-                    showAlert('Campaign approved and emails sent!', 'success');
+                    showAlert(`Campaign approved and ${result.emails_sent || 0} emails sent!`, 'success');
                     updateCampaignStatus(result);
                     document.getElementById('approvalSection').style.display = 'none';
                 } else {
-                    showAlert('Error approving campaign', 'error');
+                    showAlert(`Error sending emails: ${result.errors ? result.errors.join(', ') : 'Unknown error'}`, 'error');
                 }
             } catch (error) {
-                console.error('Error approving campaign:', error);
-                showAlert('Error approving campaign', 'error');
+                console.error('Error approving and sending campaign:', error);
+                showAlert('Error approving and sending emails', 'error');
             }
         }
 
         // Reject campaign
         async function rejectCampaign(campaignId) {
             try {
-                const response = await fetch(`${API_BASE}/agents/mailerpanda/approve`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        campaign_id: campaignId,
-                        approved: false
-                    })
-                });
-
-                const result = await response.json();
-                
-                if (response.ok) {
-                    showAlert('Campaign rejected', 'info');
-                    updateCampaignStatus(result);
-                    document.getElementById('approvalSection').style.display = 'none';
-                } else {
-                    showAlert('Error rejecting campaign', 'error');
-                }
+                showAlert('Campaign rejected', 'info');
+                document.getElementById('approvalSection').style.display = 'none';
+                // Clear the campaign status
+                document.getElementById('campaignStatus').innerHTML = `
+                    <p style="color: #666; text-align: center; padding: 40px 0;">
+                        Campaign rejected. Create a new campaign to get started!
+                    </p>
+                `;
             } catch (error) {
                 console.error('Error rejecting campaign:', error);
                 showAlert('Error rejecting campaign', 'error');

@@ -222,21 +222,40 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
       });
 
       if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Backend error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
       console.log("Modification response:", data);
 
-      alert("Suggestions submitted! Generating new draft...");
-      
-      // In a real implementation, you would wait for the backend to regenerate
-      // For now, we'll reset to allow regeneration
-      handleReset();
+      // Check if we got a new email template
+      if (data.email_template && (data.status === 'awaiting_approval' || data.status === 'complete')) {
+        // Update the generated email content with the modified version
+        setGeneratedEmail({
+          subject: data.email_template.subject || 'Modified Email',
+          content: data.email_template.body || 'No content generated'
+        });
+        
+        // Update campaign ID if it changed
+        if (data.campaign_id) {
+          setCampaignId(data.campaign_id);
+        }
+        
+        // Clear the suggestion and go back to review state
+        setSuggestion('');
+        setUiState('DRAFT_REVIEW');
+        
+        console.log("Modified email template received:", data.email_template);
+      } else {
+        throw new Error(`Modification failed: ${data.status}`);
+      }
       
     } catch (error) {
       console.error('Error submitting suggestions:', error);
-      alert('Error submitting suggestions. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setError(`Error submitting suggestions: ${errorMessage}`);
+      setUiState('SUGGESTING_CHANGES'); // Stay in the suggestion state to allow retry
     } finally {
       setIsLoading(false);
     }

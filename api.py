@@ -1229,7 +1229,16 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
         enable_description_personalization = session.get("enable_description_personalization", False)
         
         if request.action == "approve":
+            # Extract template and subject from stored results
+            stored_template = stored_result.get("email_template", "")
+            stored_subject = stored_result.get("subject", "")
+            
+            # Debug template extraction
+            print(f"🔍 [API DEBUG] Using template: {stored_template[:100] if stored_template else 'Empty'}...")
+            print(f"🔍 [API DEBUG] Using subject: {stored_subject}")
+            
             # Continue with email sending - call the agent again to actually send
+            print(f"🔍 [API DEBUG] APPROVE ENDPOINT CALLED! Calling agent with frontend_approved=True")
             result = agent.handle(
                 user_id=request.user_id,
                 consent_tokens=original_request.consent_tokens,
@@ -1238,6 +1247,10 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
                 enable_description_personalization=enable_description_personalization,
                 excel_file_path=stored_result.get("excel_file_path"),
                 personalization_mode=original_request.personalization_mode,
+                frontend_approved=True,  # ✅ KEY FIX: Tell agent emails are approved
+                send_approved=True,      # ✅ KEY FIX: Tell agent to actually send
+                pre_approved_template=stored_template,  # ✅ Pass the stored template
+                pre_approved_subject=stored_subject,    # ✅ Pass the stored subject
                 google_api_key=original_request.google_api_key,
                 mailjet_api_key=original_request.mailjet_api_key,
                 mailjet_api_secret=original_request.mailjet_api_secret

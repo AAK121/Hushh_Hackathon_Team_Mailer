@@ -20,7 +20,7 @@ import json
 import jwt
 import hashlib
 from typing import Dict, Optional, List, Tuple
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from pydantic import BaseModel
 
@@ -325,7 +325,7 @@ class FrontendIntegration:
         
         # Create session data
         session_data = {
-            'session_id': f"session_{user.id}_{agent_id}_{int(datetime.utcnow().timestamp())}",
+            'session_id': f"session_{user.id}_{agent_id}_{int(datetime.now(timezone.utc).timestamp())}",
             'user_id': user.id,
             'user_email': user.email,
             'agent_id': agent_id,
