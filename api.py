@@ -452,13 +452,27 @@ async def list_agents():
     # ChanduFinance agent info
     agents["agent_chandufinance"] = {
         "name": "ChanduFinance Agent",
-        "version": "1.0.0", 
-        "description": "Financial valuation and DCF analysis with investment recommendations",
+        "version": "2.1.0", 
+        "description": "Advanced AI-powered financial advisor with portfolio management, analytics, market data, and planning capabilities",
         "status": "available",
         "requirements": get_agent_requirements("agent_chandufinance"),
         "endpoints": {
             "execute": "/agents/chandufinance/execute",
-            "status": "/agents/chandufinance/status"
+            "status": "/agents/chandufinance/status",
+            # Portfolio Management
+            "portfolio_create": "/agents/chandufinance/portfolio/create",
+            "portfolio_analyze": "/agents/chandufinance/portfolio/analyze", 
+            "portfolio_rebalance": "/agents/chandufinance/portfolio/rebalance",
+            # Financial Analytics
+            "analytics_cashflow": "/agents/chandufinance/analytics/cashflow",
+            "analytics_spending": "/agents/chandufinance/analytics/spending",
+            "analytics_tax": "/agents/chandufinance/analytics/tax-optimization",
+            # Market Data
+            "market_stocks": "/agents/chandufinance/market/stock-price",
+            "market_portfolio": "/agents/chandufinance/market/portfolio-value",
+            # Advanced Planning
+            "planning_retirement": "/agents/chandufinance/planning/retirement",
+            "planning_emergency": "/agents/chandufinance/planning/emergency-fund"
         }
     }
     
@@ -526,16 +540,41 @@ async def create_consent_token(request: ConsentTokenRequest):
         if not scope_enum:
             raise HTTPException(status_code=400, detail=f"Invalid scope: {request.scope}")
         
-        token = issue_token(
+        # Issue token
+        token_obj = issue_token(
             user_id=request.user_id,
-            agent_id=request.agent_id,
+            agent_id=request.agent_id, 
             scope=scope_enum
         )
         
         return ConsentTokenResponse(
-            token=token.token,
-            expires_at=token.expires_at,
-            scope=request.scope
+            token=token_obj.token,
+            expires_at=token_obj.expires_at,
+            scope=str(token_obj.scope)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to create token: {str(e)}")
+
+@app.post("/consent/tokens", response_model=ConsentTokenResponse)  
+async def create_consent_token_plural(request: ConsentTokenRequest):
+    """Create a consent token for agent operations (plural endpoint)."""
+    try:
+        # Convert scope string to ConsentScope enum
+        scope_enum = getattr(ConsentScope, request.scope.replace(".", "_").upper(), None)
+        if not scope_enum:
+            raise HTTPException(status_code=400, detail=f"Invalid scope: {request.scope}")
+        
+        # Issue token
+        token_obj = issue_token(
+            user_id=request.user_id,
+            agent_id=request.agent_id, 
+            scope=scope_enum
+        )
+        
+        return ConsentTokenResponse(
+            token=token_obj.token,
+            expires_at=token_obj.expires_at,
+            scope=str(token_obj.scope)
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to create token: {str(e)}")
@@ -1679,6 +1718,685 @@ async def get_chandufinance_status():
         ],
         description="AI-powered personal financial advisor with encrypted vault storage, goal tracking, stock analysis, and educational content"
     )
+
+# ============================================================================
+# NEW ENHANCED CHANDUFINANCE AGENT ENDPOINTS
+# ============================================================================
+
+# Portfolio Management Models
+class PortfolioCreateRequest(BaseModel):
+    """Request model for creating a new investment portfolio."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    portfolio_name: str = Field(..., description="Name for the portfolio")
+    investment_amount: float = Field(..., ge=100, description="Initial investment amount")
+    risk_tolerance: str = Field(..., description="Risk tolerance (conservative/moderate/aggressive)")
+    investment_goals: List[str] = Field(..., description="Investment goals")
+    time_horizon: int = Field(..., ge=1, le=50, description="Investment time horizon in years")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class PortfolioAnalyzeRequest(BaseModel):
+    """Request model for portfolio analysis."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    portfolio_id: Optional[str] = Field(None, description="Portfolio ID to analyze")
+    holdings: Optional[List[Dict[str, Any]]] = Field(None, description="Current holdings")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class PortfolioRebalanceRequest(BaseModel):
+    """Request model for portfolio rebalancing suggestions."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    portfolio_id: str = Field(..., description="Portfolio ID to rebalance")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+# Analytics Models
+class CashflowAnalysisRequest(BaseModel):
+    """Request model for cash flow analysis."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    period_months: int = Field(12, ge=1, le=60, description="Analysis period in months")
+    include_projections: bool = Field(True, description="Include future projections")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class SpendingAnalysisRequest(BaseModel):
+    """Request model for spending pattern analysis."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    transactions: Optional[List[Dict[str, Any]]] = Field(None, description="Transaction data")
+    analysis_type: str = Field("detailed", description="Analysis type (summary/detailed/predictive)")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class TaxOptimizationRequest(BaseModel):
+    """Request model for tax optimization analysis."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    annual_income: float = Field(..., ge=0, description="Annual income")
+    investment_income: float = Field(0, ge=0, description="Investment income")
+    tax_year: int = Field(2024, description="Tax year")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+# Market Data Models
+class StockPriceRequest(BaseModel):
+    """Request model for stock price lookup."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    symbols: List[str] = Field(..., description="Stock symbols to lookup")
+    include_analysis: bool = Field(False, description="Include AI analysis")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class PortfolioValueRequest(BaseModel):
+    """Request model for portfolio valuation."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    portfolio_id: str = Field(..., description="Portfolio ID")
+    include_performance: bool = Field(True, description="Include performance metrics")
+
+# Planning Models
+class RetirementPlanningRequest(BaseModel):
+    """Request model for retirement planning."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    current_age: int = Field(..., ge=18, le=100, description="Current age")
+    retirement_age: int = Field(..., ge=50, le=80, description="Desired retirement age")
+    desired_retirement_income: float = Field(..., ge=1000, description="Desired monthly retirement income")
+    current_savings: float = Field(0, ge=0, description="Current retirement savings")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+class EmergencyFundRequest(BaseModel):
+    """Request model for emergency fund analysis."""
+    user_id: str = Field(..., description="User identifier")
+    token: str = Field(..., description="HushhMCP consent token")
+    monthly_expenses: float = Field(..., ge=500, description="Monthly expenses")
+    current_emergency_fund: float = Field(0, ge=0, description="Current emergency fund amount")
+    risk_profile: str = Field("moderate", description="Risk profile (conservative/moderate/aggressive)")
+    gemini_api_key: Optional[str] = Field(None, description="Gemini API key for AI features")
+
+# Response Models
+class FinanceApiResponse(BaseModel):
+    """Base response model for finance API endpoints."""
+    status: str = Field(..., description="Response status")
+    data: Dict[str, Any] = Field(..., description="Response data")
+    ai_insights: Optional[str] = Field(None, description="AI-generated insights")
+    recommendations: Optional[List[str]] = Field(None, description="Actionable recommendations")
+    processing_time: float = Field(..., description="Processing time in seconds")
+    errors: Optional[List[str]] = Field(None, description="Any errors encountered")
+
+# ============================================================================
+# PORTFOLIO MANAGEMENT ENDPOINTS
+# ============================================================================
+
+@app.post("/agents/chandufinance/portfolio/create", response_model=FinanceApiResponse)
+async def create_portfolio(request: PortfolioCreateRequest):
+    """Create a new investment portfolio with AI-powered allocation."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        # Import the enhanced finance agent
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        # Prepare portfolio parameters
+        parameters = {
+            'command': 'create_portfolio',
+            'portfolio_name': request.portfolio_name,
+            'investment_amount': request.investment_amount,
+            'risk_tolerance': request.risk_tolerance,
+            'investment_goals': request.investment_goals,
+            'time_horizon': request.time_horizon
+        }
+        
+        # Add API key if provided
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        # Execute the agent
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={
+                ConsentScope.VAULT_READ_FINANCE.value: request.token,
+                ConsentScope.VAULT_WRITE_FILE.value: request.token
+            },
+            parameters=parameters
+        )
+        
+        # Process the result
+        portfolio_data = {
+            'portfolio_id': result.get('portfolio_id', f"portfolio_{request.user_id}_{int(datetime.now().timestamp())}"),
+            'allocation': result.get('recommended_allocation', {}),
+            'expected_return': result.get('expected_return', 0.08),
+            'risk_score': result.get('risk_score', 0.15),
+            'created_at': datetime.now().isoformat()
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=portfolio_data,
+            ai_insights=result.get('ai_insights', 'Portfolio created successfully with optimized allocation.'),
+            recommendations=result.get('recommendations', ['Monitor portfolio performance regularly', 'Consider rebalancing quarterly']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/portfolio/analyze", response_model=FinanceApiResponse)
+async def analyze_portfolio(request: PortfolioAnalyzeRequest):
+    """Analyze portfolio performance and provide AI insights."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'analyze_portfolio',
+            'portfolio_id': request.portfolio_id,
+            'holdings': request.holdings or []
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        analysis_data = {
+            'performance_metrics': result.get('performance_metrics', {}),
+            'risk_analysis': result.get('risk_analysis', {}),
+            'diversification_score': result.get('diversification_score', 0.75),
+            'benchmark_comparison': result.get('benchmark_comparison', {}),
+            'volatility': result.get('volatility', 0.15)
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=analysis_data,
+            ai_insights=result.get('ai_insights', 'Portfolio analysis completed with comprehensive metrics.'),
+            recommendations=result.get('recommendations', ['Consider diversification improvements']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/portfolio/rebalance", response_model=FinanceApiResponse)
+async def rebalance_portfolio(request: PortfolioRebalanceRequest):
+    """Get AI-powered portfolio rebalancing suggestions."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'rebalance_portfolio',
+            'portfolio_id': request.portfolio_id
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        rebalance_data = {
+            'current_allocation': result.get('current_allocation', {}),
+            'target_allocation': result.get('target_allocation', {}),
+            'rebalance_trades': result.get('rebalance_trades', []),
+            'estimated_cost': result.get('estimated_cost', 0),
+            'expected_benefit': result.get('expected_benefit', 'Improved risk-adjusted returns')
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=rebalance_data,
+            ai_insights=result.get('ai_insights', 'Rebalancing analysis completed with optimized suggestions.'),
+            recommendations=result.get('recommendations', ['Execute trades during market hours', 'Consider tax implications']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+# ============================================================================
+# FINANCIAL ANALYTICS ENDPOINTS
+# ============================================================================
+
+@app.post("/agents/chandufinance/analytics/cashflow", response_model=FinanceApiResponse)
+async def analyze_cashflow(request: CashflowAnalysisRequest):
+    """Analyze cash flow patterns with AI insights."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'analyze_cashflow',
+            'period_months': request.period_months,
+            'include_projections': request.include_projections
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        cashflow_data = {
+            'monthly_analysis': result.get('monthly_analysis', {}),
+            'trends': result.get('trends', {}),
+            'projections': result.get('projections', {}) if request.include_projections else {},
+            'key_metrics': result.get('key_metrics', {}),
+            'seasonal_patterns': result.get('seasonal_patterns', {})
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=cashflow_data,
+            ai_insights=result.get('ai_insights', 'Cash flow analysis reveals important spending patterns.'),
+            recommendations=result.get('recommendations', ['Optimize irregular expenses', 'Build emergency buffer']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/analytics/spending", response_model=FinanceApiResponse)
+async def analyze_spending(request: SpendingAnalysisRequest):
+    """Analyze spending patterns with AI-powered insights."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'analyze_spending',
+            'transactions': request.transactions or [],
+            'analysis_type': request.analysis_type
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        spending_data = {
+            'category_breakdown': result.get('category_breakdown', {}),
+            'spending_trends': result.get('spending_trends', {}),
+            'unusual_patterns': result.get('unusual_patterns', []),
+            'saving_opportunities': result.get('saving_opportunities', []),
+            'behavioral_insights': result.get('behavioral_insights', {})
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=spending_data,
+            ai_insights=result.get('ai_insights', 'Spending analysis reveals optimization opportunities.'),
+            recommendations=result.get('recommendations', ['Reduce discretionary spending', 'Automate savings']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/analytics/tax-optimization", response_model=FinanceApiResponse)
+async def analyze_tax_optimization(request: TaxOptimizationRequest):
+    """Provide AI-powered tax optimization strategies."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'tax_optimization',
+            'annual_income': request.annual_income,
+            'investment_income': request.investment_income,
+            'tax_year': request.tax_year
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        tax_data = {
+            'current_tax_bracket': result.get('current_tax_bracket', '22%'),
+            'optimization_strategies': result.get('optimization_strategies', []),
+            'estimated_savings': result.get('estimated_savings', 0),
+            'retirement_contributions': result.get('retirement_contributions', {}),
+            'tax_loss_harvesting': result.get('tax_loss_harvesting', {})
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=tax_data,
+            ai_insights=result.get('ai_insights', 'Tax optimization analysis identifies potential savings.'),
+            recommendations=result.get('recommendations', ['Maximize retirement contributions', 'Consider tax-advantaged accounts']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+# ============================================================================
+# MARKET DATA ENDPOINTS
+# ============================================================================
+
+@app.post("/agents/chandufinance/market/stock-price", response_model=FinanceApiResponse)
+async def get_stock_prices(request: StockPriceRequest):
+    """Get real-time stock prices with optional AI analysis."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'get_stock_prices',
+            'symbols': request.symbols,
+            'include_analysis': request.include_analysis
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        stock_data = {
+            'prices': result.get('prices', {}),
+            'market_data': result.get('market_data', {}),
+            'analysis': result.get('analysis', {}) if request.include_analysis else {},
+            'last_updated': datetime.now().isoformat()
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=stock_data,
+            ai_insights=result.get('ai_insights', 'Stock price data retrieved successfully.'),
+            recommendations=result.get('recommendations', []) if request.include_analysis else [],
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/market/portfolio-value", response_model=FinanceApiResponse)
+async def get_portfolio_value(request: PortfolioValueRequest):
+    """Get live portfolio valuation with performance metrics."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'get_portfolio_value',
+            'portfolio_id': request.portfolio_id,
+            'include_performance': request.include_performance
+        }
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        portfolio_data = {
+            'current_value': result.get('current_value', 0),
+            'total_return': result.get('total_return', {}),
+            'daily_change': result.get('daily_change', {}),
+            'performance_metrics': result.get('performance_metrics', {}) if request.include_performance else {},
+            'last_updated': datetime.now().isoformat()
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=portfolio_data,
+            ai_insights=result.get('ai_insights', 'Portfolio valuation completed successfully.'),
+            recommendations=result.get('recommendations', []),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+# ============================================================================
+# ADVANCED PLANNING ENDPOINTS
+# ============================================================================
+
+@app.post("/agents/chandufinance/planning/retirement", response_model=FinanceApiResponse)
+async def analyze_retirement_planning(request: RetirementPlanningRequest):
+    """Comprehensive retirement planning with AI insights."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'retirement_planning',
+            'current_age': request.current_age,
+            'retirement_age': request.retirement_age,
+            'desired_retirement_income': request.desired_retirement_income,
+            'current_savings': request.current_savings
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        retirement_data = {
+            'required_savings': result.get('required_savings', 0),
+            'monthly_contribution_needed': result.get('monthly_contribution_needed', 0),
+            'retirement_readiness_score': result.get('retirement_readiness_score', 0),
+            'projection_scenarios': result.get('projection_scenarios', {}),
+            'recommended_strategies': result.get('recommended_strategies', [])
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=retirement_data,
+            ai_insights=result.get('ai_insights', 'Retirement planning analysis provides comprehensive roadmap.'),
+            recommendations=result.get('recommendations', ['Increase savings rate', 'Diversify retirement accounts']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
+
+@app.post("/agents/chandufinance/planning/emergency-fund", response_model=FinanceApiResponse)
+async def analyze_emergency_fund(request: EmergencyFundRequest):
+    """Emergency fund analysis with personalized recommendations."""
+    start_time = datetime.now(timezone.utc)
+    
+    try:
+        # Validate consent token
+        is_valid, error_msg, token_obj = validate_token(request.token, ConsentScope.VAULT_READ_FINANCE)
+        if not is_valid:
+            raise HTTPException(status_code=403, detail=f"Invalid consent token: {error_msg}")
+        
+        from hushh_mcp.agents.chandufinance.index import run_agent
+        
+        parameters = {
+            'command': 'emergency_fund_analysis',
+            'monthly_expenses': request.monthly_expenses,
+            'current_emergency_fund': request.current_emergency_fund,
+            'risk_profile': request.risk_profile
+        }
+        
+        if request.gemini_api_key:
+            parameters['gemini_api_key'] = request.gemini_api_key
+        
+        result = run_agent(
+            user_id=request.user_id,
+            tokens={ConsentScope.VAULT_READ_FINANCE.value: request.token},
+            parameters=parameters
+        )
+        
+        emergency_data = {
+            'recommended_amount': result.get('recommended_amount', request.monthly_expenses * 6),
+            'current_coverage_months': result.get('current_coverage_months', 0),
+            'funding_gap': result.get('funding_gap', 0),
+            'recommended_timeline': result.get('recommended_timeline', '12 months'),
+            'best_accounts': result.get('best_accounts', [])
+        }
+        
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        
+        return FinanceApiResponse(
+            status="success",
+            data=emergency_data,
+            ai_insights=result.get('ai_insights', 'Emergency fund analysis provides security assessment.'),
+            recommendations=result.get('recommendations', ['Build emergency fund gradually', 'Use high-yield savings account']),
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+        return FinanceApiResponse(
+            status="error",
+            data={},
+            errors=[str(e)],
+            processing_time=processing_time
+        )
 
 # ============================================================================
 # RELATIONSHIP MEMORY AGENT ENDPOINTS

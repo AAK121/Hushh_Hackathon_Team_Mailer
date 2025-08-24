@@ -271,6 +271,228 @@ class MassMailerAgent:
             print(f"⚠️  Trust link creation failed: {e}")
             return None
 
+    def _save_user_email_memory(self, user_id: str, email_data: Dict, consent_tokens: Dict[str, str]) -> str:
+        """
+        Saves user's email writing preferences and style to persistent vault storage.
+        
+        Args:
+            user_id: User identifier
+            email_data: Dictionary containing email preferences and examples
+            consent_tokens: Consent tokens for validation
+            
+        Returns:
+            str: Memory storage key
+        """
+        try:
+            # Validate consent for vault write operations
+            self._validate_consent_for_operation(consent_tokens, "campaign_storage", user_id)
+            
+            # Create user's vault directory
+            user_vault_dir = os.path.join("vault", user_id)
+            os.makedirs(user_vault_dir, exist_ok=True)
+            
+            # Load existing memory or create new
+            memory_file = os.path.join(user_vault_dir, "email_preferences.enc")
+            existing_memory = self._load_user_email_memory(user_id, consent_tokens)
+            
+            # Prepare memory data
+            timestamp = datetime.now(timezone.utc).isoformat()
+            memory_data = {
+                'user_id': user_id,
+                'agent_id': self.agent_id,
+                'data_type': 'email_writing_preferences',
+                'created_at': existing_memory.get('created_at', timestamp) if existing_memory else timestamp,
+                'updated_at': timestamp,
+                'preferences': {
+                    'writing_style': email_data.get('writing_style', ''),
+                    'tone': email_data.get('tone', ''),
+                    'formality_level': email_data.get('formality_level', 'professional'),
+                    'personalization_preferences': email_data.get('personalization_preferences', 'moderate'),
+                    'subject_line_style': email_data.get('subject_line_style', ''),
+                    'content_structure': email_data.get('content_structure', ''),
+                    'closing_style': email_data.get('closing_style', ''),
+                    'key_phrases': email_data.get('key_phrases', []),
+                    'avoid_phrases': email_data.get('avoid_phrases', [])
+                },
+                'email_examples': existing_memory.get('email_examples', []) if existing_memory else [],
+                'feedback_history': existing_memory.get('feedback_history', []) if existing_memory else [],
+                'campaign_history': existing_memory.get('campaign_history', []) if existing_memory else []
+            }
+            
+            # Add current email as example if provided
+            if email_data.get('email_template') and email_data.get('subject'):
+                new_example = {
+                    'subject': email_data['subject'],
+                    'content': email_data['email_template'],
+                    'user_input': email_data.get('user_input', ''),
+                    'timestamp': timestamp,
+                    'campaign_id': email_data.get('campaign_id', ''),
+                    'user_satisfaction': email_data.get('user_satisfaction', 'unknown')
+                }
+                memory_data['email_examples'].append(new_example)
+                
+                # Keep only last 10 examples to avoid bloat
+                memory_data['email_examples'] = memory_data['email_examples'][-10:]
+            
+            # Add user feedback if provided
+            if email_data.get('user_feedback'):
+                feedback_entry = {
+                    'feedback': email_data['user_feedback'],
+                    'timestamp': timestamp,
+                    'campaign_id': email_data.get('campaign_id', ''),
+                    'original_input': email_data.get('user_input', '')
+                }
+                memory_data['feedback_history'].append(feedback_entry)
+                
+                # Keep only last 20 feedback entries
+                memory_data['feedback_history'] = memory_data['feedback_history'][-20:]
+            
+            # Encrypt and save to file
+            from hushh_mcp.config import VAULT_ENCRYPTION_KEY
+            encrypted_data = encrypt_data(json.dumps(memory_data), VAULT_ENCRYPTION_KEY)
+            
+            # Save encrypted data to file
+            with open(memory_file, 'w') as f:
+                json.dump({
+                    'ciphertext': encrypted_data.ciphertext,
+                    'iv': encrypted_data.iv,
+                    'tag': encrypted_data.tag,
+                    'encoding': encrypted_data.encoding,
+                    'algorithm': encrypted_data.algorithm
+                }, f)
+            
+            print(f"💾 User email preferences saved to vault: {memory_file}")
+            return memory_file
+            
+        except Exception as e:
+            print(f"⚠️ Failed to save email memory: {e}")
+            return ""
+
+    def _load_user_email_memory(self, user_id: str, consent_tokens: Dict[str, str]) -> Optional[Dict]:
+        """
+        Loads user's email writing preferences and style from persistent vault storage.
+        
+        Args:
+            user_id: User identifier
+            consent_tokens: Consent tokens for validation
+            
+        Returns:
+            Optional[Dict]: User's email preferences or None if not found
+        """
+        try:
+            # Validate consent for vault read operations
+            self._validate_consent_for_operation(consent_tokens, "contact_management", user_id)
+            
+            # Check for user's memory file
+            memory_file = os.path.join("vault", user_id, "email_preferences.enc")
+            if not os.path.exists(memory_file):
+                print(f"📝 No email preferences found for user {user_id}")
+                return None
+            
+            # Load and decrypt memory data
+            with open(memory_file, 'r') as f:
+                encrypted_file_data = json.load(f)
+            
+            from hushh_mcp.config import VAULT_ENCRYPTION_KEY
+            from hushh_mcp.types import EncryptedPayload
+            
+            # Reconstruct EncryptedPayload object
+            encrypted_payload = EncryptedPayload(
+                ciphertext=encrypted_file_data['ciphertext'],
+                iv=encrypted_file_data['iv'],
+                tag=encrypted_file_data['tag'],
+                encoding=encrypted_file_data['encoding'],
+                algorithm=encrypted_file_data['algorithm']
+            )
+            
+            # Decrypt data
+            decrypted_data = decrypt_data(encrypted_payload, VAULT_ENCRYPTION_KEY)
+            memory_data = json.loads(decrypted_data)
+            
+            print(f"💾 User email preferences loaded from vault")
+            print(f"   📅 Created: {memory_data.get('created_at', 'Unknown')}")
+            print(f"   📅 Updated: {memory_data.get('updated_at', 'Unknown')}")
+            print(f"   📧 Examples: {len(memory_data.get('email_examples', []))}")
+            print(f"   💬 Feedback: {len(memory_data.get('feedback_history', []))}")
+            
+            return memory_data
+            
+        except Exception as e:
+            print(f"⚠️ Failed to load email memory: {e}")
+            return None
+
+    def _analyze_user_style_from_memory(self, memory_data: Dict) -> str:
+        """
+        Analyzes user's previous emails and feedback to create a style guide.
+        
+        Args:
+            memory_data: User's email memory data
+            
+        Returns:
+            str: Style analysis and guidelines for content generation
+        """
+        if not memory_data:
+            return ""
+        
+        preferences = memory_data.get('preferences', {})
+        examples = memory_data.get('email_examples', [])
+        feedback_history = memory_data.get('feedback_history', [])
+        
+        style_guide = []
+        
+        # Basic preferences
+        if preferences.get('writing_style'):
+            style_guide.append(f"Writing style: {preferences['writing_style']}")
+        if preferences.get('tone'):
+            style_guide.append(f"Tone: {preferences['tone']}")
+        if preferences.get('formality_level'):
+            style_guide.append(f"Formality: {preferences['formality_level']}")
+        
+        # Content structure preferences
+        if preferences.get('content_structure'):
+            style_guide.append(f"Structure: {preferences['content_structure']}")
+        if preferences.get('closing_style'):
+            style_guide.append(f"Closing: {preferences['closing_style']}")
+        
+        # Key phrases to use or avoid
+        if preferences.get('key_phrases'):
+            style_guide.append(f"Preferred phrases: {', '.join(preferences['key_phrases'])}")
+        if preferences.get('avoid_phrases'):
+            style_guide.append(f"Avoid phrases: {', '.join(preferences['avoid_phrases'])}")
+        
+        # Recent feedback patterns
+        if feedback_history:
+            recent_feedback = feedback_history[-3:]  # Last 3 feedback items
+            common_requests = []
+            for fb in recent_feedback:
+                feedback_text = fb.get('feedback', '').lower()
+                if 'more formal' in feedback_text or 'formal' in feedback_text:
+                    common_requests.append("User prefers more formal language")
+                elif 'casual' in feedback_text or 'informal' in feedback_text:
+                    common_requests.append("User prefers casual/informal language")
+                elif 'shorter' in feedback_text or 'brief' in feedback_text:
+                    common_requests.append("User prefers shorter emails")
+                elif 'longer' in feedback_text or 'detailed' in feedback_text:
+                    common_requests.append("User prefers detailed emails")
+                elif 'personal' in feedback_text:
+                    common_requests.append("User wants more personalization")
+            
+            if common_requests:
+                style_guide.append(f"Recent feedback patterns: {'; '.join(set(common_requests))}")
+        
+        # Example analysis
+        if examples:
+            recent_examples = examples[-2:]  # Last 2 examples
+            style_guide.append(f"Recent examples available: {len(recent_examples)} emails")
+            
+            # Analyze subject line patterns
+            subjects = [ex.get('subject', '') for ex in recent_examples if ex.get('subject')]
+            if subjects:
+                avg_subject_length = sum(len(s) for s in subjects) / len(subjects)
+                style_guide.append(f"Subject length preference: ~{int(avg_subject_length)} characters")
+        
+        return " | ".join(style_guide) if style_guide else ""
+
     def _build_workflow(self) -> StateGraph:
         """Builds the enhanced LangGraph workflow with HushMCP integration."""
         graph_builder = StateGraph(AgentState)
@@ -459,7 +681,7 @@ class MassMailerAgent:
             }
 
     def _draft_content(self, state: AgentState) -> dict:
-        """LangGraph node: Drafts email content using AI with enhanced consent validation."""
+        """LangGraph node: Drafts email content using AI with enhanced consent validation and memory."""
         # Validate consent for AI content generation
         self._validate_consent_for_operation(
             state["consent_tokens"], 
@@ -468,6 +690,46 @@ class MassMailerAgent:
         )
         
         print("✅ Consent validated for AI content generation.")
+        
+        # 🧠 LOAD USER'S EMAIL MEMORY
+        print("🧠 Loading user's email writing preferences...")
+        user_memory = self._load_user_email_memory(state["user_id"], state["consent_tokens"])
+        style_guide = self._analyze_user_style_from_memory(user_memory) if user_memory else ""
+        
+        # Build memory context for AI
+        memory_context = ""
+        if user_memory:
+            preferences = user_memory.get('preferences', {})
+            examples = user_memory.get('email_examples', [])
+            feedback_history = user_memory.get('feedback_history', [])
+            
+            memory_context = f"""
+📚 USER'S EMAIL WRITING PREFERENCES (Use this to match their style):
+"""
+            
+            if style_guide:
+                memory_context += f"Style Guide: {style_guide}\n"
+            
+            # Add recent email examples for style reference
+            if examples:
+                recent_examples = examples[-2:]  # Last 2 examples
+                memory_context += f"\n🎯 Recent Email Examples (match this style):\n"
+                for i, example in enumerate(recent_examples, 1):
+                    memory_context += f"Example {i}:\n"
+                    memory_context += f"Subject: {example.get('subject', 'N/A')}\n"
+                    memory_context += f"Content: {example.get('content', 'N/A')[:200]}...\n\n"
+            
+            # Add recent feedback patterns
+            if feedback_history:
+                recent_feedback = feedback_history[-3:]  # Last 3 feedback items
+                memory_context += f"💬 Recent User Feedback (avoid these issues):\n"
+                for fb in recent_feedback:
+                    memory_context += f"- {fb.get('feedback', 'N/A')}\n"
+                memory_context += "\n"
+            
+            memory_context += "⚠️ IMPORTANT: Use the above preferences to write emails that match the user's preferred style, tone, and structure.\n"
+        else:
+            memory_context = "📝 No previous email preferences found. Use professional, polite tone.\n"
         
         # Default: No placeholders
         placeholders_str = ""
@@ -499,6 +761,8 @@ class MassMailerAgent:
             prompt = f"""
 You are an email drafting assistant powered by HushMCP framework.
 
+{memory_context}
+
 Here is the current email template:
 ---
 {state['email_template']}
@@ -522,6 +786,8 @@ Update it based on this feedback:
         else:
             prompt = f"""
 You are an email drafting assistant powered by HushMCP framework.
+
+{memory_context}
 
 Write a professional email based on this input:
 "{state['user_input']}"
@@ -554,6 +820,22 @@ Write a professional email based on this input:
             else:
                 print(f"❌ Error generating content with AI: {e}")
                 raise Exception(f"AI content generation failed: {error_msg}")
+
+        # 🧠 SAVE CURRENT EMAIL TO MEMORY
+        email_data = {
+            'email_template': parsed["email_template"],
+            'subject': parsed["subject"],
+            'user_input': state['user_input'],
+            'user_feedback': state.get('user_feedback', ''),
+            'campaign_id': state.get('campaign_id', ''),
+            'timestamp': datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Save to memory (in background, don't block on errors)
+        try:
+            self._save_user_email_memory(state["user_id"], email_data, state["consent_tokens"])
+        except Exception as memory_error:
+            print(f"⚠️ Failed to save email to memory: {memory_error}")
 
         # Store draft in vault
         draft_data = {
@@ -614,13 +896,57 @@ Write a professional email based on this input:
         if state.get('api_approval_action'):
             action = state.get('api_approval_action')
             if action == 'approve':
+                # 🧠 SAVE APPROVAL TO MEMORY
+                try:
+                    approval_data = {
+                        'email_template': state.get('email_template', ''),
+                        'subject': state.get('subject', ''),
+                        'user_input': state.get('user_input', ''),
+                        'user_satisfaction': 'approved',
+                        'campaign_id': state.get('campaign_id', ''),
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                    self._save_user_email_memory(state["user_id"], approval_data, state["consent_tokens"])
+                except Exception as memory_error:
+                    print(f"⚠️ Failed to save approval to memory: {memory_error}")
+                
                 return {"approved": True}
             elif action in ['modify', 'regenerate']:
+                # 🧠 SAVE FEEDBACK TO MEMORY
+                try:
+                    feedback_data = {
+                        'email_template': state.get('email_template', ''),
+                        'subject': state.get('subject', ''),
+                        'user_input': state.get('user_input', ''),
+                        'user_feedback': state.get('api_feedback', 'Please modify the content'),
+                        'user_satisfaction': 'needs_improvement',
+                        'campaign_id': state.get('campaign_id', ''),
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                    self._save_user_email_memory(state["user_id"], feedback_data, state["consent_tokens"])
+                except Exception as memory_error:
+                    print(f"⚠️ Failed to save feedback to memory: {memory_error}")
+                
                 return {
                     "user_feedback": state.get('api_feedback', 'Please modify the content'),
                     "approved": False
                 }
             else:  # reject
+                # 🧠 SAVE REJECTION TO MEMORY
+                try:
+                    rejection_data = {
+                        'email_template': state.get('email_template', ''),
+                        'subject': state.get('subject', ''),
+                        'user_input': state.get('user_input', ''),
+                        'user_feedback': 'Email rejected by user',
+                        'user_satisfaction': 'rejected',
+                        'campaign_id': state.get('campaign_id', ''),
+                        'timestamp': datetime.now(timezone.utc).isoformat()
+                    }
+                    self._save_user_email_memory(state["user_id"], rejection_data, state["consent_tokens"])
+                except Exception as memory_error:
+                    print(f"⚠️ Failed to save rejection to memory: {memory_error}")
+                
                 return {"approved": False, "rejected": True}
 
         # If in interactive mode and no decision has been made, pause for frontend
@@ -637,8 +963,37 @@ Write a professional email based on this input:
         # Fallback to CLI for direct terminal usage (should not be reached in API flow)
         user_input = input("\n✅ Approve this email? (yes/y/approve OR provide feedback): ").strip()
         if user_input.lower() in ["yes", "y", "approve", "approved"]:
+            # 🧠 SAVE APPROVAL TO MEMORY
+            try:
+                approval_data = {
+                    'email_template': state.get('email_template', ''),
+                    'subject': state.get('subject', ''),
+                    'user_input': state.get('user_input', ''),
+                    'user_satisfaction': 'approved',
+                    'campaign_id': state.get('campaign_id', ''),
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }
+                self._save_user_email_memory(state["user_id"], approval_data, state["consent_tokens"])
+            except Exception as memory_error:
+                print(f"⚠️ Failed to save approval to memory: {memory_error}")
+            
             return {"approved": True}
         else:
+            # 🧠 SAVE FEEDBACK TO MEMORY
+            try:
+                feedback_data = {
+                    'email_template': state.get('email_template', ''),
+                    'subject': state.get('subject', ''),
+                    'user_input': state.get('user_input', ''),
+                    'user_feedback': user_input,
+                    'user_satisfaction': 'needs_improvement',
+                    'campaign_id': state.get('campaign_id', ''),
+                    'timestamp': datetime.now(timezone.utc).isoformat()
+                }
+                self._save_user_email_memory(state["user_id"], feedback_data, state["consent_tokens"])
+            except Exception as memory_error:
+                print(f"⚠️ Failed to save feedback to memory: {memory_error}")
+            
             return {"user_feedback": user_input, "approved": False}
 
     def _route_tools(self, state: AgentState) -> str:
@@ -865,12 +1220,54 @@ customized email content here
                         if not from_email:
                             raise ValueError("Sender email not configured.")
 
+                        # ✨ AI-POWERED PERSONALIZATION: Check if personalization is enabled and we have description
+                        contact_description = contact_dict.get('description', '')
+                        personalization_enabled = state.get('enable_description_personalization', False)
+                        
+                        if personalization_enabled and contact_description and contact_description.strip():
+                            print(f"✨ [DEBUG] Using AI personalization for {row.get('name')} with description: {contact_description[:50]}...")
+                            
+                            # Use AI to customize the email based on the description
+                            customized = self._customize_email_with_description(
+                                base_template=template,
+                                base_subject=subject,
+                                contact_info=contact_dict,
+                                description=contact_description,
+                                state=state
+                            )
+                            
+                            personalized_subject = customized["subject"]
+                            personalized_content = customized["content"]
+                            
+                            # Then apply any remaining placeholder substitution
+                            safe_contact = SafeDict(contact_dict)
+                            personalized_subject = personalized_subject.format_map(safe_contact)
+                            personalized_content = personalized_content.format_map(safe_contact)
+                            
+                            print(f"✨ [DEBUG] AI-personalized subject: {personalized_subject}")
+                            print(f"✨ [DEBUG] AI-personalized content: {personalized_content[:100]}...")
+                            
+                        else:
+                            if not personalization_enabled:
+                                print(f"📝 [DEBUG] AI personalization is DISABLED for this campaign")
+                            elif not contact_description:
+                                print(f"📝 [DEBUG] No description found for {row.get('name')}, using standard template")
+                            
+                            # Fall back to simple placeholder replacement
+                            safe_contact = SafeDict(contact_dict)
+                            personalized_subject = subject.format_map(safe_contact)
+                            personalized_content = template.format_map(safe_contact)
+                            
+                            print(f"� [DEBUG] Standard personalized content: {personalized_content[:100]}...")
+
+                        print(f"🚀 [DEBUG] Contact data: {dict(contact_dict)}")
+
                         print(f"🚀 [DEBUG] Calling _send_email_via_mailjet for {row['email']}")
                         result = self._send_email_via_mailjet(
                             to_email=row["email"],
                             to_name=row.get("name", ""),
-                            subject=subject,
-                            content=template,
+                            subject=personalized_subject,
+                            content=personalized_content,
                             from_email=from_email,
                             from_name="MailerPanda Agent",
                             campaign_id=campaign_id

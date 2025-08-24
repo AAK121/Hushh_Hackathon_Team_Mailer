@@ -10,19 +10,20 @@ import AgentStore from './components/AgentStore';
 import MailerPandaAgent from './components/MailerPandaAgent';
 import AddToCalendarAgent from './components/AddToCalendarAgent';
 import FinanceAgent from './components/FinanceAgent';
+import FinanceAgentDebug from './components/FinanceAgentDebug';
 import RelationshipAgent from './components/RelationshipAgent';
-import ResearchAgent from './components/ResearchAgent';
+import ResearchAgentNew from './components/ResearchAgentNew';
 
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
   const [activeView, setActiveView] = useState('ai-agents');
-  const [selectedAIAgent, setSelectedAIAgent] = useState<'calendar' | null>(null);
+  const [selectedAIAgent, setSelectedAIAgent] = useState<'mass-mail' | 'calendar' | null>(null);
   const [selectedStoreAgent, setSelectedStoreAgent] = useState<string | null>(null);
   const [showHITL, setShowHITL] = useState(false);
   const [hitlPrompt, setHitlPrompt] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const handleSelectAIAgent = (agent: 'calendar') => {
+  const handleSelectAIAgent = (agent: 'mass-mail' | 'calendar') => {
     setSelectedAIAgent(agent);
   };
 
@@ -173,6 +174,8 @@ function AppContent() {
             <AIAgentSelection onSelectAgent={handleSelectAIAgent} onShowHITL={handleShowHITL} />
           ) : selectedAIAgent === 'calendar' ? (
             <AICalendarAgent onBack={handleBackToAgentSelection} />
+          ) : selectedAIAgent === 'mass-mail' ? (
+            <MailerPandaAgent onBack={handleBackToAgentSelection} />
           ) : null
         ) : activeView === 'ai-calendar' ? (
           <AICalendarAgent onBack={() => handleViewChange('ai-agents')} />
@@ -191,7 +194,7 @@ function AppContent() {
           ) : selectedStoreAgent === 'agent_relationship' ? (
             <RelationshipAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : selectedStoreAgent === 'agent_research' ? (
-            <ResearchAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
+            <ResearchAgentNew onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
               <h2>Agent not implemented yet</h2>

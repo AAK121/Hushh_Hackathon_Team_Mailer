@@ -1,0 +1,171 @@
+[
+  {
+    "test_name": "Create Consent Token",
+    "success": false,
+    "details": "Failed: 404",
+    "timestamp": "2025-08-24T11:41:45.391679",
+    "response_data": {
+      "detail": "Not Found"
+    }
+  },
+  {
+    "test_name": "Portfolio Creation",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:47.438456",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 4.1e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Portfolio Analysis",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:49.484160",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 2.7e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Portfolio Rebalance",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:51.528973",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 7.4e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Cashflow Analysis",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:53.574850",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 3.5e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Spending Analysis",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:55.618359",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 3.5e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Tax Optimization",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:57.661886",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 4.6e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Stock Prices",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:41:59.703230",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 2.5e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Portfolio Value",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:42:01.738588",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 2.1e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Retirement Planning",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:42:03.790262",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 3.5e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  },
+  {
+    "test_name": "Emergency Fund",
+    "success": false,
+    "details": "Success status not returned",
+    "timestamp": "2025-08-24T11:42:05.828295",
+    "response_data": {
+      "status": "error",
+      "data": {},
+      "ai_insights": null,
+      "recommendations": null,
+      "processing_time": 2.8e-05,
+      "errors": [
+        "tuple indices must be integers or slices, not str"
+      ]
+    }
+  }
+]

@@ -76,14 +76,14 @@ const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent, onSh
       {fullChatMode ? (
   <div className="full-chat">
           {/* Only show chat and sidebar/menu icon in full chat mode */}
-          <HITLChat fullChatMode={true} onSend={() => {}} />
+          {/* <HITLChat fullChatMode={true} onSend={() => {}} /> */}
         </div>
       ) : (
   <div className="layout">
           {/* Main Content */}
           <main className="main-content">
             <div className="chat-area">
-              <HITLChat onSend={() => setFullChatMode(true)} />
+              {/* <HITLChat onSend={() => setFullChatMode(true)} /> */}
             </div>
             <div className="agents-section">
               <div className="search-box">

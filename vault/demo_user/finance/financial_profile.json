@@ -1,0 +1,14 @@
+{
+  "ciphertext": "fcYLWY7mOf4WgZQmXugNlHnb8dp7xKmSbv10+lksdw4+LgLR/KCocAfJ/aP+4//7JzldmwmJIgtiLon5fJcXYggDzWJPMdkDSPvSSpDxgRZA9VRJnrVBp3LA9rVOrs9YXi/t92wBY9pWh3B1KuTt6ozpC+zMgBdWCKqh7sS2PHIgeuK9sFqnX11XFOtxugZN7meIl1SUQomgvcBG4Sc0WreCRVmoJIn8mIcsaLLCbm7V0Hii/CWsOGESdDs7e8v0XV/h+XM1ziiXh/9ylktiQZj+FT4BVGs2eJalXI+zI10GbxkeY/9rRkMTqoP9J7nv8DUjTA1gNciZdGK1AGVEbb9Ox3OeHSWH6tlrSI730HxbIzC4D3AEo/KSCMV8S5fc0t+0e0DqJMcN7Ow+YI3pda4Xgeiw4wcLD0DRTq4/NyT6ZqgmCeXc+1sPlKcq3h1zqcDur6CJpj/BPfK81uQItV/fR/+2EcgmKneHbs1HJHZDb9HP9rnySj+3KVU3h0K8d21XH6zAkJ0cYUiTG1dCb9YDxmlywLd+iKBmDleTBc4XLdZPumLq96eNfA3is0Ed8DSS3k6MXjlMr9USsUt+cXesqGDO0SquaWK/7+RqySwBhEQeF9+ks+IKp8yN/klsyzeI7GIO1cDjiV+HRaMw9lMDEM8ovJ4R8ESjU5vN48sM8NYw/rN7+iRjb0bwDZyL8iWrmtV2iPOv44gAVk8guO8KSUK+nxnyfVreEnLNSxIp0eNAiru369swXHtbGdgmREg75cNlPA==",
+  "iv": "uz8noHWWUd//pKcM",
+  "tag": "apdCJ++wDIPK6UMoGq9+fw==",
+  "encoding": "base64",
+  "algorithm": "aes-256-gcm",
+  "metadata": {
+    "agent_id": "chandufinance",
+    "user_id": "demo_user",
+    "scope": "vault.read.finance",
+    "created_at": "2025-08-24T12:39:34.748127",
+    "data_type": "personal_financial_profile"
+  }
+}
