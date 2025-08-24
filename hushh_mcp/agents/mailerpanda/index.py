@@ -1163,27 +1163,52 @@ customized email content here
             print(f"🔒 Vault Storage Keys: {list(final_state.get('vault_storage', {}).keys())}")
             print(f"🔗 Trust Links Created: {len(final_state.get('trust_links', []))}")
             
-            return {
-                "status": "complete",
-                "agent_id": self.agent_id,
-                "agent_version": self.version,
-                "campaign_summary": {
+            # 🚀 CRITICAL FIX: Check if workflow ended for approval
+            # If in interactive mode and not approved, it requires approval
+            if (mode == "interactive" and 
+                not final_state.get("approved", False) and 
+                not final_state.get("send_approved", False)):
+                # Return approval-required result with complete state data
+                return {
+                    "status": "awaiting_approval",
+                    "agent_id": self.agent_id,
+                    "agent_version": self.version,
                     "campaign_id": final_state.get("campaign_id"),
-                    "total_sent": final_state.get("total_sent", 0),
-                    "total_failed": final_state.get("total_failed", 0),
-                    "vault_storage": final_state.get("vault_storage", {}),
-                    "trust_links": final_state.get("trust_links", [])
-                },
-                # ✨ NEW: Personalization statistics
-                "personalized_count": final_state.get("personalized_count", 0),
-                "standard_count": final_state.get("standard_count", 0),
-                "description_column_detected": final_state.get("description_column_detected", False),
-                "emails_sent": final_state.get("total_sent", 0),
-                "send_status": final_state.get("send_status", []),
-                "email_template": final_state.get("email_template"),
-                "final_state": final_state,
-                "hushh_mcp_compliant": True
-            }
+                    "requires_approval": True,
+                    "approval_status": "pending",
+                    "mode": mode,
+                    "email_template": final_state.get("email_template"),
+                    "subject": final_state.get("subject"),  # 🚀 INCLUDE SUBJECT FOR FRONTEND
+                    "personalized_count": final_state.get("personalized_count", 0),
+                    "standard_count": final_state.get("standard_count", 0),
+                    "description_column_detected": final_state.get("description_column_detected", False),
+                    "final_state": final_state,
+                    "hushh_mcp_compliant": True
+                }
+            else:
+                # Complete execution result
+                return {
+                    "status": "complete",
+                    "agent_id": self.agent_id,
+                    "agent_version": self.version,
+                    "campaign_summary": {
+                        "campaign_id": final_state.get("campaign_id"),
+                        "total_sent": final_state.get("total_sent", 0),
+                        "total_failed": final_state.get("total_failed", 0),
+                        "vault_storage": final_state.get("vault_storage", {}),
+                        "trust_links": final_state.get("trust_links", [])
+                    },
+                    # ✨ NEW: Personalization statistics
+                    "personalized_count": final_state.get("personalized_count", 0),
+                    "standard_count": final_state.get("standard_count", 0),
+                    "description_column_detected": final_state.get("description_column_detected", False),
+                    "emails_sent": final_state.get("total_sent", 0),
+                    "send_status": final_state.get("send_status", []),
+                    "email_template": final_state.get("email_template"),
+                    "subject": final_state.get("subject"),  # 🚀 CRITICAL FIX: Include subject in result
+                    "final_state": final_state,
+                    "hushh_mcp_compliant": True
+                }
             
         except PermissionError as e:
             print(f"🚫 Permission denied: {e}")

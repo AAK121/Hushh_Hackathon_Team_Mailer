@@ -702,6 +702,23 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
+        # 🚀 [CRITICAL FIX] Construct proper email_template structure for frontend
+        email_template_body = result.get("email_template")
+        subject = result.get("subject", "Email Campaign")
+        
+        # Construct email_template with proper structure for frontend
+        if email_template_body:
+            email_template = {
+                "subject": subject,
+                "body": email_template_body
+            }
+        else:
+            email_template = None
+        
+        print(f"🔍 [DEBUG] Agent result email_template: {email_template_body}")
+        print(f"🔍 [DEBUG] Agent result subject: {subject}")
+        print(f"🔍 [DEBUG] Constructed email_template: {email_template}")
+        
         # Check if human approval is required
         requires_approval = result.get("requires_approval", False)
         
@@ -715,7 +732,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
                 user_id=request.user_id,
                 mode=request.mode,
                 campaign_id=session_id,
-                email_template=result.get("email_template"),
+                email_template=email_template,
                 requires_approval=True,
                 approval_status="pending",
                 feedback_required=True,
@@ -733,7 +750,7 @@ async def execute_mailerpanda_agent(request: MailerPandaRequest):
                 user_id=request.user_id,
                 mode=request.mode,
                 campaign_id=session_id,
-                email_template=result.get("email_template"),
+                email_template=email_template,
                 requires_approval=False,
                 emails_sent=result.get("emails_sent", 0),
                 send_status=result.get("send_status", []),
@@ -802,15 +819,30 @@ async def approve_mailerpanda_campaign(request: MailerPandaApprovalRequest):
         
         processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
         
-        # Fix email_template format
-        email_template = result.get("email_template")
-        if isinstance(email_template, str):
+        # 🚀 [CRITICAL FIX] Construct proper email_template structure for frontend 
+        email_template_body = result.get("email_template")
+        # Get subject from agent result first, then fall back to saved_state
+        subject = result.get("subject") or saved_state.get("subject", "Email Campaign")
+        
+        # Construct email_template with proper structure for frontend
+        if isinstance(email_template_body, str):
             email_template = {
-                "subject": saved_state.get("subject", "Email Campaign"),
-                "body": email_template
+                "subject": subject,
+                "body": email_template_body
             }
-        elif email_template is None:
+        elif email_template_body is None:
             email_template = None
+        else:
+            # If email_template is already a dict, ensure it has both subject and body
+            email_template = email_template_body
+            if "subject" not in email_template:
+                email_template["subject"] = subject
+        
+        print(f"🔍 [DEBUG] Agent result email_template: {email_template_body}")
+        print(f"🔍 [DEBUG] Agent result subject: {result.get('subject')}")
+        print(f"🔍 [DEBUG] Saved state subject: {saved_state.get('subject')}")
+        print(f"🔍 [DEBUG] Final subject used: {subject}")
+        print(f"🔍 [DEBUG] Final email_template: {email_template}")
         
         # Update session status
         if request.action == "approve":
@@ -1085,14 +1117,28 @@ async def mass_email_with_context_toggle(request: MassEmailRequest):
         
         # Fix email_template format - convert string to dict if needed
         email_template = result.get("email_template")
+        subject = result.get("subject", "Email Campaign")
+        
         if isinstance(email_template, str):
             # If it's a string, create dict with subject and body
             email_template = {
-                "subject": result.get("subject", "Email Campaign"),
+                "subject": subject,  # Use the actual subject from result
                 "body": email_template
             }
+        elif isinstance(email_template, dict):
+            # If it's already a dict, ensure subject is populated
+            if not email_template.get("subject"):
+                email_template["subject"] = subject
         elif email_template is None:
-            email_template = None
+            # If no template, create one with the subject
+            email_template = {
+                "subject": subject,
+                "body": ""
+            }
+        
+        # Debug the email template structure
+        print(f"🔍 [DEBUG] Email template structure: {email_template}")
+        print(f"🔍 [DEBUG] Subject from result: {subject}")
         
         # Check if human approval is required
         requires_approval = result.get("requires_approval", False)
@@ -1229,11 +1275,30 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
         enable_description_personalization = session.get("enable_description_personalization", False)
         
         if request.action == "approve":
-            # Extract template and subject from stored results
-            stored_template = stored_result.get("email_template", "")
+            # Extract template and subject from stored results with proper format handling
+            stored_result_template = stored_result.get("email_template", "")
             stored_subject = stored_result.get("subject", "")
             
+            # Handle different email_template formats
+            if isinstance(stored_result_template, dict):
+                # If email_template is a dict, extract the body and subject
+                stored_template = stored_result_template.get("body", "")
+                if not stored_subject:  # Use dict subject if no direct subject
+                    stored_subject = stored_result_template.get("subject", "Email Campaign")
+            elif isinstance(stored_result_template, str):
+                # If email_template is a string, use it directly
+                stored_template = stored_result_template
+            else:
+                # Fallback to empty template
+                stored_template = ""
+            
+            # If still no subject, try to get it from the final_state
+            if not stored_subject:
+                final_state = stored_result.get("final_state", {})
+                stored_subject = final_state.get("subject", "Email Campaign")
+            
             # Debug template extraction
+            print(f"🔍 [API DEBUG] Stored result template type: {type(stored_result_template)}")
             print(f"🔍 [API DEBUG] Using template: {stored_template[:100] if stored_template else 'Empty'}...")
             print(f"🔍 [API DEBUG] Using subject: {stored_subject}")
             
@@ -2822,6 +2887,28 @@ async def get_general_chat_status():
             "message": "Chat message content"
         }
     )
+
+@app.get("/agents/chat/sessions/{session_id}")
+async def get_chat_session(session_id: str):
+    """Get chat session details."""
+    # For now, return a simple response to avoid 404 errors
+    # In a real implementation, this would fetch session data
+    return {
+        "session_id": session_id,
+        "status": "active",
+        "created_at": "2025-08-24T00:00:00Z",
+        "messages": []
+    }
+
+@app.get("/agents/chat/sessions/{user_id}/list")
+async def get_user_chat_sessions(user_id: str):
+    """Get user's chat sessions."""
+    # For now, return empty list to avoid 404 errors
+    # In a real implementation, this would fetch user's sessions
+    return {
+        "user_id": user_id,
+        "sessions": []
+    }
 
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")

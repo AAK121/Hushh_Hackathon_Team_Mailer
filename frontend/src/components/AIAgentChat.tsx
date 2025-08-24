@@ -113,7 +113,8 @@ const AIAgentChat: React.FC<AIAgentChatProps> = ({
         sender_email: user.email || '',
         recipient_emails: [],
         require_approval: false,
-        use_ai_generation: true
+        use_ai_generation: true,
+        body: currentEmailDraft,
       });
 
       // Extract the AI response and any updated email content
