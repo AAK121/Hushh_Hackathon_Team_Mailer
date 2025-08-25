@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import './MailerPandaUI.css';
+import { useAuth } from '../contexts/AuthContext';
+import { hushMcpApi } from '../services/hushMcpApi';
 
 // Interface definitions for backend integration
 interface GeneratedEmail {
@@ -30,6 +32,9 @@ interface MailerPandaUIProps {
 
 // --- Main MailerPanda UI Component ---
 function MailerPandaUI({ onBack }: MailerPandaUIProps) {
+  // Auth context for user information and token generation
+  const { user } = useAuth();
+  
   // State to manage the overall flow of the UI
   // 'INITIAL' -> 'DRAFT_REVIEW' -> 'SUGGESTING_CHANGES' OR 'FINAL_CONFIRMATION' -> 'SENT'
   const [uiState, setUiState] = useState('INITIAL');
@@ -78,6 +83,11 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
       return;
     }
 
+    if (!user?.id) {
+      alert('User not authenticated. Please log in.');
+      return;
+    }
+
     console.log("Sending to backend:", { command: userInput, file: excelFile?.name });
     setIsLoading(true);
     setError(''); // Clear any previous errors
@@ -88,9 +98,22 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
         excelFileData = await fileToBase64(excelFile);
       }
 
+      // Generate fresh consent tokens using the same pattern as AIAgentChat
+      console.log("Generating fresh consent tokens for user:", user.id);
+      let consentTokens;
+      try {
+        consentTokens = await hushMcpApi.createMailerPandaTokens(user.id);
+        console.log("Generated consent tokens:", consentTokens);
+      } catch (tokenError) {
+        console.error("Failed to generate consent tokens:", tokenError);
+        setError('Failed to generate authentication tokens. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
       // Prepare request for our MailerPanda backend
       const requestBody = {
-        user_id: 'frontend_user_123', // Required user ID
+        user_id: user.id, // Use actual user ID from auth
         user_input: userInput,
         excel_file_data: excelFileData,
         excel_file_name: excelFile?.name || '',
@@ -101,13 +124,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
         google_api_key: 'AIzaSyCYmItUaAVeo1pRFnBdFPqTibIqas17TBI',
         mailjet_api_key: 'cca56ed08f5272f813370d7fc5a34a24',
         mailjet_api_secret: '60fb43675233e2ac775f1c6cb8fe455c',
-        consent_tokens: {
-          'vault.read.email': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQucmVhZC5lbWFpbHwxNzU1OTQ2MzA5NjU0fDE3NTYwMzI3MDk2NTQ=.e98cb6fe90a9d4a6ded5bf2a37b25028d1ea82a7e5dde4223552a312dba75b36',
-          'vault.write.email': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQud3JpdGUuZW1haWx8MTc1NTk0NjMwOTY1NHwxNzU2MDMyNzA5NjU0.107cf985c5c82413b218a436e8206856b1f982e37a70d6c5ab2fabd97c0ef60e',
-          'vault.read.file': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQucmVhZC5maWxlfDE3NTU5NDYzMDk2NTR8MTc1NjAzMjcwOTY1NA==.5549616fd68e1a507ff89e18692134c8301d40ec077df18e62b803059ca17642',
-          'vault.write.file': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQud3JpdGUuZmlsZXwxNzU1OTQ2MzA5NjU1fDE3NTYwMzI3MDk2NTU=.42fe283d1d7e27c05b31ad2b1370aac464e9b15c1a7b4740de335e349b5ee817',
-          'custom.temporary': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8Y3VzdG9tLnRlbXBvcmFyeXwxNzU1OTQ2MzA5NjU1fDE3NTYwMzI3MDk2NTU=.2c80196d5ae2f4709ee0c4b08531cacd15221bbee1c4a441a7f2b754e291e4d2'
-        } // Real HCT cryptographic consent tokens for frontend_user_123 with HMAC signatures
+        consent_tokens: consentTokens // Use freshly generated tokens
       };
 
       console.log("Request body:", requestBody);
@@ -207,7 +224,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     try {
       // Send approval request with modification feedback
       const approvalRequest = {
-        user_id: 'frontend_user_123',
+        user_id: user?.id || 'frontend_user_123', // Use actual user ID from auth
         campaign_id: campaignId,
         action: 'modify',
         feedback: suggestion
@@ -268,7 +285,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     try {
       // Send final approval to backend
       const approvalRequest = {
-        user_id: 'frontend_user_123',
+        user_id: user?.id || 'frontend_user_123', // Use actual user ID from auth
         campaign_id: campaignId,
         action: 'approve'
       };

@@ -27,6 +27,7 @@ class AgentState(TypedDict):
     subject: Annotated[str, lambda old, new: new]
     mass: Annotated[bool, lambda old, new: new]
     user_feedback: Annotated[str, lambda old, new: new]
+    feedback_history: Annotated[list, lambda old, new: new]  # ✨ NEW: Store all feedback history
     approved: Annotated[bool, lambda old, new: new]
     user_email: Annotated[str, lambda old, new: new]
     receiver_email: Annotated[list[str], lambda old, new: new]
@@ -585,11 +586,13 @@ class MassMailerAgent:
         # Use specified excel_file_path if provided, otherwise fallback to default behavior
         if excel_file_path:
             contacts_file = excel_file_path
+            print(f"� Using uploaded Excel file: {excel_file_path}")
         else:
             # Try to use enhanced file with descriptions first, fallback to basic file
             enhanced_file = os.path.join(os.path.dirname(__file__), 'email_list_with_descriptions.xlsx')
             basic_file = self.contacts_file_path
             contacts_file = enhanced_file if os.path.exists(enhanced_file) else basic_file
+            print(f"� Using default Excel file: {contacts_file}")
         
         if not os.path.exists(contacts_file):
             raise FileNotFoundError(f"Contacts file not found at: {contacts_file}")
@@ -745,31 +748,58 @@ class MassMailerAgent:
             contacts = self._read_contacts_with_consent(state["user_id"], state["consent_tokens"], state.get("excel_file_path"))
             if contacts:
                 df = pd.DataFrame(contacts)
-                allowed_placeholders = [f"{{{col}}}" for col in df.columns]
+                available_columns = list(df.columns)
+                
+                allowed_placeholders = [f"{{{col}}}" for col in available_columns]
                 placeholders_str = ", ".join(allowed_placeholders)
+                
+                print(f"📋 [DEBUG] Available Excel columns: {available_columns}")
+                print(f"📋 [DEBUG] Available placeholders for LLM: {available_columns}")
 
                 placeholder_instruction = f"""
-5. ✅ You can ONLY use these placeholders: {placeholders_str}  
-6. Do not use any placeholders that are not in the list above.  
-7. Leave <user_email> and <receiver_emails> blank if not provided in the input.  
-8. Do not add extra words, comments, or explanations outside of these tags.
+5. ✅ SMART PLACEHOLDER USAGE:
+   📋 Available placeholders from Excel columns: {placeholders_str}
+   📋 Available Excel columns: {available_columns}
+   
+   
+   
+6. Do not use placeholders for information explicitly provided in the user input.
+7. Available columns for placeholders: {available_columns}
+8. Leave <user_email> and <receiver_emails> blank if not provided in the input.
+9. Do not add extra words, comments, or explanations outside of these tags.
 """
         except Exception as e:
             print(f"⚠️  Could not load contacts for placeholder detection: {e}")
 
-        if state.get('user_feedback'):
+        # Build cumulative feedback context from feedback history
+        feedback_context = ""
+        feedback_history = state.get('feedback_history', [])
+        current_feedback = state.get('user_feedback', '')
+        
+        # Add current feedback to history if it exists and isn't already there
+        if current_feedback and current_feedback not in feedback_history:
+            feedback_history.append(current_feedback)
+            
+        if feedback_history:
+            feedback_context = f"""
+📝 CUMULATIVE FEEDBACK HISTORY (Apply ALL of these changes):
+"""
+            for i, feedback in enumerate(feedback_history, 1):
+                feedback_context += f"{i}. {feedback}\n"
+            feedback_context += "\n⚠️ IMPORTANT: Apply ALL the feedback points above to improve the email.\n"
+
+        if feedback_history or current_feedback:
             prompt = f"""
 You are an email drafting assistant powered by HushMCP framework.
 
 {memory_context}
 
-Here is the current email template:
----
-{state['email_template']}
----
+Write a professional email based on this input:
+"{state['user_input']}"
 
-Update it based on this feedback:
-"{state['user_feedback']}"
+{feedback_context}
+
+
 
 ⚠️ Important:
 1. Output must be in this exact XML-like format:
@@ -791,6 +821,8 @@ You are an email drafting assistant powered by HushMCP framework.
 
 Write a professional email based on this input:
 "{state['user_input']}"
+
+
 
 ⚠️ Important:
 1. Output must be in this exact XML-like format:
@@ -859,7 +891,9 @@ Write a professional email based on this input:
             "approved": state.get("approved", False),
             "frontend_approved": state.get("frontend_approved", False),
             "send_approved": state.get("send_approved", False),
-            "mode": state.get("mode", "interactive")
+            "mode": state.get("mode", "interactive"),
+            # ✨ PRESERVE FEEDBACK HISTORY
+            "feedback_history": feedback_history if 'feedback_history' in locals() else state.get("feedback_history", [])
         }
 
     def _get_feedback(self, state: AgentState) -> dict:
@@ -994,7 +1028,16 @@ Write a professional email based on this input:
             except Exception as memory_error:
                 print(f"⚠️ Failed to save feedback to memory: {memory_error}")
             
-            return {"user_feedback": user_input, "approved": False}
+            # Update feedback history
+            feedback_history = state.get('feedback_history', [])
+            if user_input and user_input not in feedback_history:
+                feedback_history.append(user_input)
+            
+            return {
+                "user_feedback": user_input, 
+                "feedback_history": feedback_history,  # ✨ Update feedback history
+                "approved": False
+            }
 
     def _route_tools(self, state: AgentState) -> str:
         """LangGraph conditional edge: Routes based on approval status."""
@@ -1220,6 +1263,9 @@ customized email content here
                         if not from_email:
                             raise ValueError("Sender email not configured.")
 
+                        # Create safe dict for placeholder replacement
+                        safe_contact = SafeDict(contact_dict)
+
                         # ✨ AI-POWERED PERSONALIZATION: Check if personalization is enabled and we have description
                         contact_description = contact_dict.get('description', '')
                         personalization_enabled = state.get('enable_description_personalization', False)
@@ -1240,12 +1286,13 @@ customized email content here
                             personalized_content = customized["content"]
                             
                             # Then apply any remaining placeholder substitution
-                            safe_contact = SafeDict(contact_dict)
                             personalized_subject = personalized_subject.format_map(safe_contact)
                             personalized_content = personalized_content.format_map(safe_contact)
                             
                             print(f"✨ [DEBUG] AI-personalized subject: {personalized_subject}")
                             print(f"✨ [DEBUG] AI-personalized content: {personalized_content[:100]}...")
+                            print(f"🔍 [DEBUG] Subject after replacement: {personalized_subject}")
+                            print(f"🔍 [DEBUG] Content after replacement: {personalized_content[:150]}...")
                             
                         else:
                             if not personalization_enabled:
@@ -1254,13 +1301,18 @@ customized email content here
                                 print(f"📝 [DEBUG] No description found for {row.get('name')}, using standard template")
                             
                             # Fall back to simple placeholder replacement
-                            safe_contact = SafeDict(contact_dict)
                             personalized_subject = subject.format_map(safe_contact)
                             personalized_content = template.format_map(safe_contact)
                             
                             print(f"� [DEBUG] Standard personalized content: {personalized_content[:100]}...")
+                            print(f"🔍 [DEBUG] Subject after replacement: {personalized_subject}")
+                            print(f"🔍 [DEBUG] Content after replacement: {personalized_content[:150]}...")
 
                         print(f"🚀 [DEBUG] Contact data: {dict(contact_dict)}")
+                        print(f"🔍 [DEBUG] Available columns: {list(contact_dict.keys())}")
+                        print(f"🔍 [DEBUG] Template before replacement: {template[:100]}...")
+                        print(f"🔍 [DEBUG] Subject before replacement: {subject}")
+                        print(f"🔍 [DEBUG] Contact data: {dict(contact_dict)}")
 
                         print(f"🚀 [DEBUG] Calling _send_email_via_mailjet for {row['email']}")
                         result = self._send_email_via_mailjet(
@@ -1499,6 +1551,7 @@ customized email content here
             "email_template": pre_approved_template or "",
             "receiver_email": [],
             "user_feedback": "",
+            "feedback_history": [],  # ✨ NEW: Initialize feedback history
             "approved": frontend_approved,
             "send_approved": send_approved,
             "consent_tokens": consent_tokens,

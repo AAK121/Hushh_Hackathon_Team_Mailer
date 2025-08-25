@@ -1119,7 +1119,10 @@ async def mass_email_with_context_toggle(request: MassEmailRequest):
             "request": request,
             "start_time": start_time,
             "status": "executing",
-            "context_message": context_message
+            "context_message": context_message,
+            "excel_file_path": excel_file_path,  # ✅ Store excel_file_path for approval workflow
+            "enable_description_personalization": enable_description_personalization,
+            "feedback_history": []  # ✨ NEW: Initialize feedback history for cumulative modifications
         }
         
         # Execute the campaign
@@ -1312,6 +1315,11 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
         stored_result = session.get("result", {})
         excel_analysis = session.get("excel_analysis", {})
         enable_description_personalization = session.get("enable_description_personalization", False)
+        stored_excel_file_path = session.get("excel_file_path")  # ✅ Get stored excel_file_path
+        
+        # ✅ FIX: Define excel_file_path_to_use at the top level
+        excel_file_path_to_use = getattr(original_request, 'excel_file_path', None) or stored_excel_file_path
+        print(f"🔍 [API DEBUG] excel_file_path_to_use: {excel_file_path_to_use}")
         
         if request.action == "approve":
             # Extract template and subject from stored results with proper format handling
@@ -1343,13 +1351,16 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
             
             # Continue with email sending - call the agent again to actually send
             print(f"🔍 [API DEBUG] APPROVE ENDPOINT CALLED! Calling agent with frontend_approved=True")
+            print(f"🔍 [API DEBUG] original_request.excel_file_path: {getattr(original_request, 'excel_file_path', 'NOT_FOUND')}")
+            print(f"🔍 [API DEBUG] stored_excel_file_path: {stored_excel_file_path}")
+            
             result = agent.handle(
                 user_id=request.user_id,
                 consent_tokens=original_request.consent_tokens,
                 user_input=original_request.user_input,
                 mode="headless",  # Skip approval since human already approved
                 enable_description_personalization=enable_description_personalization,
-                excel_file_path=stored_result.get("excel_file_path"),
+                excel_file_path=excel_file_path_to_use,  # ✅ FIX: Use proper excel_file_path
                 personalization_mode=original_request.personalization_mode,
                 frontend_approved=True,  # ✅ KEY FIX: Tell agent emails are approved
                 send_approved=True,      # ✅ KEY FIX: Tell agent to actually send
@@ -1362,13 +1373,16 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
             
             session["status"] = "completed"
             
+            # Fix email_template format for API response
+            email_template_dict = {"template": stored_result.get("email_template", ""), "subject": stored_result.get("subject", "")}
+            
             response = MassEmailResponse(
                 status="completed",
                 user_id=request.user_id,
                 campaign_id=request.campaign_id,
                 context_personalization_enabled=enable_description_personalization,
                 excel_analysis=excel_analysis,
-                email_template=stored_result.get("email_template"),
+                email_template=email_template_dict,
                 emails_sent=result.get("emails_sent", 0),
                 personalized_count=result.get("personalized_count", 0),
                 standard_count=result.get("standard_count", 0),
@@ -1396,8 +1410,28 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
             )
             
         elif request.action == "modify":
-            # Handle modifications - regenerate with feedback
-            modified_user_input = f"{original_request.user_input}\n\nModification feedback: {request.feedback}"
+            # Handle modifications - regenerate with accumulated feedback history
+            stored_result = session.get("result", {})
+            
+            # Get existing feedback history from the session
+            feedback_history = session.get("feedback_history", [])
+            
+            # Add new feedback to history if it's not empty and not already there
+            if request.feedback and request.feedback.strip() and request.feedback not in feedback_history:
+                feedback_history.append(request.feedback.strip())
+            
+            # Store updated feedback history in session
+            session["feedback_history"] = feedback_history
+            
+            # Create cumulative feedback context
+            if feedback_history:
+                cumulative_feedback = "\n".join([f"{i+1}. {fb}" for i, fb in enumerate(feedback_history)])
+                modified_user_input = f"{original_request.user_input}\n\nCUMULATIVE MODIFICATION FEEDBACK (Apply ALL points):\n{cumulative_feedback}"
+            else:
+                modified_user_input = original_request.user_input
+            
+            print(f"🔄 [API DEBUG] Feedback history now contains {len(feedback_history)} items")
+            print(f"🔄 [API DEBUG] Cumulative feedback: {cumulative_feedback if feedback_history else 'None'}")
             
             result = agent.handle(
                 user_id=request.user_id,
@@ -1405,7 +1439,7 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
                 user_input=modified_user_input,
                 mode="interactive",  # Still needs approval after modification
                 enable_description_personalization=enable_description_personalization,
-                excel_file_path=stored_result.get("excel_file_path"),
+                excel_file_path=excel_file_path_to_use,  # ✅ FIX: Use proper excel_file_path
                 personalization_mode=original_request.personalization_mode,
                 google_api_key=original_request.google_api_key,
                 mailjet_api_key=original_request.mailjet_api_key,
@@ -1484,13 +1518,18 @@ async def approve_mass_email_campaign(request: MailerPandaApprovalRequest):
         return response
         
     except Exception as e:
+        print(f"❌ [API DEBUG] Approval endpoint error: {str(e)}")
+        print(f"❌ [API DEBUG] Error type: {type(e).__name__}")
+        import traceback
+        print(f"❌ [API DEBUG] Traceback: {traceback.format_exc()}")
+        
         return MassEmailResponse(
             status="error",
             user_id=request.user_id,
             campaign_id=request.campaign_id,
             context_personalization_enabled=False,
             excel_analysis={},
-            errors=[str(e)],
+            errors=[f"Approval failed: {str(e)}"],
             processing_time=(datetime.now(timezone.utc) - start_time).total_seconds()
         )
 
