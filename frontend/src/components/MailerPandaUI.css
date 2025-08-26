@@ -3,8 +3,8 @@
 .app-container {
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 2rem;
+  align-items: center;
+  padding: 2rem;
   min-height: 100vh;
   background-color: #f0f2f5;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -27,7 +27,7 @@
   flex-direction: column;
   gap: 1.5rem;
   animation: fadeIn 0.5s ease-in-out;
-  margin: 0 1rem;
+  margin: 0 auto;
 }
 
 @keyframes fadeIn {

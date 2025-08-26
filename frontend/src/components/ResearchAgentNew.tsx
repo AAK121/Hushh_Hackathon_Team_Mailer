@@ -9,6 +9,13 @@ import './ResearchAgentNew.css';
 import './force-cache-refresh.css';
 import './scrollbar-override.css';
 import { researchAgentApi, Paper } from '../services/ResearchAgentApi';
+import { useAuth } from '../contexts/AuthContext';
+
+// Props interface
+interface ResearchAgentNewProps {
+  onBack: () => void;
+  onSendToHITL: (message: string, context?: any) => void;
+}
 
 // Chat message interface
 interface ChatMessage {
@@ -18,10 +25,15 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const ResearchAgentNew: React.FC = () => {
+const ResearchAgentNew: React.FC<ResearchAgentNewProps> = ({ onBack, onSendToHITL }) => {
+  const { user } = useAuth();
   const [leftPanelWidth, setLeftPanelWidth] = useState(55); // Initial width as percentage
   const [isResizing, setIsResizing] = useState(false);
   const [activeView, setActiveView] = useState<'abstract' | 'pdf'>('abstract');
+  
+  // PDF viewer state
+  const [pdfZoom, setPdfZoom] = useState(100); // Zoom percentage
+  const [isPdfZooming, setIsPdfZooming] = useState(false);
   
   // Chat-related state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -92,6 +104,62 @@ const ResearchAgentNew: React.FC = () => {
     setActiveView(view);
   };
 
+  // PDF zoom functions
+  const handleZoomIn = () => {
+    setPdfZoom(prev => Math.min(prev + 25, 300)); // Max 300%
+  };
+
+  const handleZoomOut = () => {
+    setPdfZoom(prev => Math.max(prev - 25, 50)); // Min 50%
+  };
+
+  const handleZoomReset = () => {
+    setPdfZoom(100);
+  };
+
+  // Handle touchpad/wheel zoom
+  const handlePdfWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      setIsPdfZooming(true);
+      
+      // More sensitive zoom for touchpad
+      const zoomDelta = Math.abs(e.deltaY) > 100 ? 15 : 5; // Adjust sensitivity
+      
+      if (e.deltaY < 0) {
+        // Zoom in
+        setPdfZoom(prev => Math.min(prev + zoomDelta, 300));
+      } else {
+        // Zoom out
+        setPdfZoom(prev => Math.max(prev - zoomDelta, 50));
+      }
+      
+      // Reset zooming state after a delay
+      setTimeout(() => setIsPdfZooming(false), 150);
+    }
+  };
+
+  // Keyboard shortcuts for PDF viewer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeView === 'pdf' && selectedPaper) {
+        if ((e.ctrlKey || e.metaKey) && e.key === '=') {
+          e.preventDefault();
+          handleZoomIn();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === '-') {
+          e.preventDefault();
+          handleZoomOut();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+          e.preventDefault();
+          handleZoomReset();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeView, selectedPaper]);
+
   // Chat functionality
   const addChatMessage = (message: ChatMessage) => {
     setChatMessages(prev => [...prev, message]);
@@ -131,7 +199,7 @@ User Question: ${message}`;
       }
 
       // Send message to research agent API
-      const response = await researchAgentApi.sendChatMessage(enhancedMessage, selectedPaper?.id);
+      const response = await researchAgentApi.sendChatMessage(enhancedMessage, selectedPaper?.id, user?.id || 'frontend_user');
       
       const aiMessage: ChatMessage = {
         id: generateId(),
@@ -224,8 +292,8 @@ User Question: ${message}`;
     setUploadedPaper(file);
 
     try {
-      // Upload to backend for processing
-      const uploadResult = await researchAgentApi.uploadPDF(file);
+      // Upload to backend for processing with authenticated user ID
+      const uploadResult = await researchAgentApi.uploadPDF(file, user?.id || 'frontend_user_research');
 
       // Create a Paper object from the upload result
       const uploadedPaperObj: Paper = {
@@ -1082,15 +1150,57 @@ You can now ask detailed questions about the content of this document!`,
                     }
                     
                     return pdfUrl ? (
-                      <div className="pdf-embed-container">
-                        <iframe
-                          src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1`}
-                          width="100%"
-                          height="100%"
-                          title={`PDF: ${selectedPaper.title}`}
-                          frameBorder="0"
-                          className="pdf-iframe"
-                        />
+                      <div className="pdf-embed-container" onWheel={handlePdfWheel}>
+                        {/* Zoom Controls */}
+                        <div className="pdf-zoom-controls">
+                          <button 
+                            className="zoom-btn" 
+                            onClick={handleZoomOut}
+                            title="Zoom Out (Ctrl + Scroll)"
+                          >
+                            <i className="fas fa-search-minus"></i>
+                          </button>
+                          <span className="zoom-indicator">
+                            {pdfZoom}%
+                          </span>
+                          <button 
+                            className="zoom-btn" 
+                            onClick={handleZoomIn}
+                            title="Zoom In (Ctrl + Scroll)"
+                          >
+                            <i className="fas fa-search-plus"></i>
+                          </button>
+                          <button 
+                            className="zoom-btn reset" 
+                            onClick={handleZoomReset}
+                            title="Reset Zoom"
+                          >
+                            <i className="fas fa-expand-arrows-alt"></i>
+                          </button>
+                        </div>
+                        
+                        {/* PDF Iframe with zoom */}
+                        <div className="pdf-iframe-wrapper">
+                          <iframe
+                            src={`${pdfUrl}#toolbar=1&navpanes=1&scrollbar=1&zoom=${pdfZoom}`}
+                            width="100%"
+                            height="100%"
+                            title={`PDF: ${selectedPaper.title}`}
+                            frameBorder="0"
+                            className={`pdf-iframe ${isPdfZooming ? 'zooming' : ''}`}
+                            style={{
+                              zoom: `${pdfZoom}%`
+                            }}
+                          />
+                        </div>
+                        
+                        {/* Touch/Gesture Instructions */}
+                        <div className="pdf-instructions">
+                          <small>
+                            <i className="fas fa-info-circle"></i>
+                            Use Ctrl + Scroll or Ctrl +/- to zoom | Click zoom buttons above
+                          </small>
+                        </div>
                       </div>
                     ) : (
                       <div className="pdf-loading">
@@ -1461,52 +1571,35 @@ You can now ask detailed questions about the content of this document!`,
                         
                         {/* Debug info for all messages */}
                         {message.role === 'ai' && (
-                            <div className="message-actions" style={{
-                            marginTop: '15px',
-                            paddingTop: '10px', 
-                            borderTop: '2px solid #dee2e6',
-                            display: 'flex',
-                            justifyContent: 'flex-end',
-                            backgroundColor: '#f8f9fa',
-                            padding: '10px',
-                            borderRadius: '4px',
-                            position: 'relative',
-                            zIndex: 1000
-                          }}>
+                            <div className="message-actions">
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(message.content)
+                                  .then(() => {
+                                    // Visual feedback
+                                    const btn = document.getElementById(`copy-btn-${message.id}`);
+                                    if (btn) {
+                                      const originalText = btn.textContent;
+                                      btn.textContent = 'COPIED!';
+                                      btn.classList.add('copied');
+                                      setTimeout(() => {
+                                        btn.textContent = originalText;
+                                        btn.classList.remove('copied');
+                                      }, 2000);
+                                    }
+                                  })
+                                  .catch(() => {
+                                    alert('Failed to copy to clipboard');
+                                  });
+                              }}
+                              id={`copy-btn-${message.id}`}
+                              className="copy-message-btn"
+                            >
+                              COPY
+                            </button>
                             <button 
                               onClick={() => saveSpecificResponseToNotes(message.content, message.id)}
                               className="save-to-notes-btn"
-                              style={{
-                                backgroundColor: '#007bff',
-                                color: '#ffffff',
-                                border: '2px solid #0056b3',
-                                padding: '12px 24px',
-                                fontSize: '14px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                borderRadius: '6px',
-                                display: 'inline-block',
-                                minWidth: '150px',
-                                minHeight: '40px',
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                                transition: 'all 0.2s ease',
-                                textAlign: 'center' as const,
-                                lineHeight: '1.2',
-                                opacity: 1,
-                                visibility: 'visible' as const,
-                                position: 'relative' as const,
-                                zIndex: 9999
-                              }}
-                              onMouseOver={(e) => {
-                                const target = e.target as HTMLButtonElement;
-                                target.style.backgroundColor = '#0056b3';
-                                target.style.transform = 'translateY(-1px)';
-                              }}
-                              onMouseOut={(e) => {
-                                const target = e.target as HTMLButtonElement;
-                                target.style.backgroundColor = '#007bff';
-                                target.style.transform = 'translateY(0)';
-                              }}
                             >
                               SAVE TO NOTES
                             </button>

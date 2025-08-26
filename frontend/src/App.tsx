@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SignIn from './components/SignIn';
 import AIAgentSelection from './components/AIAgentSelection';
 import HITLChat from './components/HITLChat';
@@ -14,14 +14,80 @@ import FinanceAgentDebug from './components/FinanceAgentDebug';
 import RelationshipAgent from './components/RelationshipAgent';
 import ResearchAgentNew from './components/ResearchAgentNew';
 
+// App State Interface for persistence
+interface AppState {
+  activeView: string;
+  selectedAIAgent: 'mass-mail' | 'calendar' | null;
+  selectedStoreAgent: string | null;
+  showHITL: boolean;
+  hitlPrompt: string;
+}
+
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
-  const [activeView, setActiveView] = useState('ai-agents');
-  const [selectedAIAgent, setSelectedAIAgent] = useState<'mass-mail' | 'calendar' | null>(null);
-  const [selectedStoreAgent, setSelectedStoreAgent] = useState<string | null>(null);
-  const [showHITL, setShowHITL] = useState(false);
-  const [hitlPrompt, setHitlPrompt] = useState('');
+  
+  // State persistence functions
+  const saveAppState = (state: AppState) => {
+    try {
+      localStorage.setItem('appState', JSON.stringify(state));
+    } catch (error) {
+      console.warn('Failed to save app state:', error);
+    }
+  };
+
+  const loadAppState = (): AppState | null => {
+    try {
+      const saved = localStorage.getItem('appState');
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.warn('Failed to load app state:', error);
+      return null;
+    }
+  };
+
+  // Initialize state from localStorage or defaults
+  const initializeState = () => {
+    const savedState = loadAppState();
+    if (savedState) {
+      console.log('🔄 Restoring app state from localStorage:', savedState);
+      return {
+        activeView: savedState.activeView || 'ai-agents',
+        selectedAIAgent: savedState.selectedAIAgent || null,
+        selectedStoreAgent: savedState.selectedStoreAgent || null,
+        showHITL: savedState.showHITL || false,
+        hitlPrompt: savedState.hitlPrompt || ''
+      };
+    }
+    console.log('🆕 Using default app state');
+    return {
+      activeView: 'ai-agents',
+      selectedAIAgent: null,
+      selectedStoreAgent: null,
+      showHITL: false,
+      hitlPrompt: ''
+    };
+  };
+
+  const initialState = initializeState();
+  const [activeView, setActiveView] = useState(initialState.activeView);
+  const [selectedAIAgent, setSelectedAIAgent] = useState<'mass-mail' | 'calendar' | null>(initialState.selectedAIAgent);
+  const [selectedStoreAgent, setSelectedStoreAgent] = useState<string | null>(initialState.selectedStoreAgent);
+  const [showHITL, setShowHITL] = useState(initialState.showHITL);
+  const [hitlPrompt, setHitlPrompt] = useState(initialState.hitlPrompt);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Save state whenever it changes
+  useEffect(() => {
+    const currentState: AppState = {
+      activeView,
+      selectedAIAgent,
+      selectedStoreAgent,
+      showHITL,
+      hitlPrompt
+    };
+    console.log('💾 Saving app state:', currentState);
+    saveAppState(currentState);
+  }, [activeView, selectedAIAgent, selectedStoreAgent, showHITL, hitlPrompt]);
 
   const handleSelectAIAgent = (agent: 'mass-mail' | 'calendar') => {
     setSelectedAIAgent(agent);
@@ -51,7 +117,23 @@ function AppContent() {
   const handleViewChange = (view: string) => {
     setActiveView(view);
     setIsSidebarOpen(false);
-    // Reset all states when changing views
+    // Only reset states when going to home/ai-agents
+    if (view === 'ai-agents') {
+      setSelectedAIAgent(null);
+      setSelectedStoreAgent(null);
+      setShowHITL(false);
+      setHitlPrompt('');
+    }
+  };
+
+  // Function to clear app state (useful for sign out or reset)
+  const clearAppState = () => {
+    try {
+      localStorage.removeItem('appState');
+    } catch (error) {
+      console.warn('Failed to clear app state:', error);
+    }
+    setActiveView('ai-agents');
     setSelectedAIAgent(null);
     setSelectedStoreAgent(null);
     setShowHITL(false);
@@ -127,6 +209,7 @@ function AppContent() {
 
           <nav className="sidebar-nav">
             {[
+              { label: 'Home', action: () => clearAppState(), icon: '🏠' },
               { label: 'Agent Selection', action: () => handleViewChange('ai-agents'), icon: '🤖' },
               { label: 'Agent Store', action: () => handleViewChange('agent-store'), icon: '🏪' },
 

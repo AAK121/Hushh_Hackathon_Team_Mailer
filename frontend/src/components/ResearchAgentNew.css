@@ -43,7 +43,7 @@ body {
 .app-header {
     background: linear-gradient(135deg, #2c3e50, #34495e);
     color: white;
-    width: 100%;
+    width: 100% !important;
     /* border-bottom: 0.125rem solid #3498db; */
     min-height: 8vh;
     max-height: 8vh;
@@ -2236,6 +2236,88 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+/* PDF Zoom Controls */
+.pdf-zoom-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid #e0e0e0;
+    backdrop-filter: blur(10px);
+    z-index: 10;
+    position: relative;
+}
+
+.zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #3498db;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.zoom-btn:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+}
+
+.zoom-btn.reset {
+    background: #e74c3c;
+}
+
+.zoom-btn.reset:hover {
+    background: #c0392b;
+}
+
+.zoom-indicator {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #2c3e50;
+    min-width: 45px;
+    text-align: center;
+    background: rgba(52, 152, 219, 0.1);
+    padding: 4px 8px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 152, 219, 0.2);
+}
+
+/* PDF Instructions */
+.pdf-instructions {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    z-index: 10;
+    backdrop-filter: blur(5px);
+    opacity: 0.7;
+    transition: opacity 0.3s ease;
+}
+
+.pdf-instructions:hover {
+    opacity: 1;
+}
+
+.pdf-instructions i {
+    color: #3498db;
+    margin-right: 6px;
 }
 
 .pdf-iframe {
@@ -2245,6 +2327,17 @@ body {
     border: none;
     border-radius: 0;
     box-shadow: none;
+    transition: transform 0.1s ease;
+    overflow: auto;
+}
+
+.pdf-iframe.zooming {
+    transition: transform 0.05s ease;
+}
+
+/* Enhanced PDF container for better zoom handling */
+.pdf-embed-container:hover .pdf-instructions {
+    opacity: 1;
 }
 
 /* Message content spacing improvements */
@@ -2606,6 +2699,7 @@ body {
     border-top: 2px solid #dee2e6 !important;
     display: flex !important;
     justify-content: flex-end !important;
+    gap: 10px !important;
     background-color: #f8f9fa !important;
     border-radius: 4px !important;
     position: relative !important;
@@ -2619,7 +2713,6 @@ body {
     background: #007bff !important;
     color: white !important;
     border: 2px solid #0056b3 !important;
-    padding: 12px 24px !important;
     border-radius: 6px !important;
     font-size: 14px !important;
     font-weight: 600 !important;
@@ -2631,8 +2724,8 @@ body {
     text-decoration: none !important;
     outline: none !important;
     font-family: inherit !important;
-    min-width: 150px !important;
-    min-height: 40px !important;
+    width: 150px !important;
+    height: 40px !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
     text-align: center !important;
     line-height: 1.2 !important;
@@ -2640,7 +2733,6 @@ body {
     visibility: visible !important;
     position: relative !important;
     z-index: 9999 !important;
-    margin: 10px 0 !important;
 }
 
 .save-to-notes-btn:hover {
@@ -2659,6 +2751,48 @@ body {
 
 .save-to-notes-btn:active {
     transform: translateY(0) !important;
+}
+
+/* Copy Message Button Styling */
+.copy-message-btn {
+    background: #007bff !important;
+    color: white !important;
+    border: 2px solid #0056b3 !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    display: inline-block !important;
+    text-decoration: none !important;
+    outline: none !important;
+    font-family: inherit !important;
+    width: 150px !important;
+    height: 40px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    position: relative !important;
+    z-index: 9999 !important;
+}
+
+.copy-message-btn:hover {
+    background: #0056b3 !important;
+    border-color: #004085 !important;
+    transform: translateY(-1px) !important;
+    color: white !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3) !important;
+}
+
+.copy-message-btn:active {
+    transform: translateY(0) !important;
+}
+
+.copy-message-btn.copied {
+    background: #28a745 !important;
+    border-color: #1e7e34 !important;
 }
 
 /* Create New Note Option in Modal */

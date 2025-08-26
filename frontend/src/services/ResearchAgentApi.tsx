@@ -1,7 +1,10 @@
 /**
  * Research Agent API Service
- * Handles communication with the backend API for paper search, chat, and analysis
+ * Handles communication with the backend API for paper search, chat, and analysis.
+ * Includes advanced formatting for mathematical content into standard LaTeX.
  */
+
+import { hushMcpApi } from './hushMcpApi';
 
 // Types and Interfaces
 export interface Paper {
@@ -70,7 +73,7 @@ class ResearchAgentApiService {
   private chatHistory: ChatMessage[] = [];
 
   constructor() {
-    this.baseUrl = 'http://localhost:8001'; // Main API server port (integrated research endpoints)
+    this.baseUrl = 'http://localhost:8001'; // Main API server port
     this.loadSessionFromStorage();
   }
 
@@ -129,9 +132,7 @@ class ResearchAgentApiService {
       console.log('🎯 Initialized new session:', this.sessionId);
     }
 
-    // Update current paper if provided
     if (paperId && this.sessionMemory.currentPaper?.id !== paperId) {
-      // Find paper in selected papers or search history
       const foundPaper = this.sessionMemory.context.selectedPapers.find(p => p.id === paperId);
       if (foundPaper) {
         this.sessionMemory.currentPaper = foundPaper;
@@ -156,12 +157,10 @@ class ResearchAgentApiService {
 
     this.chatHistory.push(message);
     
-    // Keep only last 50 messages to prevent storage bloat
     if (this.chatHistory.length > 50) {
       this.chatHistory = this.chatHistory.slice(-50);
     }
 
-    // Update session memory
     if (this.sessionMemory) {
       this.sessionMemory.chatHistory = this.chatHistory;
       this.saveSessionToStorage();
@@ -178,22 +177,17 @@ class ResearchAgentApiService {
     this.initializeSession();
     
     if (this.sessionMemory) {
-      // Check if paper already exists
       const existingIndex = this.sessionMemory.context.selectedPapers.findIndex(p => p.id === paper.id);
       
       if (existingIndex >= 0) {
-        // Update existing paper
         this.sessionMemory.context.selectedPapers[existingIndex] = paper;
       } else {
-        // Add new paper
         this.sessionMemory.context.selectedPapers.push(paper);
       }
 
-      // Set as current paper
       this.sessionMemory.currentPaper = paper;
       this.sessionMemory.context.currentTopic = paper.title;
       
-      // Add system message about paper selection
       this.addMessageToHistory(
         `Selected paper: "${paper.title}" by ${paper.authors.join(', ')}`,
         'system'
@@ -211,7 +205,7 @@ class ResearchAgentApiService {
     return {
       session_id: this.sessionId,
       current_paper: this.sessionMemory?.currentPaper,
-      chat_history: this.chatHistory.slice(-10), // Last 10 messages for context
+      chat_history: this.chatHistory.slice(-10),
       selected_papers: this.sessionMemory?.context.selectedPapers || [],
       current_topic: this.sessionMemory?.context.currentTopic
     };
@@ -222,15 +216,12 @@ class ResearchAgentApiService {
    */
   async searchPapers(query: string, maxResults: number = 20): Promise<SearchResponse> {
     try {
-      // Initialize session and add search query to context
       this.initializeSession();
       this.addMessageToHistory(`Searching for: ${query}`, 'user');
 
       const response = await fetch(`${this.baseUrl}/research/search`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: query.trim(),
           max_results: maxResults,
@@ -238,26 +229,18 @@ class ResearchAgentApiService {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`Search failed: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(`Search failed: ${response.statusText}`);
 
       const data = await response.json();
-      console.log('Search response:', data); // Debug log
       
-      // Transform the response to match our interface
-      // Handle both possible response structures
       const papers = data.results?.papers || data.papers || [];
       const transformedPapers = papers.map((paper: any, index: number) => {
         const arxivId = paper.arxiv_id || paper.id || '';
         let pdfUrl = paper.pdf_url;
         
-        // Construct PDF URL if not provided but arXiv ID is available
         if (!pdfUrl && arxivId) {
           const cleanArxivId = arxivId.replace('arXiv:', '').trim();
-          if (cleanArxivId) {
-            pdfUrl = `https://arxiv.org/pdf/${cleanArxivId}.pdf`;
-          }
+          if (cleanArxivId) pdfUrl = `https://arxiv.org/pdf/${cleanArxivId}.pdf`;
         }
 
         return {
@@ -272,10 +255,8 @@ class ResearchAgentApiService {
         };
       });
 
-      // Add search results to session memory
       this.addMessageToHistory(`Found ${transformedPapers.length} papers`, 'system');
       
-      // Update session context with search topic
       if (this.sessionMemory) {
         this.sessionMemory.context.currentTopic = query;
         this.saveSessionToStorage();
@@ -292,6 +273,258 @@ class ResearchAgentApiService {
       throw new Error(error instanceof Error ? error.message : 'Failed to search papers');
     }
   }
+  
+  /**
+   * Send a chat message about the selected paper
+   */
+  async sendChatMessage(message: string, paperId?: string, userId: string = 'frontend_user'): Promise<ChatResponse> {
+    try {
+      this.initializeSession(userId, paperId);
+      this.addMessageToHistory(message, 'user');
+
+      const requestBody: any = {
+        message: message.trim(),
+        user_id: userId,
+        paper_id: paperId || 'general',
+        format_math: true,
+        preserve_structure: true,
+        prevent_hallucination: true,
+        stick_to_content: true,
+        ...this.getSessionContext()
+      };
+
+      const response = await fetch(`${this.baseUrl}/research/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
+      });
+
+      if (!response.ok) throw new Error(`Chat failed: ${response.statusText}`);
+
+      const data = await response.json();
+      
+      if (data.session_id && !this.sessionId) {
+        this.sessionId = data.session_id;
+        if (this.sessionMemory) this.sessionMemory.sessionId = data.session_id;
+      }
+
+      let aiResponse = data.results?.response || data.response || data.message || 'No response received';
+      
+      if (this.detectHallucination(aiResponse, message)) {
+        aiResponse = `⚠️ **Warning: Potential Hallucination Detected**\n\nThe AI response may contain fabricated information not present in the actual document. Please verify any specific details mentioned.\n\n---\n\n${aiResponse}`;
+      }
+      
+      // Enhanced formatting for mathematical content
+      aiResponse = this.formatMathematicalContent(aiResponse);
+      
+      this.addMessageToHistory(aiResponse, 'ai');
+
+      return {
+        message: aiResponse,
+        status: data.status || 'success',
+        session_id: data.session_id
+      };
+    } catch (error) {
+      console.error('Error sending chat message:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to send message';
+      this.addMessageToHistory(`Error: ${errorMsg}`, 'system');
+      throw new Error(errorMsg);
+    }
+  }
+
+  // --- START: MATHEMATICAL CONTENT FORMATTING ---
+
+  // --- START: MATHEMATICAL CONTENT FORMATTING ---
+
+  /**
+   * Main function to format mathematical content for better display.
+   * It runs a pipeline of formatters to clean and standardize the text into valid LaTeX.
+   */
+  private formatMathematicalContent(content: string): string {
+    if (typeof content !== 'string') {
+      console.warn('formatMathematicalContent received non-string input:', typeof content);
+      return String(content || '');
+    }
+    try {
+      // The order of operations is critical for correct parsing.
+      content = this.formatCodeBlocks(content);
+      content = this.formatMathematicalStatements(content);
+      content = this.formatReferences(content);
+      content = this.formatMatrices(content); // Must run before expressions
+      content = this.formatMathExpressions(content);
+      content = content.replace(/<PROTECT_REF>(.*?)<\/PROTECT_REF>/g, '$1'); // Unprotect
+      return content;
+    } catch (error) {
+      console.error('Error formatting mathematical content:', error);
+      return String(content || '');
+    }
+  }
+
+  /**
+   * Protects reference citations (e.g., [1]) from being misinterpreted as matrices.
+   */
+  private formatReferences(content: string): string {
+    return content.replace(/(\[\d+\])/g, '<PROTECT_REF>$1</PROTECT_REF>');
+  }
+
+  /**
+   * Converts text-based matrices into standard LaTeX `bmatrix` or `pmatrix` environments.
+   */
+  private formatMatrices(content: string): string {
+    // This regex looks for matrices enclosed in brackets `[...]` or `(...)`
+    const matrixPattern = /(\\begin{bmatrix}(?:.|\n)*?\\end{bmatrix})|\[((?:.|\n)*?)\]/g;
+    
+    return content.replace(matrixPattern, (match, bmatrix, bracketContent) => {
+      // If it's already a bmatrix, leave it alone.
+      if (bmatrix) return match;
+      
+      // If the match contains a protected reference, ignore it.
+      if (/<PROTECT_REF>/.test(match)) return match;
+      
+      // Heuristic: if it's a short, single-line item, it's probably not a matrix.
+      if (!bracketContent.includes('\n') && bracketContent.split(/\s+/).length < 4) {
+          return match;
+      }
+
+      const latexRows = this.formatMatrixRows(bracketContent);
+      // Use bmatrix for square brackets, which is standard for state-space representation.
+      return `$$\n\\begin{bmatrix}\n${latexRows}\n\\end{bmatrix}\n$$`;
+    });
+  }
+
+  /**
+   * Helper to convert a string of matrix content into LaTeX rows.
+   */
+  private formatMatrixRows(matrixContent: string): string {
+    if (typeof matrixContent !== 'string') return '';
+    const lines = matrixContent.split('\n').filter(line => line.trim().length > 0);
+    return lines.map(line => {
+      const cells = line.trim().split(/\s+/).join(' & ');
+      return `  ${cells} \\\\`;
+    }).join('\n');
+  }
+
+  /**
+   * Formats and cleans various mathematical expressions into standard LaTeX.
+   */
+  private formatMathExpressions(content: string): string {
+    if (typeof content !== 'string') return String(content || '');
+
+    // Pre-cleaning for common input errors
+    content = content.replace(/\\dθ˙/g, '\\ddot{\\theta}'); // Fix dotted notation
+    content = content.replace(/\\dψ˙/g, '\\ddot{\\psi}');
+    content = content.replace(/(\w)\s*(\^|\_)\s*\{([^}]+)\}/g, '$1$2{$3}'); // Remove spaces before sup/sub
+    content = content.replace(/(\\left|\()(\s*\$)/g, '$1'); // Clean up misplaced delimiters
+    content = content.replace(/(\$\s*)(\\right|\))/g, '$2');
+
+    // Remove box-drawing characters and Markdown bolding
+    content = content.replace(/┌[─-]*\d+[─-]*┐/g, '');
+    content = content.replace(/\*\*(.*?)\*\*/g, '$1');
+
+    // Standardize display math `$$...$$` to be on its own lines
+    content = content.replace(/(\S)\s*\$\$(.*?)\$\$\s*(\S)/g, '$1\n$$\n$2\n$$\n$3');
+
+    // Convert common function names to proper LaTeX commands
+    const functions = ['sin', 'cos', 'tan', 'ln', 'log', 'exp', 'sec'];
+    functions.forEach(func => {
+      const regex = new RegExp(`(?<!\\\\)${func}(?=[\\s\\(])`, 'g');
+      content = content.replace(regex, `\\${func}`);
+    });
+
+    // Convert textual representations of Greek letters and symbols
+    const symbols: { [key: string]: string } = {
+      'alpha': '\\alpha', 'beta': '\\beta', 'gamma': '\\gamma', 'delta': '\\delta',
+      'Gamma': '\\Gamma', 'Lambda': '\\Lambda', 'mu': '\\mu', 'nu': '\\nu',
+      'rho': '\\rho', 'sigma': '\\sigma', 'tau': '\\tau', 'omega': '\\omega', 'theta': '\\theta',
+      'psi': '\\psi', 'dot': '\\dot', 'ddot': '\\ddot', 'kappa': '\\kappa', 'lambda': '\\lambda',
+      'epsilon': '\\epsilon', 'partial': '\\partial', 'int': '\\int', 'nabla': '\\nabla', 'sum': '\\sum'
+    };
+    for (const key in symbols) {
+      const regex = new RegExp(`(?<!\\\\)${key}(?!\\w)`, 'g');
+      content = content.replace(regex, symbols[key]);
+    }
+
+    // A more robust fraction formatter
+    content = content.replace(/dtn\s*\n\s*dn\s*\n\s*x/g, '\\frac{d^n x}{dt^n}');
+    content = content.replace(/dti\s*\n\s*d\(i-1\)\s*\n\s*x/g, '\\frac{d^{i-1} x}{dt^{i-1}}');
+    content = content.replace(/([a-zA-Z0-9\._\^\{\}]+)\s*\/\s*([a-zA-Z0-9\._\^\{\}]+)/g, '\\frac{$1}{$2}');
+    
+    // Format subscripts and superscripts with curly braces
+    content = content.replace(/_([a-zA-Z0-9]+)/g, '_{$1}');
+    content = content.replace(/\^([a-zA-Z0-9]+)/g, '^{$1}');
+    
+    // Handle special cases like d^n x / dt^n
+    content = content.replace(/d\^([a-zA-Z0-9]+)\s*([a-zA-Z])\s*\/\s*d([a-zA-Z])\^([a-zA-Z0-9]+)/g, '\\frac{d^{$1}$2}{d$3^{$4}}');
+    
+    // Handle summations written on multiple lines
+    content = content.replace(/i=1\s*\n\s*∑\s*\n\s*n/g, '\\sum_{i=1}^{n}');
+
+    // Clean up remaining invalid `pmatrix` environments used for simple fractions
+    content = content.replace(/\\left\s*\\begin{pmatrix}(.*?)\\end{pmatrix}\s*\\right/g, '($1)');
+
+    return content;
+  }
+
+  /**
+   * Formats pre-formatted code blocks and commands.
+   */
+  private formatCodeBlocks(content: string): string {
+    if (typeof content !== 'string') return String(content || '');
+    content = content.replace(/(\.\/macek[^']*'[^']*'[^']*'[^']*')/g, '\n```bash\n$1\n```\n');
+    content = content.replace(/(!(?:contract|minor|delete)[^;]*(?:;[^;]*)*)/g, '`$1`');
+    return content;
+  }
+
+  /**
+   * Formats mathematical statements (theorems, lemmas, etc.) using Markdown.
+   */
+  private formatMathematicalStatements(content: string): string {
+    if (typeof content !== 'string') return String(content || '');
+    const statements = ['Theorem', 'Lemma', 'Definition', 'Proposition', 'Corollary'];
+    statements.forEach(statement => {
+      const regex = new RegExp(`(${statement}\\s+\\d+\\.?)(.*?)(?=\\n\\n|\\n[A-Z]|\\n$)`, 'gs');
+      content = content.replace(regex, '\n**$1**\n> $2\n');
+    });
+    return content;
+  }
+  
+  // --- END: MATHEMATICAL CONTENT FORMATTING ---
+
+  /**
+   * Detect potential hallucination in AI responses
+   */
+  private detectHallucination(response: string, userQuestion: string): boolean {
+    const hallucinationIndicators = [
+      /(?:[\w\s-]+\n){20,}/,
+      /(?:AI-(?:Powered|Enhanced|Driven|Based)\s+[\w\s]+){5,}/,
+      /(?:Ultimate|Universal|Infinite|Perfect|Complete|Advanced|Next-Gen|Revolutionary|Groundbreaking)\s+[\w\s]+(?:System|Platform|Solution|Tool|Application){3,}/,
+    ];
+
+    const isListingRequest = /(?:list|tell me|show me|what are).*(?:projects?|names?|titles?)/i.test(userQuestion);
+    const hasExcessiveList = /(?:^|\n)(?:[\w\s-]+\n){15,}/.test(response);
+
+    for (const pattern of hallucinationIndicators) {
+      if (pattern.test(response)) {
+        console.warn('🚨 Potential hallucination detected:', pattern);
+        return true;
+      }
+    }
+
+    if (isListingRequest && hasExcessiveList) {
+      console.warn('🚨 Excessive list detected for listing request');
+      return true;
+    }
+
+    if (response.length > 10000 && isListingRequest) {
+      console.warn('🚨 Response too long for typical document content');
+      return true;
+    }
+
+    return false;
+  }
+  
+  // --- All other methods from the original class are assumed to be here ---
+  // --- For brevity, they are not repeated but should be included in the final file ---
 
   /**
    * Get paper content and details
@@ -314,77 +547,6 @@ class ResearchAgentApiService {
     } catch (error) {
       console.error('Error getting paper content:', error);
       throw new Error(error instanceof Error ? error.message : 'Failed to get paper content');
-    }
-  }
-
-  /**
-   * Send a chat message about the selected paper
-   */
-  async sendChatMessage(message: string, paperId?: string): Promise<ChatResponse> {
-    try {
-      // Initialize session if needed
-      this.initializeSession('frontend_user', paperId);
-      
-      // Add user message to history
-      this.addMessageToHistory(message, 'user');
-
-      const requestBody: any = {
-        message: message.trim(),
-        user_id: 'frontend_user',
-        paper_id: paperId || 'general',
-        format_math: true, // Request mathematical formatting
-        preserve_structure: true, // Preserve matrix and table structures
-        prevent_hallucination: true, // Prevent AI from making up information
-        stick_to_content: true, // Only use information from the actual paper
-        ...this.getSessionContext()
-      };
-
-      const response = await fetch(`${this.baseUrl}/research/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        throw new Error(`Chat failed: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      console.log('Chat response:', data); // Debug log
-      
-      // Store session ID if provided
-      if (data.session_id && !this.sessionId) {
-        this.sessionId = data.session_id;
-        if (this.sessionMemory) {
-          this.sessionMemory.sessionId = data.session_id;
-        }
-      }
-
-      let aiResponse = data.results?.response || data.response || data.message || 'No response received';
-      
-      // Check for hallucination indicators and warn user
-      if (this.detectHallucination(aiResponse, message)) {
-        aiResponse = `⚠️ **Warning: Potential Hallucination Detected**\n\nThe AI response may contain fabricated information not present in the actual document. Please verify any specific details mentioned.\n\n---\n\n${aiResponse}`;
-      }
-      
-      // Enhanced formatting for mathematical content
-      aiResponse = this.formatMathematicalContent(aiResponse);
-      
-      // Add AI response to history
-      this.addMessageToHistory(aiResponse, 'ai');
-
-      return {
-        message: aiResponse,
-        status: data.status || 'success',
-        session_id: data.session_id
-      };
-    } catch (error) {
-      console.error('Error sending chat message:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Failed to send message';
-      this.addMessageToHistory(`Error: ${errorMsg}`, 'system');
-      throw new Error(errorMsg);
     }
   }
 
@@ -447,7 +609,6 @@ class ResearchAgentApiService {
     try {
       let pdfUrl = paper.pdf_url;
       
-      // Construct arXiv PDF URL if not available
       if (!pdfUrl && paper.arxiv_id) {
         const arxivId = paper.arxiv_id.replace('arXiv:', '').trim();
         if (arxivId) {
@@ -456,12 +617,11 @@ class ResearchAgentApiService {
       }
 
       if (pdfUrl) {
-        // Create a safe filename
         const safeTitle = paper.title
-          .replace(/[^a-z0-9\s]/gi, '') // Remove special characters
-          .replace(/\s+/g, '_') // Replace spaces with underscores
+          .replace(/[^a-z0-9\s]/gi, '')
+          .replace(/\s+/g, '_')
           .toLowerCase()
-          .substring(0, 50); // Limit length
+          .substring(0, 50);
 
         const link = document.createElement('a');
         link.href = pdfUrl;
@@ -469,7 +629,6 @@ class ResearchAgentApiService {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         
-        // Append to body, click, and remove
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -489,21 +648,17 @@ class ResearchAgentApiService {
    */
   async saveNotes(notes: NotesData, paperId?: string, fileName?: string): Promise<void> {
     try {
-      // Initialize session if needed
       this.initializeSession();
       
-      // Use provided filename or generate one if not provided
       const noteFileName = fileName || `notes_${new Date().toISOString().replace(/[:.]/g, '-')}`;
       const noteContent = notes.personal || notes.summary || 'Empty note';
       
-      // Store in localStorage (for backward compatibility)
       const notesKey = `research_notes_${paperId || 'general'}`;
       const existingNotes = localStorage.getItem(notesKey);
       const allNotes = existingNotes ? JSON.parse(existingNotes) : {};
       allNotes[noteFileName] = noteContent;
       localStorage.setItem(notesKey, JSON.stringify(allNotes));
       
-      // Also store in session memory
       this.updateSessionNotes(noteFileName, noteContent);
       this.addMessageToHistory(`Saved note: ${noteFileName}`, 'system');
       
@@ -519,21 +674,15 @@ class ResearchAgentApiService {
    */
   async loadNotes(): Promise<Record<string, string>> {
     try {
-      console.log('🔄 loadNotes() called');
-      // Load from localStorage
       const allNotes: Record<string, string> = {};
       
-      // Get all notes from localStorage
-      console.log('📂 Scanning localStorage for notes...');
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('research_notes_')) {
-          console.log(`🔑 Found notes key: ${key}`);
           const notes = localStorage.getItem(key);
           if (notes) {
             try {
               const parsedNotes = JSON.parse(notes);
-              console.log(`📝 Parsed notes from ${key}:`, parsedNotes);
               Object.assign(allNotes, parsedNotes);
             } catch (parseError) {
               console.error(`❌ Failed to parse notes from ${key}:`, parseError);
@@ -542,16 +691,13 @@ class ResearchAgentApiService {
         }
       }
       
-      // Also merge session notes
       const sessionNotes = this.getSessionNotes();
-      console.log('🧠 Session notes:', sessionNotes);
       Object.assign(allNotes, sessionNotes);
       
-      console.log('📋 Final combined notes:', allNotes);
       return allNotes;
     } catch (error) {
       console.error('❌ Error loading notes:', error);
-      return {}; // Return empty object if loading fails
+      return {};
     }
   }
 
@@ -560,16 +706,8 @@ class ResearchAgentApiService {
    */
   async getNote(noteName: string): Promise<string> {
     try {
-      console.log(`🔍 Getting note: "${noteName}"`);
       const allNotes = await this.loadNotes();
-      const noteContent = allNotes[noteName] || '';
-      console.log(`📄 Note "${noteName}" content:`, {
-        found: !!allNotes[noteName],
-        contentLength: noteContent.length,
-        isEmpty: noteContent.trim() === '',
-        preview: noteContent.length > 100 ? noteContent.substring(0, 100) + '...' : noteContent
-      });
-      return noteContent;
+      return allNotes[noteName] || '';
     } catch (error) {
       console.error('Error getting note:', error);
       return '';
@@ -581,18 +719,8 @@ class ResearchAgentApiService {
    */
   async updateNote(noteName: string, content: string): Promise<void> {
     try {
-      console.log('updateNote called with:', { 
-        noteName, 
-        contentLength: content.length,
-        isEmpty: content.trim() === '',
-        content: content.length < 100 ? content : content.substring(0, 100) + '...'
-      });
-      
-      // First, find which localStorage key contains this note (if it exists)
       let targetKey = '';
-      let foundNote = false;
       
-      console.log('🔍 Searching for existing note in localStorage...');
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('research_notes_')) {
@@ -602,8 +730,6 @@ class ResearchAgentApiService {
               const parsedNotes = JSON.parse(notes);
               if (parsedNotes.hasOwnProperty(noteName)) {
                 targetKey = key;
-                foundNote = true;
-                console.log('✅ Found existing note in key:', targetKey);
                 break;
               }
             } catch (parseError) {
@@ -613,49 +739,18 @@ class ResearchAgentApiService {
         }
       }
       
-      // Determine which key to use
       if (!targetKey) {
-        // If note doesn't exist, use default key or create a new one
         targetKey = 'research_notes_general';
-        console.log('📝 Note not found, will create in key:', targetKey);
       }
       
-      // Get existing notes from the target key
       const existingNotesData = localStorage.getItem(targetKey);
       const allNotes = existingNotesData ? JSON.parse(existingNotesData) : {};
       
-      // Update or create the note
-      const oldContent = allNotes[noteName];
-      allNotes[noteName] = content; // Save as-is, even if empty
+      allNotes[noteName] = content;
       
-      // Save back to localStorage
       localStorage.setItem(targetKey, JSON.stringify(allNotes));
       
-      console.log('✅ Note updated successfully:', {
-        noteName,
-        targetKey,
-        wasExisting: foundNote,
-        oldContentLength: oldContent?.length || 0,
-        newContentLength: content.length,
-        wasCleared: content.trim() === ''
-      });
-      
-      // Also update session memory if available
       this.updateSessionNotes(noteName, content);
-      
-      // Verify the save worked by reading it back
-      const verification = await this.getNote(noteName);
-      if (verification === content) {
-        console.log('✅ Note save verified successfully');
-      } else {
-        console.warn('⚠️ Note save verification failed', {
-          expected: content.length,
-          actual: verification.length,
-          expectedEmpty: content.trim() === '',
-          actualEmpty: verification.trim() === ''
-        });
-        throw new Error('Note verification failed - content mismatch');
-      }
       
     } catch (error) {
       console.error('❌ Error updating note:', error);
@@ -668,17 +763,14 @@ class ResearchAgentApiService {
    */
   async deleteNote(noteName: string): Promise<void> {
     try {
-      console.log('🗑️ deleteNote called for:', noteName);
       let noteDeleted = false;
       
-      // First try to delete from session memory
-      if (this.sessionMemory && this.sessionMemory.context.notes && this.sessionMemory.context.notes[noteName]) {
-        console.log('🧠 Deleting from session memory:', noteName);
+      if (this.sessionMemory?.context.notes[noteName]) {
         delete this.sessionMemory.context.notes[noteName];
+        this.saveSessionToStorage();
         noteDeleted = true;
       }
       
-      // Then find and delete from localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('research_notes_')) {
@@ -686,21 +778,13 @@ class ResearchAgentApiService {
           if (notes) {
             try {
               const parsedNotes = JSON.parse(notes);
-              
-              // Check if this note exists in this storage location
               if (parsedNotes[noteName] !== undefined) {
-                console.log('🗂️ Found note in localStorage key:', key);
                 delete parsedNotes[noteName];
                 localStorage.setItem(key, JSON.stringify(parsedNotes));
-                console.log('✅ Note deleted from localStorage:', noteName);
-                noteDeleted = true;
-                
-                // If the localStorage object is now empty, remove the entire key
                 if (Object.keys(parsedNotes).length === 0) {
-                  console.log('🗄️ Removing empty localStorage key:', key);
                   localStorage.removeItem(key);
                 }
-                break; // Note found and deleted, exit loop
+                noteDeleted = true;
               }
             } catch (parseError) {
               console.warn('⚠️ Failed to parse notes from key:', key, parseError);
@@ -710,11 +794,9 @@ class ResearchAgentApiService {
       }
       
       if (!noteDeleted) {
-        console.warn('⚠️ Note not found for deletion:', noteName);
         throw new Error(`Note "${noteName}" not found`);
       }
       
-      console.log('✅ Note deleted successfully:', noteName);
     } catch (error) {
       console.error('❌ Error deleting note:', error);
       throw new Error(error instanceof Error ? error.message : 'Failed to delete note');
@@ -722,17 +804,60 @@ class ResearchAgentApiService {
   }
 
   /**
+   * Debug method to list all notes in storage
+   */
+  debugListAllNotes(): void {
+    console.log('🔍 DEBUG: Listing all notes in storage');
+    
+    if (this.sessionMemory?.context.notes) {
+      console.log('📝 Session notes:', this.sessionMemory.context.notes);
+    } else {
+      console.log('📝 Session notes: None');
+    }
+    
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('research_notes_')) {
+        const notes = localStorage.getItem(key);
+        if (notes) {
+          try {
+            console.log(`🗂️ ${key}:`, JSON.parse(notes));
+          } catch (e) {
+            console.warn(`⚠️ Could not parse notes from ${key}`);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Clear all notes storage (useful for debugging)
+   */
+  clearAllNotesStorage(): void {
+    console.log('🗑️ Clearing all notes storage');
+    
+    if (this.sessionMemory?.context.notes) {
+      this.sessionMemory.context.notes = {};
+      this.saveSessionToStorage();
+    }
+    
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('research_notes_')) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+  }
+
+  /**
    * Test API connection
    */
   async testConnection(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
+      const response = await fetch(`${this.baseUrl}/health`);
       return response.ok;
     } catch (error) {
       console.error('API connection test failed:', error);
@@ -795,14 +920,12 @@ class ResearchAgentApiService {
         p => p.id !== paperId
       );
       
-      // Clear current paper if it was removed
       if (this.sessionMemory.currentPaper?.id === paperId) {
         this.sessionMemory.currentPaper = undefined;
         this.sessionMemory.context.currentTopic = undefined;
       }
       
       this.saveSessionToStorage();
-      console.log('🗑️ Removed paper from session:', paperId);
     }
   }
 
@@ -813,7 +936,6 @@ class ResearchAgentApiService {
     if (this.sessionMemory) {
       this.sessionMemory.context.notes[noteKey] = content;
       this.saveSessionToStorage();
-      console.log('📝 Updated session note:', noteKey);
     }
   }
 
@@ -822,231 +944,6 @@ class ResearchAgentApiService {
    */
   getSessionNotes(): Record<string, string> {
     return this.sessionMemory?.context.notes || {};
-  }
-
-  /**
-   * Format mathematical content for better display
-   */
-  private formatMathematicalContent(content: string): string {
-    try {
-      // Enhanced matrix formatting
-      content = this.formatMatrices(content);
-      
-      // Format mathematical expressions
-      content = this.formatMathExpressions(content);
-      
-      // Format code blocks and commands
-      content = this.formatCodeBlocks(content);
-      
-      // Format theorem and lemma references
-      content = this.formatMathematicalStatements(content);
-      
-      return content;
-    } catch (error) {
-      console.error('Error formatting mathematical content:', error);
-      return content; // Return original content if formatting fails
-    }
-  }
-
-  /**
-   * Format matrices for better display
-   */
-  private formatMatrices(content: string): string {
-    // Enhanced matrix pattern matching
-    const matrixPatterns = [
-      // Pattern for matrices like g23 = [matrix content]
-      /([a-zA-Z]\d+\s*=\s*)((?:\s*[sr]\d+.*?\n)+)/gm,
-      
-      // Pattern for explicit matrix brackets
-      /(\[[\s\S]*?\])/g,
-      
-      // Pattern for table-like structures with headers (s1, s2, etc.)
-      /((?:s\d+\s*)+\n(?:(?:r\d+.*?\n)+))/gm
-    ];
-
-    matrixPatterns.forEach(pattern => {
-      content = content.replace(pattern, (match, ...groups) => {
-        if (groups.length >= 2) {
-          // For named matrices like g23 = 
-          const matrixName = groups[0];
-          const matrixContent = groups[1];
-          return `\n**${matrixName.trim()}**\n\`\`\`\n${this.formatMatrixRows(matrixContent)}\n\`\`\`\n`;
-        } else {
-          // For bracket matrices or table structures
-          return `\n\`\`\`\n${this.formatMatrixRows(match)}\n\`\`\`\n`;
-        }
-      });
-    });
-
-    return content;
-  }
-
-  /**
-   * Format matrix rows for better alignment
-   */
-  private formatMatrixRows(matrixContent: string): string {
-    const lines = matrixContent.split('\n').filter(line => line.trim());
-    
-    // Find the maximum width needed for each column
-    const rows = lines.map(line => {
-      // Split on multiple spaces or tabs, preserving single spaces within cells
-      return line.trim().split(/\s{2,}|\t/).map(cell => cell.trim());
-    });
-
-    if (rows.length === 0) return matrixContent;
-
-    // Calculate column widths
-    const maxCols = Math.max(...rows.map(row => row.length));
-    const colWidths: number[] = [];
-    
-    for (let col = 0; col < maxCols; col++) {
-      const maxWidth = Math.max(
-        ...rows.map(row => (row[col] || '').length),
-        3 // Minimum column width
-      );
-      colWidths[col] = maxWidth;
-    }
-
-    // Format each row with proper spacing
-    const formattedRows = rows.map(row => {
-      const paddedCells = row.map((cell, colIndex) => {
-        const width = colWidths[colIndex] || 3;
-        return cell.padEnd(width);
-      });
-      return '│ ' + paddedCells.join(' │ ') + ' │';
-    });
-
-    // Add header and footer borders
-    const borderWidth = formattedRows[0]?.length || 0;
-    const topBorder = '┌' + '─'.repeat(borderWidth - 2) + '┐';
-    const bottomBorder = '└' + '─'.repeat(borderWidth - 2) + '┘';
-    
-    // Add separator after header if it looks like a matrix with column headers
-    let result = [topBorder, ...formattedRows, bottomBorder];
-    
-    if (formattedRows.length > 1 && 
-        (formattedRows[0].includes('s1') || formattedRows[0].includes('r1'))) {
-      const separator = '├' + '─'.repeat(borderWidth - 2) + '┤';
-      result = [topBorder, formattedRows[0], separator, ...formattedRows.slice(1), bottomBorder];
-    }
-
-    return result.join('\n');
-  }
-
-  /**
-   * Format mathematical expressions
-   */
-  private formatMathExpressions(content: string): string {
-    // Format inline math expressions
-    content = content.replace(/\$([^$]+)\$/g, '`$1`');
-    
-    // Format display math expressions
-    content = content.replace(/\$\$([^$]+)\$\$/g, '\n```math\n$1\n```\n');
-    
-    // Format M(G) notation
-    content = content.replace(/M\(([^)]+)\)/g, '**M($1)**');
-    
-    // Format M*(G) notation (dual matroids)
-    content = content.replace(/M\*\(([^)]+)\)/g, '**M*($1)**');
-    
-    // Format subscripts and superscripts in text
-    content = content.replace(/([A-Za-z])\*(\d+)/g, '$1*$2');
-    content = content.replace(/([A-Za-z])(\d+)/g, '$1₂');
-    
-    return content;
-  }
-
-  /**
-   * Format code blocks and commands
-   */
-  private formatCodeBlocks(content: string): string {
-    // Format MACEK commands
-    content = content.replace(
-      /(\.\/macek[^']*'[^']*'[^']*'[^']*')/g,
-      '\n```bash\n$1\n```\n'
-    );
-    
-    // Format other command-like structures
-    content = content.replace(
-      /(!(?:contract|minor|delete)[^;]*(?:;[^;]*)*)/g,
-      '`$1`'
-    );
-    
-    return content;
-  }
-
-  /**
-   * Format mathematical statements (theorems, lemmas, etc.)
-   */
-  private formatMathematicalStatements(content: string): string {
-    // Format theorem statements
-    content = content.replace(
-      /(Theorem\s+\d+\.?)(.*?)(?=\n\n|\n[A-Z]|\n$)/gs,
-      '\n**$1**\n> $2\n'
-    );
-    
-    // Format lemma statements
-    content = content.replace(
-      /(Lemma\s+\d+\.?)(.*?)(?=\n\n|\n[A-Z]|\n$)/gs,
-      '\n**$1**\n> $2\n'
-    );
-    
-    // Format definition statements
-    content = content.replace(
-      /(Definition\s+\d+\.?)(.*?)(?=\n\n|\n[A-Z]|\n$)/gs,
-      '\n**$1**\n> $2\n'
-    );
-    
-    return content;
-  }
-
-  /**
-   * Detect potential hallucination in AI responses
-   */
-  private detectHallucination(response: string, userQuestion: string): boolean {
-    // Patterns that suggest hallucination
-    const hallucinationIndicators = [
-      // Excessive lists (like 100+ project names)
-      /(?:[\w\s-]+\n){20,}/,
-      
-      // Repetitive patterns suggesting generated content
-      /(?:AI-(?:Powered|Enhanced|Driven|Based)\s+[\w\s]+){5,}/,
-      
-      // Generic project names that sound too perfect
-      /(?:Ultimate|Universal|Infinite|Perfect|Complete|Advanced|Next-Gen|Revolutionary|Groundbreaking)\s+[\w\s]+(?:System|Platform|Solution|Tool|Application){3,}/,
-      
-      // Very long lists of similar items
-      /(?:Detection|Prediction|Recognition|Analysis|Management|Optimization|Classification|Generation)\s*(?:System|Application|Tool|Platform)[\s\S]*?(?:Detection|Prediction|Recognition|Analysis|Management|Optimization|Classification|Generation)\s*(?:System|Application|Tool|Platform)[\s\S]*?(?:Detection|Prediction|Recognition|Analysis|Management|Optimization|Classification|Generation)\s*(?:System|Application|Tool|Platform)/,
-      
-      // Unrealistic number of items when asked for specific content
-      /^[\w\s-]+(?:\n[\w\s-]+){50,}$/
-    ];
-
-    // Check for excessive specificity when document might not contain such details
-    const isListingRequest = /(?:list|tell me|show me|what are).*(?:projects?|names?|titles?)/i.test(userQuestion);
-    const hasExcessiveList = /(?:^|\n)(?:[\w\s-]+\n){15,}/.test(response);
-    
-    // Check patterns
-    for (const pattern of hallucinationIndicators) {
-      if (pattern.test(response)) {
-        console.warn('🚨 Potential hallucination detected:', pattern);
-        return true;
-      }
-    }
-
-    // Special check for listing requests that produce unrealistic amounts of content
-    if (isListingRequest && hasExcessiveList) {
-      console.warn('🚨 Excessive list detected for listing request');
-      return true;
-    }
-
-    // Check response length vs. typical document content
-    if (response.length > 10000 && isListingRequest) {
-      console.warn('🚨 Response too long for typical document content');
-      return true;
-    }
-
-    return false;
   }
 
   /**
@@ -1090,46 +987,34 @@ class ResearchAgentApiService {
     session_id: string;
   }> {
     try {
-      // Initialize session
       this.initializeSession(userId);
       this.addMessageToHistory(`Uploading PDF: ${file.name}`, 'user');
 
-      // Prepare consent tokens - using demo tokens for testing
-      const consentTokens = JSON.stringify({
-        'vault.read.file': 'demo_token',
-        'vault.write.file': 'demo_token'
-      });
+      let consentTokens;
+      try {
+        consentTokens = await hushMcpApi.createResearchTokens(userId);
+      } catch (tokenError) {
+        console.error("Failed to generate consent tokens:", tokenError);
+        throw new Error('Failed to generate authentication tokens. Please try again.');
+      }
 
-      // Create form data with the file and other parameters
       const formData = new FormData();
       formData.append('file', file);
       formData.append('user_id', userId);
-      formData.append('consent_tokens', consentTokens);
-
-      console.log('Uploading to:', `${this.baseUrl}/agents/research/upload`);
-      console.log('File details:', {
-        fileName: file.name,
-        fileSize: file.size,
-        userId: userId,
-        consentTokens: consentTokens
-      });
+      formData.append('consent_tokens', JSON.stringify(consentTokens));
 
       const response = await fetch(`${this.baseUrl}/agents/research/upload`, {
         method: 'POST',
         body: formData
       });
 
-      console.log('Upload response status:', response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Upload error response:', errorText);
         this.addMessageToHistory(`Upload failed: ${errorText}`, 'system');
         throw new Error(`Upload failed: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const result = await response.json();
-      console.log('Upload result:', result);
       
       if (result.status !== 'success') {
         const errorMsg = result.errors?.[0] || 'Upload processing failed';
@@ -1137,20 +1022,18 @@ class ResearchAgentApiService {
         throw new Error(errorMsg);
       }
 
-      // Create paper object from upload result and add to session
       const uploadedPaper: Paper = {
         id: result.results.paper_id,
         title: file.name.replace('.pdf', ''),
         authors: ['Uploaded Document'],
         published: new Date().toISOString(),
         categories: ['uploaded', 'local-file'],
-        arxiv_id: `uploaded_${result.results.paper_id}`, // Mark as uploaded, not arXiv
+        arxiv_id: `uploaded_${result.results.paper_id}`,
         summary: `Uploaded PDF document: ${file.name} (${result.results.text_length} characters extracted)`,
-        pdf_url: '', // Uploaded file, no external URL
-        isUploaded: true // Custom flag to identify uploaded papers
+        pdf_url: '',
+        isUploaded: true
       };
 
-      // Add to session context
       this.addPaperToSession(uploadedPaper);
       this.addMessageToHistory(`Successfully uploaded and processed: ${file.name}. You can now ask questions about this document.`, 'system');
 
@@ -1170,3 +1053,14 @@ class ResearchAgentApiService {
 // Export singleton instance
 export const researchAgentApi = new ResearchAgentApiService();
 export default ResearchAgentApiService;
+
+// Expose debug methods to window object for easy debugging
+if (typeof window !== 'undefined') {
+  (window as any).researchAgentDebug = {
+    listAllNotes: () => researchAgentApi.debugListAllNotes(),
+    clearAllStorage: () => researchAgentApi.clearAllNotesStorage(),
+    deleteNote: (noteName: string) => researchAgentApi.deleteNote(noteName),
+    loadNotes: () => researchAgentApi.loadNotes(),
+    api: researchAgentApi
+  };
+}
