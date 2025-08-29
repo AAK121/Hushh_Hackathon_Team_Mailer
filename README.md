@@ -651,76 +651,20 @@ const MyCustomAgent: React.FC = () => {
 - `docs/api.md` - Full API reference
 - `docs/operons.md` - Reusable component library
 
-### External Resources
-- [HushhMCP Specification](https://github.com/hushh-labs/hushhmcp-spec)
-- [Privacy-First AI Principles](https://hushh.ai/privacy)
-- [Agent Development Tutorials](https://docs.hushh.ai/agents)
 
----
 
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-#### Backend Won't Start
-```bash
-# Check Python version
-python --version  # Should be 3.8+
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Check environment variables
-python -c "from dotenv import load_dotenv; load_dotenv(); import os; print('Keys loaded:', bool(os.getenv('GOOGLE_API_KEY')))"
-```
-
-#### Frontend Build Errors
-```bash
-# Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Check Node version
-node --version  # Should be 18+
-```
-
-#### Agent Permission Errors
-- Verify consent tokens are properly generated
-- Check token expiration times
-- Ensure scope matches required permissions
-
-### Getting Help
-- 📧 Email: support@hushh.ai
-- 💬 Discord: [Join our community](https://discord.gg/hushh)
-- 🐛 Issues: [GitHub Issues](https://github.com/AAK121/Hushh_Hackathon_Team_Mailer/issues)
-
----
 
 ## 💡 Roadmap & Future Vision
 
 ### 🎯 Immediate Goals
-- [ ] **Advanced Personalization Engine** - Multi-modal user preference learning
 - [ ] **Real-time Collaboration** - Multi-user agent interactions
 - [ ] **Mobile Applications** - iOS and Android native apps
 - [ ] **Enterprise Integration** - SSO and team management features
 
 ### 🚀 Long-term Vision
-- [ ] **Federated Agent Network** - Cross-platform agent communication
-- [ ] **Blockchain Integration** - Immutable consent and trust records
 - [ ] **Open Agent Marketplace** - Community-built agent ecosystem
-- [ ] **Advanced AI Models** - Custom fine-tuned models for each agent
 
 ---
-
-## � Built For: Hushh PDA Hackathon
-
-This project was developed as part of the **Hushh Personal Data Assistant Hackathon**, demonstrating the future of privacy-first AI agents.
-
-### 🎓 Hackathon Details
-- **Organizers**: Hushh Labs in collaboration with DAV Team and Analytics Club, IIT Bombay
-- **Prize Pool**: INR 1,70,000+
-- **Theme**: Building infrastructure for programmable trust and consent
-- **Focus**: Real-world AI agents that respect user privacy and autonomy
 
 ### 🏅 What We Built
 - **Complete Agent Ecosystem** - 5+ production-ready AI agents
@@ -813,29 +757,58 @@ We welcome contributions from the community! Here's how you can help:
 
 ---
 
-## ⚖️ License & Legal
+## 🛡️ Privacy Commitment
+- **Data minimization** - We only collect what's necessary
+- **User control** - You own and control your data
+- **Transparency** - Open-source for full auditability
+- **Security-first** - End-to-end encryption by default
 
-### 📜 MIT License
+---
+
+## 🌟 Acknowledgments
+
+### 👥 Core Team
+- **Development Team** - Full-stack development and AI integration
+- **Security Team** - Cryptographic protocol design and implementation
+- **Design Team** - User experience and interface design
+- **DevOps Team** - Infrastructure and deployment automation
+
+### 🙏 Special Thanks
+- **Hushh Labs** - Vision and platform foundation
+- **IIT Bombay Analytics Club** - Hackathon organization and support
+- **Open Source Community** - Libraries and frameworks that made this possible
+- **Early Testers** - Feedback and bug reports during development
+
+### 🔧 Built With
+- **Backend**: FastAPI, Python 3.8+, Pydantic, LangGraph
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS
+- **AI/ML**: Google Gemini 2.0, LangChain, NumPy
+- **Security**: Cryptography library, HMAC-SHA256, AES-256-GCM
+- **Infrastructure**: Docker, PostgreSQL, Redis, Nginx
+
+---
+
+## 🚀 Get Started Today
+
+Ready to experience the future of privacy-first AI agents?
+
+```bash
+git clone https://github.com/AAK121/Hushh_Hackathon_Team_Mailer.git
+cd Hushh_Hackathon_Team_Mailer
+pip install -r requirements.txt
+python api.py
 ```
-MIT License
 
-Copyright (c) 2025 Hushh AI Agent Ecosystem Contributors
+**Join the revolution in trustworthy AI. Your data, your agents, your control.**
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+---
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+<div align="center">
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
+### 🤫 **Let's build a better agentic internet together.**
+
+[🌐 Website](https://hushh.ai) • [📧 Email](mailto:support@hushh.ai) • [💬 Discord](https://discord.gg/hushh) • [🐛 Issues](https://github.com/AAK121/Hushh_Hackathon_Team_Mailer/issues)
+
+**Made with ❤️ for the future of AI privacy**
+
+</div>
