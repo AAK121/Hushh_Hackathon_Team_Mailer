@@ -43,61 +43,46 @@ Globally, **privacy in AI** is becoming increasingly important as users lose con
 
 ---
 
-## Detailed Description 
+## Detailed Description 📝
 
-###  **HushhMCP (Micro Consent Protocol) - Cryptographic Consent Management**
+### 🔐 **HushhMCP (Micro Consent Protocol) - Cryptographic Consent Management**
 The foundation of our entire ecosystem is the revolutionary **HushhMCP** protocol that ensures every AI action is cryptographically verified with user consent.
 
-### How it Works 
+**Key Features:**
+- Cryptographic signature verification using HMAC-SHA256
+- Scope-based permissions with expiration times
+- Non-repudiation through user private key signing
+- Real-time token validation for all agent actions
 
-**Consent Token Generation:**
-1. User requests permission for specific agent actions through the frontend interface
-2. System generates a unique consent token with cryptographic signature using HMAC-SHA256
-3. Token includes scope, expiration time, and specific permissions granted
-4. Token is signed with the user's private key ensuring non-repudiation
+### 🤖 **AI Agent Ecosystem**
 
-**Agent Permission Verification:**
-1. Before any action, agents must present valid consent tokens
-2. System verifies cryptographic signature and token validity
-3. Scope verification ensures agents only perform authorized actions
-4. Expired or invalid tokens are immediately rejected
+Our platform features 6 specialized AI agents working in harmony:
 
-**Technical Implementation:**
-`python
-# Consent token structure
-{
-    "user_id": "user_123",
-    "scope": "vault.read.email",
-    "permissions": ["read_contacts", "send_email"],
-    "expires_at": 1640995200,
-    "signature": "HMAC-SHA256-signature",
-    "nonce": "random_nonce_value"
-}
-`
+#### 📧 [MailerPanda Agent](hushh_mcp/agents/mailerpanda/README.md)
+AI-powered email marketing with human oversight, personalized content generation, and approval workflows.
 
-###  **1. MailerPanda Agent - AI-Powered Email Marketing with Human Oversight**
+#### 💰 [ChanduFinance Agent](hushh_mcp/agents/chandufinance/README.md) 
+Personal financial advisor with real-time market data, investment recommendations, and educational content.
 
-For many businesses struggling with personalized email marketing, creating engaging content that resonates with individual recipients while maintaining authenticity is a constant challenge. MailerPanda introduces a revolutionary approach combining **AI content generation** with **human-in-the-loop approval workflows**.
+#### 🧠 [Relationship Memory Agent](hushh_mcp/agents/relationship_memory/README.md)
+Persistent context management and cross-agent memory sharing for enhanced personalization.
 
-### How it Works 
+#### 📅 [AddToCalendar Agent](hushh_mcp/agents/addtocalendar/readme.md)
+Intelligent calendar management with AI event extraction from emails and Google Calendar integration.
 
-**AI Content Generation Phase:**
-1. User uploads contact lists via Excel/CSV files containing recipient information
-2. AI analyzes recipient data and generates personalized email content using Google Gemini 2.0
-3. System creates unique, contextually relevant messages that go beyond simple name placeholders
-4. Content incorporates recipient preferences, history, and behavioral patterns
+#### 🔍 [Research Agent](hushh_mcp/agents/research_agent/README.md)
+Multi-source information gathering with academic papers, news feeds, and comprehensive analysis.
 
-**Human Approval Workflow:**
-1. Generated content is queued for human review before sending
-2. User can approve, reject, or modify AI-generated content
-3. Feedback loop improves AI understanding of user preferences over time
-4. Only approved content is sent to recipients
+#### 📨 [Basic Mailer Agent](hushh_mcp/agents/Mailer/README.md)
+Simple email sending service with Excel/CSV support and delivery tracking.
 
-**Batch Processing and Delivery:**
-1. Approved campaigns are processed in batches for optimal delivery timing
-2. Real-time tracking of open rates, click-through rates, and engagement metrics
-3. Failed deliveries are automatically retried with exponential backoff
-4. Comprehensive analytics dashboard for campaign performance monitoring
+---
+
+## 📚 Documentation
+
+- **[Complete API Reference](docs/api.md)** - Comprehensive API documentation for all agents
+- **[Agent Architecture Diagrams](hushh_mcp/agents/)** - Visual workflows for each agent
+- **[Setup Guide](#how-to-set-up-locally)** - Local development setup instructions
 
 ### What Sets MailerPanda Apart 
 
@@ -127,58 +112,17 @@ For many businesses struggling with personalized email marketing, creating engag
 
 ---
 
-###  **2. ChanduFinance Agent - AI-Powered Personal Financial Advisor**
+### 🏗️ **Technical Architecture**
 
-Financial literacy remains a critical challenge, with many individuals lacking access to personalized investment advice. ChanduFinance democratizes financial planning by providing **AI-powered portfolio analysis**, **personalized investment recommendations**, and **educational content** tailored to individual risk profiles and financial goals.
+Our platform employs a modular microservices architecture with the following key components:
 
-### How it Works 
+- **FastAPI Backend** - High-performance async API handling all agent requests
+- **React Frontend** - Modern SPA with real-time agent status monitoring
+- **HushhMCP Protocol** - Cryptographic consent management layer
+- **Google Gemini 2.0** - Primary AI model for all language processing tasks
+- **Multi-Agent Communication** - RESTful APIs enabling seamless agent interoperability
 
-**Financial Profile Creation:**
-1. User provides income, expenses, savings, and investment experience through secure forms
-2. AI analyzes financial health and creates comprehensive risk assessment
-3. System generates personalized investment strategies based on user profile
-4. Goal-setting interface helps users define short-term and long-term financial objectives
-
-**Real-Time Market Analysis:**
-1. Integration with financial data APIs provides real-time market information
-2. AI analyzes stock performance, market trends, and economic indicators
-3. Personalized stock recommendations based on user's risk tolerance and investment timeline
-4. Portfolio optimization suggestions with specific position sizing recommendations
-
-**Educational Content Delivery:**
-1. "Explain Like I'm New" feature breaks down complex financial concepts
-2. Interactive learning modules cover investing basics, market analysis, and portfolio management
-3. Personalized learning paths based on user's knowledge level and interests
-4. Progress tracking and achievement system to encourage continued learning
-
-### What Sets ChanduFinance Apart 
-
-- **Personalized Risk Assessment:** Goes beyond basic questionnaires to analyze spending patterns, income stability, and life circumstances for accurate risk profiling.
-- **Educational Focus:** Not just recommendations, but comprehensive financial education to help users understand the reasoning behind each suggestion.
-- **Real-Time Adaptation:** Continuously adjusts recommendations based on market changes and user's evolving financial situation.
-
-### Technical Details
-
-| API Route | Description |
-|-----------|-------------|
-| /agents/chandufinance/execute | Generate financial analysis and recommendations |
-| /agents/chandufinance/portfolio | Portfolio optimization and rebalancing |
-| /agents/chandufinance/education | Personalized learning content |
-| /agents/chandufinance/goals | Financial goal tracking and planning |
-
-**Profile Setup Example:**
-`json
-{
-    "user_id": "user_123",
-    "token": "HCT:finance_consent_token",
-    "command": "setup_profile",
-    "monthly_income": 6000.0,
-    "monthly_expenses": 4000.0,
-    "current_savings": 15000.0,
-    "risk_tolerance": "moderate",
-    "investment_experience": "beginner"
-}
-`
+---
 
 ---
 
