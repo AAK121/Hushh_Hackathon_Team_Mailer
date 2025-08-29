@@ -10,7 +10,7 @@ Imagine a future where AI agents work with **cryptographically enforced consent*
 **Hushh AI Agent Ecosystem** is an innovative  AI-powered solution designed to empower users with intelligent agents for email marketing, finance, research, calendar management, and relationship memory—all built on the HushhMCP (Micro Consent Protocol) foundation.
 
 ### DEMO VIDEO:
-*Coming Soon - Full demonstration of our AI agent ecosystem*
+[Demonstration Video](https://drive.google.com/drive/folders/1RyGEkpi7KWCgS9ABf774KpVJNjQ8FRQ0?usp=sharing)
 
 ### Try it out
 `ash
