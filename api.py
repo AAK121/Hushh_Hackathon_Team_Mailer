@@ -4149,11 +4149,8 @@ async def get_research_session_status(session_id: str):
 class ChatRequest(BaseModel):
     """Request model for general chat endpoint."""
     message: str = Field(..., description="User message")
-<<<<<<< HEAD
     user_id: Optional[str] = Field(None, description="User identifier")
-=======
     user_id: Optional[str] = Field("default_user", description="User identifier")
->>>>>>> origin/main
     conversation_id: Optional[str] = Field(None, description="Conversation identifier")
 
 class ChatResponse(BaseModel):
@@ -4161,8 +4158,6 @@ class ChatResponse(BaseModel):
     response: str = Field(..., description="AI response")
     conversation_id: str = Field(..., description="Conversation identifier")
     timestamp: str = Field(..., description="Response timestamp")
-<<<<<<< HEAD
-=======
     session_id: str = Field(..., description="Session identifier for persistence")
 
 class ChatMessage(BaseModel):
@@ -4178,17 +4173,13 @@ class ConversationHistory(BaseModel):
     messages: List[ChatMessage] = Field(default_factory=list, description="Message history")
     created_at: str = Field(..., description="Conversation creation timestamp")
     updated_at: str = Field(..., description="Last update timestamp")
->>>>>>> origin/main
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_agent_assistant(request: ChatRequest):
     """
     General chat endpoint with comprehensive information about all Hushh AI agents.
     This AI assistant can help users understand and navigate the Hushh AI ecosystem.
-<<<<<<< HEAD
-=======
     Includes session persistence for conversation history.
->>>>>>> origin/main
     """
     try:
         import google.generativeai as genai
@@ -4204,8 +4195,6 @@ async def chat_with_agent_assistant(request: ChatRequest):
         genai.configure(api_key=gemini_key)
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
         
-<<<<<<< HEAD
-=======
         # Generate conversation and session IDs
         current_time = datetime.now()
         conversation_id = request.conversation_id or f"chat-{current_time.timestamp()}"
@@ -4239,7 +4228,6 @@ async def chat_with_agent_assistant(request: ChatRequest):
                 conversation_context += f"{msg.role.upper()}: {msg.content}\n"
             conversation_context += "\n"
         
->>>>>>> origin/main
         # System prompt with comprehensive agent information
         system_prompt = """You are the Hushh AI Assistant, an expert guide to the Hushh AI Agent Ecosystem. You help users understand and navigate our privacy-first AI platform with cryptographically enforced consent.
 
@@ -4319,17 +4307,6 @@ Users can interact with agents through:
 
 When users ask about specific agents, provide detailed information about their capabilities, endpoints, and use cases. Always emphasize our privacy-first approach and the HushhMCP consent system that makes our platform unique.
 
-<<<<<<< HEAD
-Be helpful, informative, and guide users to the right agents for their needs. If they want to use a specific agent, explain the consent process and required parameters."""
-
-        # Generate response
-        full_prompt = f"{system_prompt}\n\nUser: {request.message}\n\nAssistant:"
-        
-        response = model.generate_content(full_prompt)
-        
-        # Generate conversation ID if not provided
-        conversation_id = request.conversation_id or f"chat-{datetime.now().timestamp()}"
-=======
 Be helpful, informative, and guide users to the right agents for their needs. If they want to use a specific agent, explain the consent process and required parameters.
 
 CONVERSATION CONTEXT:
@@ -4348,17 +4325,12 @@ Remember previous conversation context and maintain continuity. Reference earlie
         )
         chat_conversations[conversation_id].messages.append(assistant_message)
         chat_conversations[conversation_id].updated_at = current_time.isoformat()
->>>>>>> origin/main
         
         return ChatResponse(
             response=response.text,
             conversation_id=conversation_id,
-<<<<<<< HEAD
-            timestamp=datetime.now().isoformat()
-=======
             timestamp=current_time.isoformat(),
             session_id=session_id
->>>>>>> origin/main
         )
         
     except Exception as e:
@@ -4368,8 +4340,6 @@ Remember previous conversation context and maintain continuity. Reference earlie
             detail=f"Chat processing failed: {str(e)}"
         )
 
-<<<<<<< HEAD
-=======
 @app.get("/chat/conversations/{user_id}")
 async def get_user_conversations(user_id: str):
     """Get all conversations for a specific user."""
@@ -4448,7 +4418,6 @@ async def delete_conversation(conversation_id: str):
             detail=f"Failed to delete conversation: {str(e)}"
         )
 
->>>>>>> origin/main
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")
     print("API Documentation: http://127.0.0.1:8001/docs")

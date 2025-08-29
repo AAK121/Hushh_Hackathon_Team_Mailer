@@ -223,29 +223,189 @@ Ask me anything about our agents, how to use them, or get started with the platf
 const StyledWrapper = styled.div`
   width: 100vw;
   min-height: 100vh;
-  background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+  position: relative;
+  overflow: hidden;
+  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+  opacity: 1;
+  transform: translateY(0);
+
+  /* Dynamic animated background with orange theme */
+  background: linear-gradient(-45deg, #ff6f00, #ff8f00, #ff9800, #ffb74d);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+
+  /* Floating particles background */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 20% 80%, rgba(255, 152, 0, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(255, 193, 7, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(255, 111, 0, 0.2) 0%, transparent 50%);
+    animation: particleFloat 20s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  /* Moving light effects */
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+      radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
+        rgba(255, 152, 0, 0.15), 
+        transparent 40%);
+    animation: lightPulse 8s ease-in-out infinite;
+    pointer-events: none;
+  }
+
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
 
+  @keyframes gradientShift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  @keyframes particleFloat {
+    0%, 100% {
+      transform: translateY(0px) rotate(0deg);
+      opacity: 1;
+    }
+    33% {
+      transform: translateY(-30px) rotate(120deg);
+      opacity: 0.8;
+    }
+    66% {
+      transform: translateY(-60px) rotate(240deg);
+      opacity: 0.6;
+    }
+  }
+
+  @keyframes lightPulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: scale(1.2);
+    }
+  }
+
   .chat-container {
     width: 100%;
     max-width: 1200px;
     height: 90vh;
-    background: #fff;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.1) 0%, 
+      rgba(255, 255, 255, 0.05) 100%);
     border-radius: 24px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+    box-shadow: 
+      0 8px 32px rgba(0, 0, 0, 0.3),
+      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: relative;
+
+    /* Animated border gradient */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 24px;
+      padding: 2px;
+      background: linear-gradient(45deg, 
+        transparent, 
+        rgba(255, 152, 0, 0.3), 
+        rgba(255, 193, 7, 0.3), 
+        transparent,
+        rgba(255, 152, 0, 0.3));
+      background-size: 300% 300%;
+      animation: borderGlow 6s ease infinite;
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: xor;
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      pointer-events: none;
+    }
+
+    /* Inner glow effect */
+    &::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 150%;
+      height: 150%;
+      background: radial-gradient(circle, 
+        rgba(255, 152, 0, 0.1) 0%, 
+        rgba(255, 193, 7, 0.1) 30%, 
+        transparent 70%);
+      transform: translate(-50%, -50%);
+      animation: innerGlow 10s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes borderGlow {
+      0%, 100% {
+        background-position: 0% 50%;
+      }
+      50% {
+        background-position: 100% 50%;
+      }
+    }
+
+    @keyframes innerGlow {
+      0%, 100% {
+        opacity: 0.3;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        opacity: 0.6;
+        transform: translate(-50%, -50%) scale(1.1);
+      }
+    }
   }
 
   .chat-header {
-    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+    background: linear-gradient(135deg, 
+      rgba(255, 152, 0, 0.9) 0%, 
+      rgba(255, 111, 0, 0.9) 100%);
     padding: 24px;
     color: white;
     border-radius: 24px 24px 0 0;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 2;
+
+    /* Subtle inner shadow for neumorphic effect */
+    box-shadow: 
+      inset 0 2px 4px rgba(255, 255, 255, 0.1),
+      inset 0 -2px 4px rgba(0, 0, 0, 0.1);
   }
 
   .header-content {
@@ -288,7 +448,12 @@ const StyledWrapper = styled.div`
     display: flex;
     flex-direction: column;
     gap: 16px;
-    background: #f8fafc;
+    background: linear-gradient(135deg, 
+      rgba(248, 250, 252, 0.8) 0%, 
+      rgba(241, 245, 249, 0.8) 100%);
+    backdrop-filter: blur(10px);
+    position: relative;
+    z-index: 1;
   }
 
   .message {
@@ -315,6 +480,14 @@ const StyledWrapper = styled.div`
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.3s ease;
+
+    /* Neumorphic shadow effect */
+    box-shadow: 
+      0 4px 8px rgba(0, 0, 0, 0.1),
+      inset 0 2px 4px rgba(255, 255, 255, 0.1);
   }
 
   .message.user .message-avatar {
@@ -322,7 +495,9 @@ const StyledWrapper = styled.div`
   }
 
   .message.assistant .message-avatar {
-    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.2) 0%, 
+      rgba(255, 255, 255, 0.1) 100%);
   }
 
   .avatar-icon {
@@ -331,13 +506,32 @@ const StyledWrapper = styled.div`
     color: white;
   }
 
+  .message.assistant .avatar-icon {
+    color: #64748b;
+  }
+
   .message-content {
-    background: white;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.9) 0%, 
+      rgba(255, 255, 255, 0.8) 100%);
     border-radius: 16px;
     padding: 16px 20px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e8f0;
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     position: relative;
+    transition: all 0.3s ease;
+
+    /* Neumorphic shadow effect */
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
   }
 
   .message.user .message-content {
@@ -455,23 +649,41 @@ const StyledWrapper = styled.div`
 
   .input-container {
     padding: 24px;
-    background: white;
-    border-top: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, 
+      rgba(255, 255, 255, 0.1) 0%, 
+      rgba(255, 255, 255, 0.05) 100%);
+    backdrop-filter: blur(20px);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 2;
   }
 
   .input-wrapper {
     display: flex;
     align-items: flex-end;
     gap: 12px;
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
+    background: linear-gradient(135deg, 
+      rgba(248, 250, 252, 0.9) 0%, 
+      rgba(241, 245, 249, 0.9) 100%);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 16px;
     padding: 12px;
-    transition: border-color 0.2s;
-  }
+    transition: all 0.3s ease;
 
-  .input-wrapper:focus-within {
-    border-color: #ff9800;
+    /* Neumorphic shadow effect */
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+    &:focus-within {
+      border-color: rgba(255, 152, 0, 0.6);
+      box-shadow: 
+        0 6px 20px rgba(0, 0, 0, 0.15),
+        0 0 0 2px rgba(255, 152, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
   }
 
   .message-input {
@@ -503,18 +715,57 @@ const StyledWrapper = styled.div`
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     flex-shrink: 0;
-  }
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
 
-  .send-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
-  }
+    /* Neumorphic shadow effect */
+    box-shadow: 
+      0 4px 12px rgba(255, 152, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
-  .send-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    /* Hover gradient effect */
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, 
+        transparent, 
+        rgba(255, 255, 255, 0.2), 
+        transparent);
+      transition: left 0.5s;
+    }
+
+    &:hover:not(:disabled) {
+      transform: translateY(-4px);
+      box-shadow: 
+        0 8px 25px rgba(255, 152, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+
+      &::before {
+        left: 100%;
+      }
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(-2px);
+      transition: transform 0.1s;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: 
+        0 2px 8px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
   }
 
   .send-icon {
