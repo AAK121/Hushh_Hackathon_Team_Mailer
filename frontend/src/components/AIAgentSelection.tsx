@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import HITLChat from './HITLChat';
+import React, { useState, useRef, useEffect } from 'react';
 import styled from 'styled-components';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
-  CalendarIcon, 
-  ChatBubbleLeftRightIcon,
-  DocumentTextIcon
+  PaperAirplaneIcon, 
+  CpuChipIcon, 
+  UserIcon
 } from '@heroicons/react/24/outline';
 
 interface AIAgentSelectionProps {
@@ -12,469 +13,557 @@ interface AIAgentSelectionProps {
   onShowHITL: (prompt: string) => void;
 }
 
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+}
+
 const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent, onShowHITL }) => {
-  const [prompt, setPrompt] = useState('');
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const [preservedPrompt, setPreservedPrompt] = useState('');
-  const [selectedAgent, setSelectedAgent] = useState<'mass-mail' | 'calendar' | null>(null);
-  const [search, setSearch] = useState('');
-  const [fullChatMode, setFullChatMode] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'assistant',
+      content: `# Welcome to Hushh AI Agent Ecosystem! 🚀
 
-  const agents = [
-    {
-      id: 'mass-mail' as const,
-      title: 'Mass Mailing Campaigns',
-      description: 'Create and manage bulk email campaigns with Excel/CSV import support',
-      icon: DocumentTextIcon,
-      gradient: 'from-green-500 to-green-700',
-      features: ['Excel/CSV import', 'Template management', 'Bulk sending', 'Campaign tracking']
-    },
-    {
-      id: 'calendar' as const,
-      title: 'AI Calendar Agent',
-      description: 'Intelligent calendar management and event scheduling with Google Calendar',
-      icon: CalendarIcon,
-      gradient: 'from-purple-500 to-purple-700',
-      features: ['Smart scheduling', 'Event extraction', 'Google Calendar sync', 'Conflict resolution']
+I'm your AI assistant, here to help you navigate our privacy-first AI platform with 6 specialized agents:
+
+**🤖 Available Agents:**
+- **📧 MailerPanda**: AI-powered email marketing with human oversight
+- **💰 ChanduFinance**: Personal financial advisor with real-time market data  
+- **🧠 Relationship Memory**: Persistent context and cross-agent memory
+- **📅 AddToCalendar**: Intelligent calendar management with Google sync
+- **🔍 Research Agent**: Multi-source information gathering and analysis
+- **📨 Basic Mailer**: Simple email sending with Excel/CSV support
+
+**🔐 Privacy-First Features:**
+- Cryptographic consent management (HushhMCP)
+- End-to-end encryption for all personal data
+- User-controlled permissions for every AI action
+
+Ask me anything about our agents, how to use them, or get started with the platform!`,
+      timestamp: new Date()
     }
-  ];
+  ]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const handleSubmitPrompt = () => {
-    if (prompt.trim()) {
-      setPreservedPrompt(prompt.trim());
-      setIsTransitioning(true);
-      
-      setTimeout(() => {
-        onShowHITL(prompt.trim());
-        setPrompt('');
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 400);
-      }, 400); // 400ms transition delay for animation
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: 'user',
+      content: input.trim(),
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('http://127.0.0.1:8001/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: input.trim(),
+          user_id: 'demo_user',
+          conversation_id: 'main_chat'
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'I apologize, but I\'m having trouble connecting to the server right now. Please try again in a moment.',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmitPrompt();
+      handleSendMessage();
     }
-  };
-
-  const handleAgentSelection = (agentId: 'mass-mail' | 'calendar') => {
-    setSelectedAgent(agentId);
-    setIsTransitioning(true);
-    
-    // Add transition delay for smooth agent selection
-    setTimeout(() => {
-      onSelectAgent(agentId);
-    }, 300); // 300ms transition delay
   };
 
   return (
     <StyledWrapper>
-      {fullChatMode ? (
-  <div className="full-chat">
-          {/* Only show chat and sidebar/menu icon in full chat mode */}
-          {/* <HITLChat fullChatMode={true} onSend={() => {}} /> */}
-        </div>
-      ) : (
-  <div className="layout">
-          {/* Main Content */}
-          <main className="main-content">
-            <div className="chat-area">
-              {/* <HITLChat onSend={() => setFullChatMode(true)} /> */}
+      <div className="chat-container">
+        <div className="chat-header">
+          <div className="header-content">
+            <div className="logo">
+              <CpuChipIcon className="logo-icon" />
+              <h1>Hushh AI Assistant</h1>
             </div>
-            <div className="agents-section">
-              <div className="search-box">
-                <input
-                  type="text"
-                  placeholder="Search agents..."
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  className="search-input"
-                />
+            <p className="subtitle">Privacy-first AI agents at your service</p>
+          </div>
+        </div>
+
+        <div className="messages-container">
+          {messages.map((message) => (
+            <div key={message.id} className={`message ${message.role}`}>
+              <div className="message-avatar">
+                {message.role === 'user' ? (
+                  <UserIcon className="avatar-icon" />
+                ) : (
+                  <CpuChipIcon className="avatar-icon" />
+                )}
               </div>
-              <div className="agents-grid">
-                {agents
-                  .filter(agent =>
-                    agent.title.toLowerCase().includes(search.toLowerCase()) ||
-                    agent.description.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map((agent) => {
-                    const IconComponent = agent.icon;
-                    return (
-                      <div 
-                        key={agent.id}
-                        className={`agent-card agent-bubble card`}
-                        onClick={() => handleAgentSelection(agent.id)}
-                      >
-                        <div className={`agent-icon bg-gradient-to-br ${agent.gradient}`}>
-                          <IconComponent className="icon" />
-                        </div>
-                        <div className="agent-content">
-                          <h3 className="agent-title">{agent.title}</h3>
-                          <p className="agent-description">{agent.description}</p>
-                          <div className="agent-features">
-                            {agent.features.map((feature, index) => (
-                              <span key={index} className="feature-tag">
-                                {feature}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="agent-arrow">
-                          <svg className="arrow-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </div>
-                    );
-                  })}
+              <div className="message-content">
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({children}) => <h1 className="markdown-h1">{children}</h1>,
+                    h2: ({children}) => <h2 className="markdown-h2">{children}</h2>,
+                    h3: ({children}) => <h3 className="markdown-h3">{children}</h3>,
+                    p: ({children}) => <p className="markdown-p">{children}</p>,
+                    ul: ({children}) => <ul className="markdown-ul">{children}</ul>,
+                    li: ({children}) => <li className="markdown-li">{children}</li>,
+                    strong: ({children}) => <strong className="markdown-strong">{children}</strong>,
+                    code: ({children}) => <code className="markdown-code">{children}</code>
+                  }}
+                >
+                  {message.content}
+                </ReactMarkdown>
+                <div className="message-time">
+                  {message.timestamp.toLocaleTimeString()}
+                </div>
               </div>
             </div>
-          </main>
+          ))}
+          {isLoading && (
+            <div className="message assistant">
+              <div className="message-avatar">
+                <CpuChipIcon className="avatar-icon" />
+              </div>
+              <div className="message-content">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
         </div>
-      )}
+
+        <div className="input-container">
+          <div className="input-wrapper">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask me about Hushh AI agents, their capabilities, or how to get started..."
+              className="message-input"
+              rows={1}
+              disabled={isLoading}
+            />
+            <button
+              onClick={handleSendMessage}
+              disabled={!input.trim() || isLoading}
+              className="send-button"
+            >
+              <PaperAirplaneIcon className="send-icon" />
+            </button>
+          </div>
+        </div>
+      </div>
     </StyledWrapper>
   );
 };
 
 const StyledWrapper = styled.div`
-  .full-chat {
-    width: 100vw;
-    min-height: 100vh;
-    background: #f0f4f9;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-  }
   width: 100vw;
   min-height: 100vh;
   background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  .layout {
-    display: flex;
-    width: 100vw;
-    min-height: 100vh;
-    max-width: 1600px;
-    margin: 0 auto;
-    align: center;
-  }
-  .sidebar {
-    width: 260px;
-    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
-    border-top-right-radius: 32px;
-    border-bottom-right-radius: 32px;
-    box-shadow: 0 8px 32px rgba(255,152,0,0.10);
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 32px 0 32px 0;
-    color: #fff;
-    min-height: 100vh;
-    position: relative;
-  }
-  .sidebar-header {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    padding: 0 32px 24px 32px;
-  }
-  .sidebar-logo {
-    font-size: 2.2rem;
-    background: #fff3e0;
-    color: #ff9800;
-    border-radius: 12px;
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(255,152,0,0.10);
-  }
-  .sidebar-title {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #fff;
-    margin: 0;
-  }
-  .sidebar-nav {
+  padding: 20px;
+
+  .chat-container {
     width: 100%;
-    padding: 0 32px;
-  }
-  .sidebar-nav ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
+    max-width: 1200px;
+    height: 90vh;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    overflow: hidden;
   }
-  .sidebar-nav li {
+
+  .chat-header {
+    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+    padding: 24px;
+    color: white;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .logo {
     display: flex;
     align-items: center;
     gap: 12px;
-    font-size: 1rem;
-    font-weight: 500;
-    color: #fff;
-    cursor: pointer;
-    transition: background 0.2s;
-    border-radius: 8px;
-    padding: 8px 12px;
-    &:hover {
-      background: rgba(255,255,255,0.08);
-    }
+    margin-bottom: 8px;
   }
-  .sidebar-icon {
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    color: #fff3e0;
+  }
+
+  .logo h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+  }
+
+  .subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+    margin: 0;
+  }
+
+  .messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: #f8fafc;
+  }
+
+  .message {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: 85%;
+  }
+
+  .message.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+
+  .message.assistant {
+    align-self: flex-start;
+  }
+
+  .message-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .message.user .message-avatar {
+    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+  }
+
+  .message.assistant .message-avatar {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  }
+
+  .avatar-icon {
     width: 20px;
     height: 20px;
-    color: #fff3e0;
+    color: white;
   }
-  .main-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 40px 0 0 0;
-    min-width: 0;
-    width: 100%;
-    gap: 2.5rem;
-  }
-  .chat-area {
-    width: 100%;
-    max-width: 900px;
-    margin: 0 auto;
-    box-shadow: none;
-    border-radius: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-  .agents-section {
-    width: 100%;
-    max-width: 1100px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1.2rem;
-  }
-  .search-box {
-    width: 100%;
-    max-width: 400px;
-    margin-bottom: 0.5rem;
-    display: flex;
-    justify-content: center;
-  }
-  .search-input {
-    width: 100%;
-    padding: 0.7rem 1rem;
-    border-radius: 12px;
-    border: 1px solid #ff9800;
-    font-size: 1rem;
-    background: #fff3e0;
-    color: #ff9800;
-    outline: none;
-    box-shadow: 0 2px 8px rgba(255,152,0,0.08);
-    transition: border 0.2s, box-shadow 0.2s;
-    &:focus {
-      border: 2px solid #ff9800;
-      box-shadow: 0 4px 16px rgba(255,152,0,0.12);
-    }
-  }
-  .agents-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-    gap: 2rem;
-    margin: 0 auto 0rem auto;
-    max-width: 1100px;
-    width: auto;
-    align-items: center;
-    justify-items: center;
-  }
-  .agent-bubble.card {
-    background: linear-gradient(135deg, #fff3e0 60%, #ffe0b2 100%);
-    border-radius: 24px;
-    box-shadow: 0 8px 32px rgba(255,152,0,0.10);
-    border: 1px solid #ff9800;
-    cursor: pointer;
-    transition: box-shadow 0.2s, border 0.2s, transform 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: left;
+
+  .message-content {
+    background: white;
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e2e8f0;
     position: relative;
-    min-width: 340px;
-    max-width: 340px;
-    box-sizing: border-box;
-    width: 100%;
-    gap: 0.4rem;
-    padding: 1.2rem 1.2rem 1rem 1.2rem;
-    overflow: hidden;
-    &:hover {
-      box-shadow: 0 12px 32px rgba(255,152,0,0.18);
-      border: 2px solid #ff9800;
-      transform: translateY(-2px) scale(1.03);
+  }
+
+  .message.user .message-content {
+    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+    color: white;
+  }
+
+  .message.assistant .message-content {
+    background: white;
+    color: #1e293b;
+  }
+
+  .message-time {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    margin-top: 8px;
+    text-align: right;
+  }
+
+  .message.user .message-time {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .message.assistant .message-time {
+    color: #64748b;
+  }
+
+  /* Markdown Styling */
+  .markdown-h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 12px 0;
+    color: inherit;
+  }
+
+  .markdown-h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 16px 0 8px 0;
+    color: inherit;
+  }
+
+  .markdown-h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 12px 0 6px 0;
+    color: inherit;
+  }
+
+  .markdown-p {
+    margin: 8px 0;
+    line-height: 1.6;
+    color: inherit;
+  }
+
+  .markdown-ul {
+    margin: 8px 0;
+    padding-left: 20px;
+  }
+
+  .markdown-li {
+    margin: 4px 0;
+    line-height: 1.5;
+  }
+
+  .markdown-strong {
+    font-weight: 600;
+    color: inherit;
+  }
+
+  .markdown-code {
+    background: rgba(0, 0, 0, 0.08);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+
+  .message.user .markdown-code {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .typing-indicator span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typing 1.4s infinite ease-in-out;
+  }
+
+  .typing-indicator span:nth-child(2) {
+    animation-delay: 0.2s;
+  }
+
+  .typing-indicator span:nth-child(3) {
+    animation-delay: 0.4s;
+  }
+
+  @keyframes typing {
+    0%, 60%, 100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    30% {
+      transform: translateY(-10px);
+      opacity: 1;
     }
   }
-  .agent-icon {
-    width: 48px !important;
-    height: 48px !important;
-    margin-bottom: 0.2rem;
+
+  .input-container {
+    padding: 24px;
+    background: white;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .input-wrapper {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 12px;
+    transition: border-color 0.2s;
+  }
+
+  .input-wrapper:focus-within {
+    border-color: #ff9800;
+  }
+
+  .message-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    resize: none;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #1e293b;
+    min-height: 24px;
+    max-height: 120px;
+    font-family: inherit;
+  }
+
+  .message-input::placeholder {
+    color: #94a3b8;
+  }
+
+  .send-button {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
+    color: white;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%);
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(255,152,0,0.10);
+    transition: transform 0.2s, box-shadow 0.2s;
+    flex-shrink: 0;
   }
-  .icon {
-    width: 28px !important;
-    height: 28px !important;
-    color: #fff3e0;
+
+  .send-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
   }
-  .agent-title {
-    font-size: 1.15rem !important;
-    margin-bottom: 0.1rem;
-    font-weight: 700;
-    color: #ff9800;
-    line-height: 1.1;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    width: 100%;
+
+  .send-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
-  .agent-description {
-    font-size: 0.95rem !important;
-    margin-bottom: 0.1rem;
-    color: #d84315;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    width: 100%;
+
+  .send-icon {
+    width: 20px;
+    height: 20px;
   }
-  .agent-features {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.2rem;
-    margin-bottom: 0.1rem;
-    justify-content: flex-start;
-    width: 100%;
-    font-size: 0.8rem !important;
-    margin: 0.5rem 0;
-  }
-  .feature-tag {
-    padding: 0.15rem 0.5rem !important;
-    border-radius: 8px;
-    font-size: 0.8rem !important;
-    background: #ffe0b2;
-    color: #ff9800;
-    border: none;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    max-width: 120px;
-    font-weight: 500;
-  }
-  .agent-arrow {
-    position: static;
-    margin-top: 0.3rem;
-    width: 28px;
-    height: 28px;
-    color: #ff9800;
-    align-self: flex-end;
-  }
-  .arrow-icon {
-    width: 100%;
-    height: 100%;
-    transition: transform 0.3s ease;
-  }
-  /* Responsive adjustments */
-  @media (max-width: 1200px) {
-    .sidebar {
-      width: 180px;
-      padding: 24px 0 24px 0;
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    padding: 10px;
+
+    .chat-container {
+      height: 95vh;
+      border-radius: 16px;
     }
-    .sidebar-header {
-      padding: 0 16px 16px 16px;
+
+    .chat-header {
+      padding: 16px;
+      border-radius: 16px 16px 0 0;
     }
-    .sidebar-nav {
-      padding: 0 16px;
+
+    .logo h1 {
+      font-size: 1.5rem;
     }
-    .main-content {
-      padding: 24px 0 0 0;
+
+    .messages-container {
+      padding: 16px;
     }
-    .agents-section {
-      max-width: 900px;
+
+    .message {
+      max-width: 95%;
+    }
+
+    .input-container {
+      padding: 16px;
     }
   }
-  @media (max-width: 900px) {
-  .layout {
-      flex-direction: column;
+
+  @media (max-width: 480px) {
+    padding: 5px;
+
+    .chat-container {
+      height: 98vh;
+      border-radius: 12px;
     }
-    .sidebar {
-      width: 100vw;
-      min-height: 80px;
-      border-radius: 0 0 32px 32px;
-      flex-direction: row;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 0 16px;
-      box-shadow: 0 4px 16px rgba(255,152,0,0.10);
+
+    .chat-header {
+      padding: 12px;
     }
-    .sidebar-header {
-      padding: 0 8px 0 8px;
+
+    .logo h1 {
+      font-size: 1.3rem;
     }
-    .sidebar-nav {
-      padding: 0 8px;
+
+    .messages-container {
+      padding: 12px;
     }
-    .main-content {
-      padding: 16px 0 0 0;
-    }
-    .agents-section {
-      max-width: 100vw;
-      padding: 0 8px;
-    }
-    .search-box {
-      max-width: 100vw;
-      padding: 0 8px;
-    }
-    .agents-grid {
-      grid-template-columns: 1fr;
-      max-width: 100vw;
-      padding: 0 8px;
-    }
-  .agent-bubble.card {
-      min-width: 90vw;
-      max-width: 90vw;
-    }
-  }
-  @media (max-width: 600px) {
-    .main-content {
-      padding: 8px 0 0 0;
-    }
-    .agents-section {
-      padding: 0 4px;
-    }
-    .search-box {
-      padding: 0 4px;
-    }
-    .agents-grid {
-      padding: 0 4px;
-    }
-  .agent-bubble.card {
-      min-width: 98vw;
-      max-width: 98vw;
-      padding: 1rem 0.5rem 0.8rem 0.5rem;
+
+    .input-container {
+      padding: 12px;
     }
   }
 `;
-
-// Add CSS for prompt transition globally
-// Remove global prompt transition style injection (not needed for this UI)
 
 export default AIAgentSelection;

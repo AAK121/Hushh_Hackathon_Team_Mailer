@@ -4139,6 +4139,144 @@ async def get_research_session_status(session_id: str):
         "created_at": datetime.utcnow().isoformat()
     }
 
+# ============================================================================
+# GENERAL CHAT ENDPOINT WITH AGENT INFORMATION
+# ============================================================================
+
+class ChatRequest(BaseModel):
+    """Request model for general chat endpoint."""
+    message: str = Field(..., description="User message")
+    user_id: Optional[str] = Field(None, description="User identifier")
+    conversation_id: Optional[str] = Field(None, description="Conversation identifier")
+
+class ChatResponse(BaseModel):
+    """Response model for general chat endpoint."""
+    response: str = Field(..., description="AI response")
+    conversation_id: str = Field(..., description="Conversation identifier")
+    timestamp: str = Field(..., description="Response timestamp")
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat_with_agent_assistant(request: ChatRequest):
+    """
+    General chat endpoint with comprehensive information about all Hushh AI agents.
+    This AI assistant can help users understand and navigate the Hushh AI ecosystem.
+    """
+    try:
+        import google.generativeai as genai
+        
+        # Configure Gemini
+        gemini_key = os.getenv('GOOGLE_API_KEY') or os.getenv('GEMINI_API_KEY')
+        if not gemini_key:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Google API key not configured"
+            )
+        
+        genai.configure(api_key=gemini_key)
+        model = genai.GenerativeModel('gemini-2.0-flash-exp')
+        
+        # System prompt with comprehensive agent information
+        system_prompt = """You are the Hushh AI Assistant, an expert guide to the Hushh AI Agent Ecosystem. You help users understand and navigate our privacy-first AI platform with cryptographically enforced consent.
+
+HUSHH AI AGENT ECOSYSTEM OVERVIEW:
+================================
+
+🔐 HushhMCP (Micro Consent Protocol):
+- Revolutionary cryptographic consent management using HMAC-SHA256
+- Every AI action requires explicit user permission through signed consent tokens
+- Scope-based permissions with expiration times
+- Non-repudiation through user private key signing
+- Real-time token validation for all agent actions
+
+🤖 AVAILABLE AI AGENTS:
+
+1. 📧 MAILERPANDA AGENT - AI-Powered Email Marketing
+   • Endpoint: /agents/mailerpanda/execute
+   • Features: AI content generation, human approval workflows, personalized campaigns
+   • Capabilities: Excel/CSV contact import, template management, A/B testing
+   • Analytics: Open rates, click-through rates, engagement metrics
+   • AI Model: Google Gemini 2.0 for content personalization
+
+2. 💰 CHANDUFINANCE AGENT - Personal Financial Advisor  
+   • Endpoint: /agents/chandufinance/execute
+   • Features: Real-time market data, investment recommendations, portfolio analysis
+   • Capabilities: Stock tracking, financial news analysis, risk assessment
+   • Educational: Personalized financial literacy content
+   • AI Model: Google Gemini 2.0 for market analysis and advice
+
+3. 🧠 RELATIONSHIP MEMORY AGENT - Persistent Context Management
+   • Endpoint: /agents/relationship_memory/chat/start
+   • Features: Cross-agent memory sharing, relationship graphs, context preservation
+   • Capabilities: Conversation history, preference tracking, behavioral patterns
+   • Privacy: AES-256-GCM encryption, user-controlled memory management
+   • AI Model: Google Gemini 2.0 for context understanding
+
+4. 📅 ADDTOCALENDAR AGENT - Intelligent Calendar Management
+   • Endpoint: /agents/addtocalendar/execute  
+   • Features: AI event extraction from emails, Google Calendar integration
+   • Capabilities: Smart scheduling, conflict resolution, recurring events
+   • Automation: Meeting link detection, reminder setting, attendee management
+   • AI Model: Google Gemini 2.0 for event understanding
+
+5. 🔍 RESEARCH AGENT - Multi-Source Information Gathering
+   • Endpoint: /agents/research/execute
+   • Features: Academic papers, news feeds, credibility scoring
+   • Capabilities: Multi-source synthesis, fact-checking, citation management
+   • Sources: ArXiv, news APIs, scholarly databases
+   • AI Model: Google Gemini 2.0 for content analysis and synthesis
+
+6. 📨 BASIC MAILER AGENT - Simple Email Service
+   • Endpoint: /agents/mailer/execute
+   • Features: Straightforward email sending, Excel/CSV support
+   • Capabilities: Template management, delivery tracking, bounce handling
+   • Reliability: Multi-provider redundancy, retry logic
+   • Analytics: Basic delivery reports and status tracking
+
+🏗️ TECHNICAL ARCHITECTURE:
+- FastAPI Backend with async processing
+- React 19 Frontend with TypeScript
+- Google Gemini 2.0 for all AI processing
+- AES-256-GCM encryption for data security
+- RESTful APIs for seamless agent communication
+
+🔒 PRIVACY COMMITMENTS:
+- Data minimization and user control
+- End-to-end encryption for all personal data  
+- Local processing options available
+- Complete transparency through open source
+- Right to deletion and data portability
+
+🚀 GETTING STARTED:
+Users can interact with agents through:
+1. Direct API calls with proper consent tokens
+2. Frontend interface with integrated workflows
+3. Programmatic access via SDK (coming soon)
+
+When users ask about specific agents, provide detailed information about their capabilities, endpoints, and use cases. Always emphasize our privacy-first approach and the HushhMCP consent system that makes our platform unique.
+
+Be helpful, informative, and guide users to the right agents for their needs. If they want to use a specific agent, explain the consent process and required parameters."""
+
+        # Generate response
+        full_prompt = f"{system_prompt}\n\nUser: {request.message}\n\nAssistant:"
+        
+        response = model.generate_content(full_prompt)
+        
+        # Generate conversation ID if not provided
+        conversation_id = request.conversation_id or f"chat-{datetime.now().timestamp()}"
+        
+        return ChatResponse(
+            response=response.text,
+            conversation_id=conversation_id,
+            timestamp=datetime.now().isoformat()
+        )
+        
+    except Exception as e:
+        print(f"Chat error: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chat processing failed: {str(e)}"
+        )
+
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")
     print("API Documentation: http://127.0.0.1:8001/docs")
