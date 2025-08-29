@@ -1,95 +1,3 @@
-# 🤫 Hushh AI Agent Ecosystem with MCP
-
-A comprehensive **AI-powered personal data assistant platform** featuring intelligent agents with cryptographic consent management, real-time chat interfaces, and enterprise-grade security.
-
-> 🔐 **Privacy-first AI agents** that work with your explicit consent, built on the HushhMCP (Micro Consent Protocol) foundation.
-
----
-
-## 🚀 What Makes This Special?
-
-This platform c## 🤝 Contributing
-
-We welcome contributions from the community! Here's how you can help:
-
-### 🔧 Development Contributions
-1. **Fork the repository**
-2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
-3. **Add comprehensive tests** for new functionality
-4. **Ensure all tests pass** (`pytest` for backend, `npm test` for frontend)
-5. **Submit a pull request** with detailed description
-
-### 🐛 Bug Reports
-- Use GitHub Issues with the `bug` label
-- Include reproduction steps and environment details
-- Attach relevant logs and screenshots
-
-### 💡 Feature Requests
-- Use GitHub Issues with the `enhancement` label
-- Describe the use case and expected behavior
-- Consider privacy and security implications
-
-### 📖 Documentation
-- Help improve README, API docs, and tutorials
-- Translate documentation to other languages
-- Create video tutorials and examples
-
-### 🧪 Testing
-- Add test cases for edge conditions
-- Improve test coverage
-- Performance and security testing
-
----
-
-## 🏢 Enterprise & Production Use
-
-### 🚀 Deployment Options
-- **Self-hosted** - Full control over your data and infrastructure
-- **Cloud-managed** - Scalable deployment with managed services
-- **Hybrid** - Sensitive data on-premises, compute in cloud
-- **Edge computing** - Local processing for maximum privacy
-
-### 🔒 Enterprise Security
-- **SOC 2 Type II** compliance ready
-- **GDPR, CCPA, HIPAA** compliance frameworks
-- **Zero-trust architecture** with encrypted everything
-- **Audit logging** for compliance and monitoring
-
-### 📈 Scalability
-- **Horizontal scaling** with load balancers
-- **Microservices architecture** for independent scaling
-- **Caching layers** for high-performance responses
-- **Database clustering** for high availability
-
----
-
-## ⚖️ License & Legal
-
-### 📜 MIT License
-```
-MIT License
-
-Copyright (c) 2025 Hushh AI Agent Ecosystem Contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```
-
 ### 🛡️ Privacy Commitment
 - **Data minimization** - We only collect what's necessary
 - **User control** - You own and control your data
@@ -324,52 +232,300 @@ Agents learn and remember your preferences:
 
 ---
 
-## 🔧 API Documentation
+## 🔧 Comprehensive API Documentation
 
-### Core Endpoints
+Our API provides a unified REST interface for interacting with privacy-first AI agents, built on **FastAPI + HushMCP** framework.
 
-#### Agent Execution
+**Framework:** FastAPI + HushMCP  
+**Supported Agents:** AddToCalendar, MailerPanda, ChanduFinance, Relationship Memory
+
+### ✨ Key API Features
+
+- **🤖 Multi-Agent Support**: AddToCalendar, MailerPanda, ChanduFinance, and Relationship Memory agents
+- **🔒 Privacy-First Design**: Complete consent token validation
+- **👥 Human-in-the-Loop**: Interactive approval workflows
+- **📊 Real-time Status**: Session management and progress tracking
+- **🛡️ Secure Operations**: HushMCP framework integration
+- **📚 Interactive Docs**: Built-in Swagger UI documentation
+- **🔄 CORS Support**: Frontend integration ready
+
+### 🏗️ API Architecture
+
+```
+Frontend Application
+        ↓
+   API Gateway (FastAPI)
+        ↓
+┌─────────────────────────┐
+│   Consent Management    │
+│   - Token validation   │
+│   - Scope enforcement  │
+└─────────────────────────┘
+        ↓
+┌─────────────────────────┐
+│    Agent Router         │
+│   - AddToCalendar       │
+│   - MailerPanda         │
+│   - ChanduFinance       │
+│   - Relationship Memory │
+└─────────────────────────┘
+        ↓
+┌─────────────────────────┐
+│   Session Manager       │
+│   - Human-in-loop       │
+│   - Status tracking     │
+└─────────────────────────┘
+```
+
+### 🚀 API Quick Start
+
+```bash
+# Start the API server
+python api.py
+
+# API will be available at:
+# Main API: http://127.0.0.1:8001
+# Interactive Docs: http://127.0.0.1:8001/docs
+# Alternative Docs: http://127.0.0.1:8001/redoc
+```
+
+### 🔑 Authentication & Consent
+
+Before using any agent, create consent tokens:
+
 ```http
-POST /agents/{agent_name}/execute
+POST /consent/token
 Content-Type: application/json
 
 {
-  "user_id": "user_123",
-  "tokens": {
-    "vault.read.email": "HCT:signed_token",
-    "vault.write.contacts": "HCT:signed_token"
-  },
-  "user_input": "Create email campaign for product launch",
-  "api_keys": {
-    "google_api_key": "your_key"
-  }
+    "user_id": "user_123",
+    "agent_id": "agent_addtocalendar",
+    "scope": "vault.read.email"
 }
 ```
 
-#### Chat Interface
+**Response:**
+```json
+{
+    "token": "HCT:dGVzdF91c2VyXzEyM...",
+    "expires_at": 1755345158982,
+    "scope": "vault.read.email"
+}
+```
+
+### 📅 AddToCalendar Agent API
+
+The AddToCalendar agent processes emails to extract event information and creates Google Calendar events automatically.
+
 ```http
-POST /chat/{agent_name}
+POST /agents/addtocalendar/execute
 Content-Type: application/json
 
 {
-  "user_id": "user_123",
-  "message": "Help me analyze my portfolio",
-  "consent_tokens": {...},
-  "session_id": "chat_session_123"
+    "user_id": "user_123",
+    "email_token": "HCT:email_consent_token...",
+    "calendar_token": "HCT:calendar_consent_token...",
+    "google_access_token": "ya29.google_oauth_token...",
+    "action": "comprehensive_analysis",
+    "confidence_threshold": 0.7,
+    "max_emails": 50
 }
 ```
 
-#### Consent Management
+**Response:**
+```json
+{
+    "status": "success",
+    "user_id": "user_123",
+    "action_performed": "comprehensive_analysis",
+    "emails_processed": 25,
+    "events_extracted": 8,
+    "events_created": 6,
+    "calendar_links": [
+        "https://calendar.google.com/event?eid=abc123"
+    ],
+    "processing_time": 12.5
+}
+```
+
+### 📧 MailerPanda Agent API
+
+The MailerPanda agent creates AI-generated email campaigns with human-in-the-loop approval workflows.
+
 ```http
-POST /consent/tokens/issue
+POST /agents/mailerpanda/execute
 Content-Type: application/json
 
 {
-  "user_id": "user_123",
-  "agent_id": "mailerpanda",
-  "scope": "vault.read.email"
+    "user_id": "user_123",
+    "user_input": "Create a marketing email for our new product launch",
+    "mode": "interactive",
+    "consent_tokens": {
+        "vault.read.email": "HCT:read_token...",
+        "vault.write.email": "HCT:write_token...",
+        "custom.temporary": "HCT:temp_token..."
+    },
+    "require_approval": true,
+    "use_ai_generation": true
 }
 ```
+
+**Approval Workflow:**
+```http
+POST /agents/mailerpanda/approve
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "campaign_id": "user_123_1754740358",
+    "action": "approve",
+    "feedback": "Looks great!"
+}
+```
+
+### 💰 ChanduFinance Agent API
+
+AI-powered personal financial advisor providing personalized investment advice and financial planning.
+
+```http
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:finance_consent_token...",
+    "command": "setup_profile",
+    "monthly_income": 6000.0,
+    "monthly_expenses": 4000.0,
+    "current_savings": 15000.0,
+    "risk_tolerance": "moderate",
+    "investment_experience": "beginner"
+}
+```
+
+**Available Commands:**
+- `setup_profile` - Create comprehensive financial profile
+- `personal_stock_analysis` - AI-powered stock analysis
+- `add_goal` - Create financial goals with timelines
+- `explain_like_im_new` - Beginner-friendly explanations
+- `investment_education` - Structured learning modules
+
+**Response:**
+```json
+{
+    "status": "success",
+    "command": "personal_stock_analysis",
+    "ticker": "AAPL",
+    "current_price": 175.50,
+    "personalized_analysis": "Based on your moderate risk tolerance...",
+    "position_sizing": {
+        "recommended_amount": 200.0,
+        "percentage_of_budget": 13.3
+    },
+    "next_steps": [
+        "Start with $100-200 position",
+        "Learn about Apple's business model"
+    ]
+}
+```
+
+### 🧠 Relationship Memory Agent API
+
+Maintains persistent context and memory for user interactions and relationships.
+
+```http
+POST /agents/relationship_memory/execute
+Content-Type: application/json
+
+{
+    "user_id": "user_123",
+    "token": "HCT:valid_token_here",
+    "user_input": "Remember that John's birthday is next month and he likes coffee"
+}
+```
+
+**Response:**
+```json
+{
+    "status": "success",
+    "response": "I've noted that John's birthday is next month and that he likes coffee...",
+    "memory_stored": true,
+    "relationships_updated": ["John"],
+    "processing_time": 0.4
+}
+```
+
+### 📊 Standard Response Format
+
+All agents follow consistent response structure:
+
+```json
+{
+    "status": "success|error|awaiting_approval|completed",
+    "user_id": "user_identifier",
+    "processing_time": 12.5,
+    "errors": ["error1", "error2"]
+    // Agent-specific fields
+}
+```
+
+### ⚠️ Error Handling
+
+**Common Error Scenarios:**
+
+```json
+// Invalid Consent Token
+{
+    "status": "error",
+    "errors": ["Invalid consent token for scope vault.read.email"]
+}
+
+// Expired Access Token
+{
+    "status": "error", 
+    "errors": ["Google access token expired or invalid"]
+}
+
+// Missing Parameters
+{
+    "detail": "Field required: google_access_token"
+}
+```
+
+### 📈 Performance & Limits
+
+| Agent | Operation | Typical Time |
+|-------|-----------|--------------|
+| **AddToCalendar** | Email processing | 2-5 seconds |
+| **MailerPanda** | AI content generation | 3-8 seconds |
+| **ChanduFinance** | Profile analysis | 1-3 seconds |
+| **Relationship Memory** | Context storage | 0.4-1 seconds |
+
+### 🔧 Environment Configuration
+
+```bash
+# Required Environment Variables
+GOOGLE_API_KEY=your_gemini_api_key
+MAILJET_API_KEY=your_mailjet_api_key  
+MAILJET_API_SECRET=your_mailjet_secret
+ENCRYPTION_KEY=your_32_byte_hex_key
+```
+
+### 📚 Interactive Documentation
+
+- **Swagger UI**: http://127.0.0.1:8001/docs
+- **ReDoc**: http://127.0.0.1:8001/redoc
+
+### 🔗 Key API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Health check |
+| `/agents` | GET | List all agents |
+| `/consent/token` | POST | Create consent token |
+| `/agents/{agent}/execute` | POST | Execute agent |
+| `/agents/mailerpanda/approve` | POST | Approve campaign |
+| `/agents/{agent}/status` | GET | Agent status |
 
 ---
 
@@ -589,4 +745,97 @@ MIT — open to the world.
 
 Let’s build a better agentic internet together.
 
+```
+
+
+# 🤫 Hushh AI Agent Ecosystem with MCP
+
+A comprehensive **AI-powered personal data assistant platform** featuring intelligent agents with cryptographic consent management, real-time chat interfaces, and enterprise-grade security.
+
+> 🔐 **Privacy-first AI agents** that work with your explicit consent, built on the HushhMCP (Micro Consent Protocol) foundation.
+
+---
+
+## 🚀 What Makes This Special?
+
+This platform c## 🤝 Contributing
+
+We welcome contributions from the community! Here's how you can help:
+
+### 🔧 Development Contributions
+1. **Fork the repository**
+2. **Create a feature branch** (`git checkout -b feature/amazing-feature`)
+3. **Add comprehensive tests** for new functionality
+4. **Ensure all tests pass** (`pytest` for backend, `npm test` for frontend)
+5. **Submit a pull request** with detailed description
+
+### 🐛 Bug Reports
+- Use GitHub Issues with the `bug` label
+- Include reproduction steps and environment details
+- Attach relevant logs and screenshots
+
+### 💡 Feature Requests
+- Use GitHub Issues with the `enhancement` label
+- Describe the use case and expected behavior
+- Consider privacy and security implications
+
+### 📖 Documentation
+- Help improve README, API docs, and tutorials
+- Translate documentation to other languages
+- Create video tutorials and examples
+
+### 🧪 Testing
+- Add test cases for edge conditions
+- Improve test coverage
+- Performance and security testing
+
+---
+
+## 🏢 Enterprise & Production Use
+
+### 🚀 Deployment Options
+- **Self-hosted** - Full control over your data and infrastructure
+- **Cloud-managed** - Scalable deployment with managed services
+- **Hybrid** - Sensitive data on-premises, compute in cloud
+- **Edge computing** - Local processing for maximum privacy
+
+### 🔒 Enterprise Security
+- **SOC 2 Type II** compliance ready
+- **GDPR, CCPA, HIPAA** compliance frameworks
+- **Zero-trust architecture** with encrypted everything
+- **Audit logging** for compliance and monitoring
+
+### 📈 Scalability
+- **Horizontal scaling** with load balancers
+- **Microservices architecture** for independent scaling
+- **Caching layers** for high-performance responses
+- **Database clustering** for high availability
+
+---
+
+## ⚖️ License & Legal
+
+### 📜 MIT License
+```
+MIT License
+
+Copyright (c) 2025 Hushh AI Agent Ecosystem Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```

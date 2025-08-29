@@ -1,12 +1,8 @@
-# 🚀 HushMCP Agent API Documentation
 
-**Version:** 2.0.0  
 **Framework:** FastAPI + HushMCP  
 **Supported Agents:** AddToCalendar, MailerPanda, ChanduFinance, Relationship Memory  
 
-> 🛡️ Privacy-first AI agent orchestration platform with comprehensive consent management and human-in-the-loop workflows.
 
----
 
 ## 📋 Table of Contents
 
