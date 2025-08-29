@@ -1000,10 +1000,14 @@ class ResearchAgentApiService {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('user_id', userId);
-      formData.append('consent_tokens', JSON.stringify(consentTokens));
 
-      const response = await fetch(`${this.baseUrl}/agents/research/upload`, {
+      // Add user_id and consent_tokens as query parameters
+      const params = new URLSearchParams({
+        user_id: userId,
+        consent_tokens: JSON.stringify(consentTokens)
+      });
+
+      const response = await fetch(`${this.baseUrl}/agents/research/upload?${params.toString()}`, {
         method: 'POST',
         body: formData
       });
