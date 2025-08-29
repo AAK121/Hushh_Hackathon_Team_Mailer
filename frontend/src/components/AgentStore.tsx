@@ -490,17 +490,23 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
     container: {
       fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
       minHeight: '100vh',
+      width: '100%',
+      maxWidth: '100vw',
       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      padding: '2rem',
-      paddingTop: '8rem',
+      padding: 'clamp(1rem, 4vw, 2rem)',
+      paddingTop: 'clamp(4rem, 8vh, 8rem)',
+      boxSizing: 'border-box' as const,
+      overflow: 'auto',
     },
     header: {
       textAlign: 'center' as const,
       marginBottom: '3rem',
       color: 'white',
+      maxWidth: '1200px',
+      margin: '0 auto 3rem auto',
     },
     title: {
-      fontSize: '3rem',
+      fontSize: 'clamp(2rem, 6vw, 3rem)',
       fontWeight: '700',
       marginBottom: '1rem',
       background: 'linear-gradient(45deg, #fff, #f0f8ff)',
@@ -509,10 +515,11 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       backgroundClip: 'text',
     },
     subtitle: {
-      fontSize: '1.2rem',
+      fontSize: 'clamp(1rem, 3vw, 1.2rem)',
       opacity: 0.9,
       maxWidth: '600px',
       margin: '0 auto',
+      lineHeight: '1.5',
     },
     controls: {
       display: 'flex',
@@ -523,13 +530,17 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       gap: '1rem',
       background: 'rgba(255, 255, 255, 0.1)',
       backdropFilter: 'blur(10px)',
-      padding: '1.5rem',
+      padding: 'clamp(1rem, 3vw, 1.5rem)',
       borderRadius: '1rem',
       border: '1px solid rgba(255, 255, 255, 0.2)',
+      maxWidth: '100%',
+      boxSizing: 'border-box' as const,
     },
     searchContainer: {
       position: 'relative' as const,
-      minWidth: '300px',
+      minWidth: 'min(300px, 100%)',
+      flex: '1 1 300px',
+      maxWidth: '400px',
     },
     searchInput: {
       width: '100%',
@@ -553,6 +564,8 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       display: 'flex',
       gap: '0.5rem',
       flexWrap: 'wrap' as const,
+      flex: '1 1 auto',
+      justifyContent: 'center',
     },
     categoryButton: {
       padding: '0.5rem 1rem',
@@ -579,18 +592,23 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))',
-      gap: '2rem',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(min(350px, 100%), 1fr))',
+      gap: 'clamp(1rem, 3vw, 2rem)',
       marginBottom: '3rem',
+      maxWidth: '100%',
+      width: '100%',
     },
     agentCard: {
       background: 'rgba(255, 255, 255, 0.95)',
       borderRadius: '1.5rem',
-      padding: '2rem',
+      padding: 'clamp(1.5rem, 4vw, 2rem)',
       boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
       transition: 'all 0.3s ease',
       cursor: 'pointer',
       border: '1px solid rgba(255, 255, 255, 0.3)',
+      width: '100%',
+      boxSizing: 'border-box' as const,
+      maxWidth: '100%',
     },
     agentCardHover: {
       transform: 'translateY(-10px)',
@@ -602,10 +620,11 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       display: 'block',
     },
     agentName: {
-      fontSize: '1.5rem',
+      fontSize: 'clamp(1.2rem, 3vw, 1.5rem)',
       fontWeight: '700',
       marginBottom: '0.5rem',
       color: '#333',
+      wordWrap: 'break-word' as const,
     },
     agentDescription: {
       fontSize: '0.9rem',
@@ -618,6 +637,8 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       justifyContent: 'space-between',
       alignItems: 'center',
       marginBottom: '1rem',
+      flexWrap: 'wrap' as const,
+      gap: '0.5rem',
     },
     rating: {
       display: 'flex',
@@ -663,8 +684,8 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
     },
     backButton: {
       position: 'absolute' as const,
-      top: '2rem',
-      left: '2rem',
+      top: 'clamp(1rem, 3vh, 2rem)',
+      left: 'clamp(1rem, 3vw, 2rem)',
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
@@ -679,6 +700,7 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       fontWeight: '500',
       cursor: 'pointer',
       transition: 'all 0.3s ease',
+      zIndex: 10,
     },
     loadingContainer: {
       display: 'flex',
@@ -703,6 +725,8 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       borderRadius: '0.75rem',
       background: 'rgba(102, 126, 234, 0.1)',
       border: '1px solid rgba(102, 126, 234, 0.2)',
+      width: '100%',
+      boxSizing: 'border-box' as const,
     },
     toggleLabel: {
       fontSize: '0.9rem',
@@ -771,12 +795,12 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       justifyContent: 'center',
       alignItems: 'center',
       zIndex: 1000,
-      padding: '2rem',
+      padding: 'clamp(1rem, 4vw, 2rem)',
     },
     modalContent: {
       background: 'white',
       borderRadius: '1.5rem',
-      maxWidth: '600px',
+      maxWidth: 'min(600px, 90vw)',
       width: '100%',
       maxHeight: '90vh',
       overflow: 'auto',
@@ -786,14 +810,17 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      padding: '2rem 2rem 1rem',
+      padding: 'clamp(1.5rem, 4vw, 2rem) clamp(1.5rem, 4vw, 2rem) clamp(0.5rem, 2vw, 1rem)',
       borderBottom: '1px solid #e5e5e5',
+      flexWrap: 'wrap' as const,
+      gap: '1rem',
     },
     modalTitle: {
-      fontSize: '1.8rem',
+      fontSize: 'clamp(1.4rem, 4vw, 1.8rem)',
       fontWeight: '700',
       color: '#333',
       margin: 0,
+      wordWrap: 'break-word' as const,
     },
     modalDeveloper: {
       color: '#666',
@@ -811,7 +838,7 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
       transition: 'all 0.2s ease',
     },
     modalBody: {
-      padding: '2rem',
+      padding: 'clamp(1.5rem, 4vw, 2rem)',
     },
     modalMeta: {
       display: 'flex',
@@ -898,20 +925,21 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
         }
       `}</style>
       
-      {showAdmin ? (
-        <AgentAdmin onBack={() => setShowAdmin(false)} />
-      ) : (
-        <>
-          <button onClick={onBack} style={styles.backButton}>
-            ← Back to Dashboard
-          </button>
+      <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+        {showAdmin ? (
+          <AgentAdmin onBack={() => setShowAdmin(false)} />
+        ) : (
+          <>
+            <button onClick={onBack} style={styles.backButton}>
+              ← Back to Dashboard
+            </button>
 
-          <div style={styles.header}>
-            <h1 style={styles.title}>🤖 Agent Store</h1>
-            <p style={styles.subtitle}>
-              Discover powerful AI agents to supercharge your workflow. Browse, purchase, and deploy intelligent automation tools.
-            </p>
-          </div>
+            <div style={styles.header}>
+              <h1 style={styles.title}>🤖 Agent Store</h1>
+              <p style={styles.subtitle}>
+                Discover powerful AI agents to supercharge your workflow. Browse, purchase, and deploy intelligent automation tools.
+              </p>
+            </div>
 
           <div style={styles.controls}>
             <div style={styles.searchContainer}>
@@ -1167,8 +1195,9 @@ const AgentStore: React.FC<AgentStoreProps> = ({ onBack, onSelectAgent }) => {
           </div>
         </div>
       )}
-    </>
-    )}
+          </>
+        )}
+      </div>
     </div>
   );
 };
