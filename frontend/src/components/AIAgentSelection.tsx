@@ -56,6 +56,7 @@ Ask me anything about our agents, how to use them, or get started with the platf
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [userId, setUserId] = useState('default_user');
+  const [isMaximized, setIsMaximized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -68,6 +69,11 @@ Ask me anything about our agents, how to use them, or get started with the platf
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
+
+    // Maximize chat interface when sending first user message
+    if (messages.length === 1) {
+      setIsMaximized(true);
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -135,7 +141,7 @@ Ask me anything about our agents, how to use them, or get started with the platf
 
   return (
     <StyledWrapper>
-      <div className="chat-container">
+      <div className={`chat-container ${isMaximized ? 'maximized' : ''}`}>
         <div className="chat-header">
           <div className="header-content">
             <div className="logo">
@@ -225,9 +231,6 @@ const StyledWrapper = styled.div`
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-  transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
-  opacity: 1;
-  transform: translateY(0);
 
   /* Dynamic animated background with orange theme */
   background: linear-gradient(-45deg, #ff6f00, #ff8f00, #ff9800, #ffb74d);
@@ -312,7 +315,7 @@ const StyledWrapper = styled.div`
   .chat-container {
     width: 100%;
     max-width: 1200px;
-    height: 90vh;
+    height: 85vh;
     background: linear-gradient(135deg, 
       rgba(255, 255, 255, 0.1) 0%, 
       rgba(255, 255, 255, 0.05) 100%);
@@ -326,8 +329,18 @@ const StyledWrapper = styled.div`
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Animated border gradient */
+    &.maximized {
+      height: 95vh;
+      max-width: 1400px;
+      transform: scale(1.02);
+      box-shadow: 
+        0 20px 60px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+    }
+
+    /* Remove excessive border animation */
     &::before {
       content: '';
       position: absolute;
@@ -339,33 +352,34 @@ const StyledWrapper = styled.div`
       padding: 2px;
       background: linear-gradient(45deg, 
         transparent, 
-        rgba(255, 152, 0, 0.3), 
-        rgba(255, 193, 7, 0.3), 
+        rgba(255, 152, 0, 0.2), 
+        rgba(255, 193, 7, 0.2), 
         transparent,
-        rgba(255, 152, 0, 0.3));
+        rgba(255, 152, 0, 0.2));
       background-size: 300% 300%;
-      animation: borderGlow 6s ease infinite;
+      animation: borderGlow 12s ease infinite;
       mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       mask-composite: xor;
       -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
       -webkit-mask-composite: xor;
       pointer-events: none;
+      opacity: 0.5;
     }
 
-    /* Inner glow effect */
+    /* Subtle inner glow */
     &::after {
       content: '';
       position: absolute;
       top: 50%;
       left: 50%;
-      width: 150%;
-      height: 150%;
+      width: 120%;
+      height: 120%;
       background: radial-gradient(circle, 
-        rgba(255, 152, 0, 0.1) 0%, 
-        rgba(255, 193, 7, 0.1) 30%, 
+        rgba(255, 152, 0, 0.05) 0%, 
+        rgba(255, 193, 7, 0.05) 30%, 
         transparent 70%);
       transform: translate(-50%, -50%);
-      animation: innerGlow 10s ease-in-out infinite;
+      animation: innerGlow 15s ease-in-out infinite;
       pointer-events: none;
     }
 
@@ -384,8 +398,8 @@ const StyledWrapper = styled.div`
         transform: translate(-50%, -50%) scale(1);
       }
       50% {
-        opacity: 0.6;
-        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.5;
+        transform: translate(-50%, -50%) scale(1.05);
       }
     }
   }
@@ -519,18 +533,17 @@ const StyledWrapper = styled.div`
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.2);
     position: relative;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
 
-    /* Neumorphic shadow effect */
+    /* Subtle neumorphic shadow effect */
     box-shadow: 
       0 4px 16px rgba(0, 0, 0, 0.1),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
 
     &:hover {
-      transform: translateY(-2px);
       box-shadow: 
-        0 8px 25px rgba(0, 0, 0, 0.15),
-        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+        0 6px 20px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
     }
   }
 
