@@ -286,6 +286,9 @@ class MassEmailResponse(BaseModel):
 # Store active agent sessions for human-in-the-loop workflows
 active_sessions = {}
 
+# Store chat conversation history for session persistence
+chat_conversations = {}
+
 # ============================================================================
 # UTILITY FUNCTIONS
 # ============================================================================
@@ -4146,7 +4149,11 @@ async def get_research_session_status(session_id: str):
 class ChatRequest(BaseModel):
     """Request model for general chat endpoint."""
     message: str = Field(..., description="User message")
+<<<<<<< HEAD
     user_id: Optional[str] = Field(None, description="User identifier")
+=======
+    user_id: Optional[str] = Field("default_user", description="User identifier")
+>>>>>>> origin/main
     conversation_id: Optional[str] = Field(None, description="Conversation identifier")
 
 class ChatResponse(BaseModel):
@@ -4154,12 +4161,34 @@ class ChatResponse(BaseModel):
     response: str = Field(..., description="AI response")
     conversation_id: str = Field(..., description="Conversation identifier")
     timestamp: str = Field(..., description="Response timestamp")
+<<<<<<< HEAD
+=======
+    session_id: str = Field(..., description="Session identifier for persistence")
+
+class ChatMessage(BaseModel):
+    """Model for storing chat messages."""
+    role: str = Field(..., description="Message role (user/assistant)")
+    content: str = Field(..., description="Message content")
+    timestamp: str = Field(..., description="Message timestamp")
+
+class ConversationHistory(BaseModel):
+    """Model for conversation history storage."""
+    conversation_id: str = Field(..., description="Conversation identifier")
+    user_id: str = Field(..., description="User identifier")
+    messages: List[ChatMessage] = Field(default_factory=list, description="Message history")
+    created_at: str = Field(..., description="Conversation creation timestamp")
+    updated_at: str = Field(..., description="Last update timestamp")
+>>>>>>> origin/main
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat_with_agent_assistant(request: ChatRequest):
     """
     General chat endpoint with comprehensive information about all Hushh AI agents.
     This AI assistant can help users understand and navigate the Hushh AI ecosystem.
+<<<<<<< HEAD
+=======
+    Includes session persistence for conversation history.
+>>>>>>> origin/main
     """
     try:
         import google.generativeai as genai
@@ -4175,6 +4204,42 @@ async def chat_with_agent_assistant(request: ChatRequest):
         genai.configure(api_key=gemini_key)
         model = genai.GenerativeModel('gemini-2.0-flash-exp')
         
+<<<<<<< HEAD
+=======
+        # Generate conversation and session IDs
+        current_time = datetime.now()
+        conversation_id = request.conversation_id or f"chat-{current_time.timestamp()}"
+        session_id = f"{request.user_id}-{conversation_id}"
+        
+        # Get or create conversation history
+        if conversation_id not in chat_conversations:
+            chat_conversations[conversation_id] = ConversationHistory(
+                conversation_id=conversation_id,
+                user_id=request.user_id,
+                messages=[],
+                created_at=current_time.isoformat(),
+                updated_at=current_time.isoformat()
+            )
+        
+        # Add user message to history
+        user_message = ChatMessage(
+            role="user",
+            content=request.message,
+            timestamp=current_time.isoformat()
+        )
+        chat_conversations[conversation_id].messages.append(user_message)
+        
+        # Build conversation context from history
+        conversation_context = ""
+        if len(chat_conversations[conversation_id].messages) > 1:
+            conversation_context = "\n\nPREVIOUS CONVERSATION:\n"
+            # Include last 10 messages for context (excluding the current user message)
+            recent_messages = chat_conversations[conversation_id].messages[-11:-1]  # -1 to exclude current message
+            for msg in recent_messages:
+                conversation_context += f"{msg.role.upper()}: {msg.content}\n"
+            conversation_context += "\n"
+        
+>>>>>>> origin/main
         # System prompt with comprehensive agent information
         system_prompt = """You are the Hushh AI Assistant, an expert guide to the Hushh AI Agent Ecosystem. You help users understand and navigate our privacy-first AI platform with cryptographically enforced consent.
 
@@ -4254,6 +4319,7 @@ Users can interact with agents through:
 
 When users ask about specific agents, provide detailed information about their capabilities, endpoints, and use cases. Always emphasize our privacy-first approach and the HushhMCP consent system that makes our platform unique.
 
+<<<<<<< HEAD
 Be helpful, informative, and guide users to the right agents for their needs. If they want to use a specific agent, explain the consent process and required parameters."""
 
         # Generate response
@@ -4263,11 +4329,36 @@ Be helpful, informative, and guide users to the right agents for their needs. If
         
         # Generate conversation ID if not provided
         conversation_id = request.conversation_id or f"chat-{datetime.now().timestamp()}"
+=======
+Be helpful, informative, and guide users to the right agents for their needs. If they want to use a specific agent, explain the consent process and required parameters.
+
+CONVERSATION CONTEXT:
+Remember previous conversation context and maintain continuity. Reference earlier parts of the conversation when relevant."""
+
+        # Generate response with conversation context
+        full_prompt = f"{system_prompt}{conversation_context}\n\nUser: {request.message}\n\nAssistant:"
+        
+        response = model.generate_content(full_prompt)
+        
+        # Add assistant response to history
+        assistant_message = ChatMessage(
+            role="assistant",
+            content=response.text,
+            timestamp=current_time.isoformat()
+        )
+        chat_conversations[conversation_id].messages.append(assistant_message)
+        chat_conversations[conversation_id].updated_at = current_time.isoformat()
+>>>>>>> origin/main
         
         return ChatResponse(
             response=response.text,
             conversation_id=conversation_id,
+<<<<<<< HEAD
             timestamp=datetime.now().isoformat()
+=======
+            timestamp=current_time.isoformat(),
+            session_id=session_id
+>>>>>>> origin/main
         )
         
     except Exception as e:
@@ -4277,6 +4368,87 @@ Be helpful, informative, and guide users to the right agents for their needs. If
             detail=f"Chat processing failed: {str(e)}"
         )
 
+<<<<<<< HEAD
+=======
+@app.get("/chat/conversations/{user_id}")
+async def get_user_conversations(user_id: str):
+    """Get all conversations for a specific user."""
+    try:
+        user_conversations = []
+        for conv_id, conversation in chat_conversations.items():
+            if conversation.user_id == user_id:
+                user_conversations.append({
+                    "conversation_id": conversation.conversation_id,
+                    "created_at": conversation.created_at,
+                    "updated_at": conversation.updated_at,
+                    "message_count": len(conversation.messages)
+                })
+        
+        return {
+            "user_id": user_id,
+            "conversations": user_conversations,
+            "total_conversations": len(user_conversations)
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversations: {str(e)}"
+        )
+
+@app.get("/chat/conversations/{conversation_id}/history")
+async def get_conversation_history(conversation_id: str):
+    """Get the full message history for a conversation."""
+    try:
+        if conversation_id not in chat_conversations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+        
+        conversation = chat_conversations[conversation_id]
+        return {
+            "conversation_id": conversation_id,
+            "user_id": conversation.user_id,
+            "messages": [
+                {
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.timestamp
+                }
+                for msg in conversation.messages
+            ],
+            "created_at": conversation.created_at,
+            "updated_at": conversation.updated_at
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve conversation history: {str(e)}"
+        )
+
+@app.delete("/chat/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Delete a specific conversation and its history."""
+    try:
+        if conversation_id not in chat_conversations:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found"
+            )
+        
+        del chat_conversations[conversation_id]
+        return {
+            "message": f"Conversation {conversation_id} deleted successfully",
+            "conversation_id": conversation_id,
+            "deleted_at": datetime.now().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete conversation: {str(e)}"
+        )
+
+>>>>>>> origin/main
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")
     print("API Documentation: http://127.0.0.1:8001/docs")
