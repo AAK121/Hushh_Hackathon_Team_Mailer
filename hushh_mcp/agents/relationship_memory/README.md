@@ -1,16 +1,120 @@
-# 🎯 Proactive Relationship Manager Agent
+# Relationship Memory Agent - Persistent Context and Interaction Management
+
+## Agent Architecture Flow
+
+```mermaid
+flowchart TD
+    A[User Interaction] --> B[Consent Token Validation]
+    B --> C{Valid Tokens?}
+    C -->|No| D[Error: Invalid Token]
+    C -->|Yes| E[Input Processing]
+    
+    E --> F[Context Extraction]
+    F --> G[NLP Analysis]
+    G --> H[Google Gemini 2.0]
+    H --> I[Relationship Data Parsing]
+    
+    I --> J[Memory Classification]
+    J --> K[Contact Information]
+    J --> L[Relationship Details]
+    J --> M[Preferences & Notes]
+    
+    K --> N[Vault Storage]
+    L --> N
+    M --> N
+    N --> O[AES-256-GCM Encryption]
+    
+    P[Cross-Agent Sharing] --> Q{User Consent?}
+    Q -->|Yes| R[MailerPanda Agent]
+    Q -->|Yes| S[ChanduFinance Agent]
+    Q -->|Yes| T[AddToCalendar Agent]
+    Q -->|No| U[Isolated Storage]
+    
+    V[Memory Retrieval] --> W[Search Interface]
+    W --> X[Temporal Relevance]
+    W --> Y[Relationship Context]
+    W --> Z[Topic-based Search]
+    
+    AA[Proactive Insights] --> BB[Relationship Analysis]
+    BB --> CC[Interaction Patterns]
+    CC --> DD[Suggestions]
+    
+    N --> P
+    N --> V
+    N --> AA
+    
+    style A fill:#e1f5fe
+    style H fill:#fff3e0
+    style N fill:#ffebee
+    style P fill:#f3e5f5
+    style V fill:#e8f5e8
+    style AA fill:#fff9c4
+```
+
+## Workflow Description
+
+### 1. Input Processing & Context Extraction
+- **User Interaction**: Process conversations, commands, and relationship updates
+- **Consent Validation**: Verify HushhMCP tokens for memory access permissions
+- **NLP Analysis**: Extract meaningful relationship information using advanced AI
+
+### 2. Memory Classification & Storage
+- **Contact Management**: Store and update contact information
+- **Relationship Details**: Track personal preferences, important dates, interactions
+- **Context Organization**: Categorize memories by relationship, topic, and timeline
+- **Encrypted Storage**: Secure all data using AES-256-GCM encryption
+
+### 3. Cross-Agent Memory Sharing
+- **Permission-Based Sharing**: Share context with other agents based on user consent
+- **MailerPanda Integration**: Provide relationship context for email personalization
+- **Finance Agent Support**: Consider family relationships in financial planning
+- **Calendar Context**: Share meeting participant information and relationship history
+
+### 4. Memory Retrieval & Search
+- **Intelligent Search**: Query memories by person, topic, timeframe, or keywords
+- **Contextual Relevance**: Prioritize recent and relevant memories
+- **Relationship Mapping**: Understand connections between different people and events
+
+### 5. Proactive Relationship Management
+- **Pattern Recognition**: Identify interaction patterns and relationship trends
+- **Proactive Suggestions**: Recommend actions based on relationship history
+- **Anniversary Reminders**: Track important dates and suggest appropriate actions
+
+## Key Features
+- 🧠 **Persistent Memory**: Long-term storage of relationship context across all interactions
+- 🔗 **Cross-Agent Integration**: Share context with other agents for enhanced personalization
+- 🔍 **Intelligent Search**: Advanced search capabilities for stored memories
+- 🤖 **Proactive Insights**: AI-powered relationship analysis and suggestions
+- 🔒 **User-Controlled**: Complete transparency and control over stored memories
+
+## API Endpoints
+- `POST /agents/relationship_memory/execute` - Store and process relationship data
+- `GET /agents/relationship_memory/query` - Search memories by criteria
+- `POST /agents/relationship_memory/manage` - Edit or delete stored memories
+- `GET /agents/relationship_memory/privacy` - Configure retention and sharing settings
+
+## Memory Categories
+- **Contact Information**: Names, emails, phone numbers, addresses
+- **Personal Preferences**: Likes, dislikes, hobbies, interests
+- **Important Dates**: Birthdays, anniversaries, milestones
+- **Interaction History**: Previous conversations, meetings, communications
+- **Relationship Context**: Family connections, professional relationships, friendships
+
+---
+
+## 🎯 Original Documentation
 
 A sophisticated AI agent for managing personal relationships with proactive capabilities, batch operations, and conversational intelligence. Built with full HushhMCP compliance and enhanced LangGraph workflow.
 
-## 🔗 Frontend-Backend Integration
+### Frontend-Backend Integration
 
-### 📡 **API Endpoint**
+#### API Endpoint
 ```
 POST http://localhost:8002/agents/relationship_memory/execute
 Content-Type: application/json
 ```
 
-### 🔑 **Dynamic API Key Support**
+#### Dynamic API Key Support
 RelationshipMemory agent supports **dynamic API keys** for secure, user-specific AI functionality:
 
 ```javascript

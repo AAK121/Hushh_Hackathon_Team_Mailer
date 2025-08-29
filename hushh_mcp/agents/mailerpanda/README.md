@@ -1,20 +1,101 @@
-# 🤖 MailerPanda Agent: AI-Powered Email Campaigns
+# MailerPanda Agent - AI-Powered Email Marketing with Human Oversight
+
+## Agent Architecture Flow
+
+```mermaid
+flowchart TD
+    A[User Input] --> B[Consent Token Validation]
+    B --> C{Valid Token?}
+    C -->|No| D[Error: Invalid Token]
+    C -->|Yes| E[Excel/CSV File Upload]
+    
+    E --> F[Contact Data Processing]
+    F --> G[AI Content Generation]
+    G --> H[Google Gemini 2.0]
+    H --> I[Personalized Email Content]
+    
+    I --> J[Human Approval Queue]
+    J --> K{User Approval?}
+    K -->|Reject| L[Feedback Collection]
+    L --> M[AI Learning Loop]
+    M --> G
+    
+    K -->|Approve| N[Batch Email Processing]
+    N --> O[Mailjet API Integration]
+    O --> P[Email Delivery]
+    
+    P --> Q[Analytics Dashboard]
+    Q --> R[Performance Metrics]
+    R --> S[Campaign Results]
+    
+    T[Vault Storage] --> U[Encrypted Data]
+    F --> T
+    I --> T
+    S --> T
+    
+    style A fill:#e1f5fe
+    style H fill:#fff3e0
+    style J fill:#f3e5f5
+    style N fill:#e8f5e8
+    style Q fill:#fff9c4
+    style T fill:#ffebee
+```
+
+## Workflow Description
+
+### 1. Input Processing
+- **User Input**: Campaign parameters and requirements
+- **Consent Validation**: HushhMCP token verification for email permissions
+- **File Upload**: Excel/CSV contact lists with recipient data
+
+### 2. AI Content Generation
+- **Data Analysis**: Parse recipient information and preferences
+- **Gemini Integration**: Generate personalized email content using Google Gemini 2.0
+- **Personalization**: Create contextually relevant messages beyond simple name replacement
+
+### 3. Human-in-the-Loop Approval
+- **Review Queue**: All AI-generated content requires human approval
+- **Feedback System**: Users can approve, reject, or modify content
+- **Learning Loop**: AI improves based on user feedback patterns
+
+### 4. Email Delivery
+- **Batch Processing**: Optimize delivery timing and rate limiting
+- **Mailjet Integration**: Reliable email service provider integration
+- **Error Handling**: Automatic retry with exponential backoff
+
+### 5. Analytics & Storage
+- **Performance Tracking**: Open rates, click-through rates, engagement metrics
+- **Encrypted Storage**: All data stored in HushhMCP vault with AES-256-GCM
+- **Campaign Analytics**: Comprehensive dashboard for campaign insights
+
+## Key Features
+- 🔐 **Cryptographic Consent**: Every action requires validated consent tokens
+- 🤖 **AI Personalization**: Beyond basic mail merge using advanced AI
+- 👥 **Human Oversight**: Quality control through approval workflows
+- 📊 **Analytics**: Real-time performance monitoring
+- 🔒 **Privacy**: End-to-end encryption for all personal data
+
+## API Endpoints
+- `POST /agents/mailerpanda/execute` - Generate email campaigns
+- `POST /agents/mailerpanda/approve` - Human approval workflow
+- `GET /agents/mailerpanda/status` - Campaign status
+- `GET /agents/mailerpanda/analytics` - Performance metrics
+
+---
+
+## 🚀 Original Documentation
 
 **Version:** 3.1.0
 **Author:** Hushh MCP Team
 **Last Updated:** 2025-08-24
 
----
-
-## 🚀 Overview
+### Overview
 
 MailerPanda is a sophisticated, AI-powered email campaign agent designed to automate, personalize, and secure your email marketing efforts. Built on the robust **Hushh MCP (My-Cyber-Protector) framework**, it combines the creative power of Google's Gemini-2.0-flash AI with a privacy-first architecture, ensuring all operations are driven by user consent.
 
 The agent manages the entire email lifecycle: from drafting compelling content based on simple user prompts to personalizing emails for individual recipients, handling human-in-the-loop approvals, and securely sending campaigns. Its most powerful feature is its **intelligent memory**, which allows the agent to learn and adapt to each user's unique writing style and preferences over time.
 
----
-
-## ✨ Core Features
+### Core Features
 
 - **🧠 Intelligent Agent Memory**: Learns and remembers user-specific email writing styles, tones, and preferences for truly personalized content generation.
 - **🤖 AI-Powered Content Generation**: Utilizes Google's Gemini-2.0-flash to draft professional, high-quality email subjects and bodies from simple natural language prompts.

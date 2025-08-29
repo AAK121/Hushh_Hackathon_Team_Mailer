@@ -1,4 +1,101 @@
-# 📅 AddToCalendar Agent
+# AddToCalendar Agent - AI-Powered Calendar Management
+
+## Agent Architecture Flow
+
+```mermaid
+flowchart TD
+    A[Email Input] --> B[Consent Token Validation]
+    B --> C{Valid Token?}
+    C -->|No| D[Error: Invalid Token]
+    C -->|Yes| E[Email Content Analysis]
+    
+    E --> F[AI Event Detection]
+    F --> G[Google Gemini 2.0]
+    G --> H[Event Information Extraction]
+    
+    H --> I[Event Validation]
+    I --> J{Valid Event Data?}
+    J -->|No| K[Error: No Event Found]
+    J -->|Yes| L[Calendar Integration]
+    
+    L --> M[Google Calendar API]
+    M --> N[Event Creation]
+    N --> O[Calendar Entry]
+    
+    O --> P[Cross-Agent Communication]
+    P --> Q[Relationship Memory Agent]
+    Q --> R[Context Storage]
+    
+    S[Gmail Integration] --> T[Email Parsing]
+    T --> E
+    
+    U[Vault Storage] --> V[Encrypted Event Data]
+    H --> U
+    O --> U
+    R --> U
+    
+    W[Event Categorization] --> X[Meeting Type Detection]
+    I --> W
+    X --> Y[Priority Assignment]
+    Y --> L
+    
+    style A fill:#e1f5fe
+    style G fill:#fff3e0
+    style L fill:#e8f5e8
+    style P fill:#f3e5f5
+    style U fill:#ffebee
+    style S fill:#fff9c4
+```
+
+## Workflow Description
+
+### 1. Email Processing
+- **Email Input**: Process emails from various sources (Gmail, manual input)
+- **Consent Validation**: HushhMCP token verification for calendar access
+- **Content Analysis**: Parse email content for potential event information
+
+### 2. AI Event Extraction
+- **Gemini Integration**: Use Google Gemini 2.0 for intelligent event detection
+- **Information Parsing**: Extract date, time, location, attendees, and description
+- **Validation**: Verify extracted information for completeness and accuracy
+
+### 3. Calendar Integration
+- **Google Calendar API**: Create events directly in user's calendar
+- **Event Formatting**: Structure event data according to calendar standards
+- **Conflict Detection**: Check for scheduling conflicts with existing events
+
+### 4. Cross-Agent Communication
+- **Memory Integration**: Share event context with Relationship Memory Agent
+- **Context Storage**: Store meeting participants and relationship data
+- **Agent Coordination**: Enable other agents to access calendar information
+
+### 5. Data Management
+- **Encrypted Storage**: All event data stored securely in HushhMCP vault
+- **Privacy Controls**: User control over what information is stored
+- **Event Categorization**: Automatically classify meeting types and priorities
+
+## Key Features
+- 📧 **Email Integration**: Seamless Gmail and email client integration
+- 🤖 **AI Event Detection**: Advanced AI for intelligent event extraction
+- 📅 **Calendar Management**: Direct Google Calendar integration
+- 🔗 **Agent Communication**: Cross-agent context sharing
+- 🔒 **Privacy-First**: Encrypted storage and consent-based access
+
+## API Endpoints
+- `POST /agents/addtocalendar/execute` - Process email for events
+- `GET /agents/addtocalendar/status` - Check processing status
+- `POST /agents/addtocalendar/calendar` - Direct calendar event creation
+- `GET /agents/addtocalendar/events` - Retrieve created events
+
+## Integration Features
+- **Gmail API**: Automatic email monitoring and processing
+- **Google Calendar**: Real-time calendar event creation
+- **Relationship Memory**: Context sharing for better personalization
+- **Vault Storage**: Secure, encrypted data management
+
+---
+
+## 📅 Original Documentation
 
 **Version:** 1.1.0  
 **Agent ID:** `agent_addtocalendar`  
@@ -6,13 +103,11 @@
 
 > 🗓️ Intelligent AI-powered calendar agent that extracts events from emails and creates calendar entries with complete privacy controls and cross-agent communication.
 
----
-
-## 🌟 Overview
+### Overview
 
 AddToCalendar is an advanced calendar management agent that uses AI to intelligently extract event information from emails and automatically create calendar entries. Built on the HushhMCP framework, it ensures complete privacy compliance and seamless integration with other agents.
 
-### ✨ Key Features
+### Key Features
 
 - **🤖 AI Event Extraction**: Advanced AI models for intelligent event detection
 - **📧 Email Processing**: Automated email analysis and categorization
