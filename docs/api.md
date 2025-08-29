@@ -1,52 +1,298 @@
-# HushMCP Agent API Documentation
 
-## Overview
+# Comprehensive API Documentation
 
-The HushMCP Agent API provides a FastAPI-based REST interface for interacting with privacy-first AI agents. The API is designed to be scalable, secure, and easy to integrate with web applications.
+Our API provides a unified REST interface for interacting with privacy-first AI agents, built on **FastAPI + HushMCP** framework.
 
-## Features
+**Framework:** FastAPI + HushMCP  
+**Supported Agents:** AddToCalendar, MailerPanda, ChanduFinance, Relationship Memory
 
-- **Agent Registry**: Automatic discovery and registration of agents
-- **Consent-Driven**: All operations require explicit user consent tokens  
-- **Async Processing**: Non-blocking request handling for better performance
-- **Type Safety**: Full Pydantic validation for requests and responses
-- **Auto Documentation**: Interactive API docs with Swagger UI
-- **CORS Support**: Ready for web application integration
-- **Error Handling**: Comprehensive error responses with details
+## ✨ Key API Features
 
-## Quick Start
+- **🤖 Multi-Agent Support**: AddToCalendar, MailerPanda, ChanduFinance, and Relationship Memory agents
+- **🔒 Privacy-First Design**: Complete consent token validation
+- **👥 Human-in-the-Loop**: Interactive approval workflows
+- **📊 Real-time Status**: Session management and progress tracking
+- **🛡️ Secure Operations**: HushMCP framework integration
+- **📚 Interactive Docs**: Built-in Swagger UI documentation
+- **🔄 CORS Support**: Frontend integration ready
 
-### 1. Install Dependencies
+## 🏗️ API Architecture
+
+```
+Frontend Application
+    ↓
+   API Gateway (FastAPI)
+    ↓
+┌─────────────────────────┐
+│   Consent Management    │
+│   - Token validation   │
+│   - Scope enforcement  │
+└─────────────────────────┘
+    ↓
+┌─────────────────────────┐
+│    Agent Router         │
+│   - AddToCalendar       │
+│   - MailerPanda         │
+│   - ChanduFinance       │
+│   - Relationship Memory │
+└─────────────────────────┘
+    ↓
+┌─────────────────────────┐
+│   Session Manager       │
+│   - Human-in-loop       │
+│   - Status tracking     │
+└─────────────────────────┘
+```
+
+## 🚀 API Quick Start
 
 ```bash
-pip install -r api_requirements.txt
+# Start the API server
+python api.py
+
+# API will be available at:
+# Main API: http://127.0.0.1:8001
+# Interactive Docs: http://127.0.0.1:8001/docs
+# Alternative Docs: http://127.0.0.1:8001/redoc
 ```
 
-### 2. Set Environment Variables
+## 🔑 Authentication & Consent
 
-Create a `.env` file with:
+Before using any agent, create consent tokens:
 
-```env
-OPENAI_API_KEY=your_openai_key
-MAILJET_API_KEY=your_mailjet_key
-MAILJET_API_SECRET=your_mailjet_secret  
-GEMINI_API_KEY=your_gemini_key
-API_HOST=127.0.0.1
-API_PORT=8001
+```http
+POST /consent/token
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "agent_id": "agent_addtocalendar",
+  "scope": "vault.read.email"
+}
 ```
 
-### 3. Start the Server
+**Response:**
+```json
+{
+  "token": "HCT:dGVzdF91c2VyXzEyM...",
+  "expires_at": 1755345158982,
+  "scope": "vault.read.email"
+}
+```
+
+## 📅 AddToCalendar Agent API
+
+The AddToCalendar agent processes emails to extract event information and creates Google Calendar events automatically.
+
+```http
+POST /agents/addtocalendar/execute
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "email_token": "HCT:email_consent_token...",
+  "calendar_token": "HCT:calendar_consent_token...",
+  "google_access_token": "ya29.google_oauth_token...",
+  "action": "comprehensive_analysis",
+  "confidence_threshold": 0.7,
+  "max_emails": 50
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "user_id": "user_123",
+  "action_performed": "comprehensive_analysis",
+  "emails_processed": 25,
+  "events_extracted": 8,
+  "events_created": 6,
+  "calendar_links": [
+    "https://calendar.google.com/event?eid=abc123"
+  ],
+  "processing_time": 12.5
+}
+```
+
+## 📧 MailerPanda Agent API
+
+The MailerPanda agent creates AI-generated email campaigns with human-in-the-loop approval workflows.
+
+```http
+POST /agents/mailerpanda/execute
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "user_input": "Create a marketing email for our new product launch",
+  "mode": "interactive",
+  "consent_tokens": {
+    "vault.read.email": "HCT:read_token...",
+    "vault.write.email": "HCT:write_token...",
+    "custom.temporary": "HCT:temp_token..."
+  },
+  "require_approval": true,
+  "use_ai_generation": true
+}
+```
+
+**Approval Workflow:**
+```http
+POST /agents/mailerpanda/approve
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "campaign_id": "user_123_1754740358",
+  "action": "approve",
+  "feedback": "Looks great!"
+}
+```
+
+## 💰 ChanduFinance Agent API
+
+AI-powered personal financial advisor providing personalized investment advice and financial planning.
+
+```http
+POST /agents/chandufinance/execute
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "token": "HCT:finance_consent_token...",
+  "command": "setup_profile",
+  "monthly_income": 6000.0,
+  "monthly_expenses": 4000.0,
+  "current_savings": 15000.0,
+  "risk_tolerance": "moderate",
+  "investment_experience": "beginner"
+}
+```
+
+**Available Commands:**
+- `setup_profile` - Create comprehensive financial profile
+- `personal_stock_analysis` - AI-powered stock analysis
+- `add_goal` - Create financial goals with timelines
+- `explain_like_im_new` - Beginner-friendly explanations
+- `investment_education` - Structured learning modules
+
+**Response:**
+```json
+{
+  "status": "success",
+  "command": "personal_stock_analysis",
+  "ticker": "AAPL",
+  "current_price": 175.50,
+  "personalized_analysis": "Based on your moderate risk tolerance...",
+  "position_sizing": {
+    "recommended_amount": 200.0,
+    "percentage_of_budget": 13.3
+  },
+  "next_steps": [
+    "Start with $100-200 position",
+    "Learn about Apple's business model"
+  ]
+}
+```
+
+## 🧠 Relationship Memory Agent API
+
+Maintains persistent context and memory for user interactions and relationships.
+
+```http
+POST /agents/relationship_memory/execute
+Content-Type: application/json
+
+{
+  "user_id": "user_123",
+  "token": "HCT:valid_token_here",
+  "user_input": "Remember that John's birthday is next month and he likes coffee"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "response": "I've noted that John's birthday is next month and that he likes coffee...",
+  "memory_stored": true,
+  "relationships_updated": ["John"],
+  "processing_time": 0.4
+}
+```
+
+## 📊 Standard Response Format
+
+All agents follow consistent response structure:
+
+```json
+{
+  "status": "success|error|awaiting_approval|completed",
+  "user_id": "user_identifier",
+  "processing_time": 12.5,
+  "errors": ["error1", "error2"]
+  // Agent-specific fields
+}
+```
+
+## ⚠️ Error Handling
+
+**Common Error Scenarios:**
+
+```json
+// Invalid Consent Token
+{
+  "status": "error",
+  "errors": ["Invalid consent token for scope vault.read.email"]
+}
+
+// Expired Access Token
+{
+  "status": "error", 
+  "errors": ["Google access token expired or invalid"]
+}
+
+// Missing Parameters
+{
+  "detail": "Field required: google_access_token"
+}
+```
+
+## 📈 Performance & Limits
+
+| Agent | Operation | Typical Time |
+|-------|-----------|--------------|
+| **AddToCalendar** | Email processing | 2-5 seconds |
+| **MailerPanda** | AI content generation | 3-8 seconds |
+| **ChanduFinance** | Profile analysis | 1-3 seconds |
+| **Relationship Memory** | Context storage | 0.4-1 seconds |
+
+## 🔧 Environment Configuration
 
 ```bash
-# Using the launcher script (recommended)
-python start_api.py
-
-# Or directly with uvicorn
-python api.py --reload
-
-# Or with custom settings
-uvicorn api:app --host 0.0.0.0 --port 8001 --reload
+# Required Environment Variables
+GOOGLE_API_KEY=your_gemini_api_key
+MAILJET_API_KEY=your_mailjet_api_key  
+MAILJET_API_SECRET=your_mailjet_secret
+ENCRYPTION_KEY=your_32_byte_hex_key
 ```
+
+## 📚 Interactive Documentation
+
+- **Swagger UI**: http://127.0.0.1:8001/docs
+- **ReDoc**: http://127.0.0.1:8001/redoc
+
+## 🔗 Key API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/health` | GET | Health check |
+| `/agents` | GET | List all agents |
+| `/consent/token` | POST | Create consent token |
+| `/agents/{agent}/execute` | POST | Execute agent |
+| `/agents/mailerpanda/approve` | POST | Approve campaign |
+| `/agents/{agent}/status` | GET | Agent status |
 
 ### 4. Access the API
 
