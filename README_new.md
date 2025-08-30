@@ -33,7 +33,7 @@ Today's AI tools are scattered, don't work together, and often compromise your p
 ### Our Solution 
 
 - **Smart AI Agents That Work Together**  
-  Six specialized AI assistants that share context and work as a team to help you get things done.
+  Four specialized AI assistants that share context and work as a team to help you get things done.
 
 - **Your Data Stays Private**  
   Everything is encrypted and you control what data each agent can access. No surprises, no hidden data collection.
