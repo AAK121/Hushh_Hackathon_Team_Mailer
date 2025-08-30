@@ -5,11 +5,23 @@ import remarkGfm from 'remark-gfm';
 import { 
   PaperAirplaneIcon, 
   CpuChipIcon, 
-  UserIcon
+  UserIcon,
+  Bars3Icon,
+  PlusIcon,
+  QuestionMarkCircleIcon,
+  ClockIcon,
+  Cog6ToothIcon,
+  ChatBubbleLeftRightIcon,
+  LightBulbIcon,
+  CodeBracketIcon,
+  PhotoIcon,
+  MicrophoneIcon,
+  MapIcon
 } from '@heroicons/react/24/outline';
 
 interface AIAgentSelectionProps {
-  // No props needed - chat is integrated directly
+  onSelectAgent?: (agent: 'mass-mail' | 'calendar') => void;
+  onShowHITL?: (prompt: string) => void;
 }
 
 interface Message {
@@ -26,7 +38,7 @@ interface ChatResponse {
   session_id: string;
 }
 
-const AIAgentSelection: React.FC<AIAgentSelectionProps> = () => {
+const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent, onShowHITL }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -57,6 +69,7 @@ Ask me anything about our agents, how to use them, or get started with the platf
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [userId, setUserId] = useState('default_user');
   const [isMaximized, setIsMaximized] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -70,9 +83,10 @@ Ask me anything about our agents, how to use them, or get started with the platf
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
-    // Maximize chat interface when sending first user message
+    // Make chat interface fullscreen when sending first user message
     if (messages.length === 1) {
       setIsMaximized(true);
+      setIsFullscreen(true);
     }
 
     const userMessage: Message = {
@@ -140,18 +154,8 @@ Ask me anything about our agents, how to use them, or get started with the platf
   };
 
   return (
-    <StyledWrapper>
-      <div className={`chat-container ${isMaximized ? 'maximized' : ''}`}>
-        <div className="chat-header">
-          <div className="header-content">
-            <div className="logo">
-              <CpuChipIcon className="logo-icon" />
-              <h1>Hushh AI Assistant</h1>
-            </div>
-            <p className="subtitle">Privacy-first AI agents at your service</p>
-          </div>
-        </div>
-
+    <StyledWrapper className={isFullscreen ? 'fullscreen' : ''}>
+      <div className={`chat-container ${isMaximized ? 'maximized' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
         <div className="messages-container">
           {messages.map((message) => (
             <div key={message.id} className={`message ${message.role}`}>
@@ -232,175 +236,62 @@ const StyledWrapper = styled.div`
   position: relative;
   overflow: hidden;
 
-  /* Dynamic animated background with orange theme */
-  background: linear-gradient(-45deg, #ff6f00, #ff8f00, #ff9800, #ffb74d);
-  background-size: 400% 400%;
-  animation: gradientShift 15s ease infinite;
-
-  /* Floating particles background */
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      radial-gradient(circle at 20% 80%, rgba(255, 152, 0, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(255, 193, 7, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(255, 111, 0, 0.2) 0%, transparent 50%);
-    animation: particleFloat 20s ease-in-out infinite;
-    pointer-events: none;
-  }
-
-  /* Moving light effects */
-  &::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: 
-      radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), 
-        rgba(255, 152, 0, 0.15), 
-        transparent 40%);
-    animation: lightPulse 8s ease-in-out infinite;
-    pointer-events: none;
-  }
+  /* Simple white background */
+  background: white;
 
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
 
-  @keyframes gradientShift {
-    0% {
-      background-position: 0% 50%;
-    }
-    50% {
-      background-position: 100% 50%;
-    }
-    100% {
-      background-position: 0% 50%;
-    }
-  }
-
-  @keyframes particleFloat {
-    0%, 100% {
-      transform: translateY(0px) rotate(0deg);
-      opacity: 1;
-    }
-    33% {
-      transform: translateY(-30px) rotate(120deg);
-      opacity: 0.8;
-    }
-    66% {
-      transform: translateY(-60px) rotate(240deg);
-      opacity: 0.6;
-    }
-  }
-
-  @keyframes lightPulse {
-    0%, 100% {
-      opacity: 0.3;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.8;
-      transform: scale(1.2);
-    }
+  /* Fullscreen mode removes padding and centers content */
+  &.fullscreen {
+    padding: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    /* Add padding to avoid menu button interference */
+    padding-top: 120px; /* Space for menu button */
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
   }
 
   .chat-container {
     width: 100%;
     max-width: 1200px;
     height: 85vh;
-    background: linear-gradient(135deg, 
-      rgba(255, 255, 255, 0.1) 0%, 
-      rgba(255, 255, 255, 0.05) 100%);
+    
+    /* Neuromorphic design */
+    background: #f0f0f0;
     border-radius: 24px;
+    
+    /* Neuromorphic shadows - inset and outset for 3D effect */
     box-shadow: 
-      0 8px 32px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(255, 255, 255, 0.1) inset;
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+      8px 8px 16px #d1d1d1,
+      -8px -8px 16px #ffffff;
+    
     display: flex;
     flex-direction: column;
     overflow: hidden;
     position: relative;
-    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 
     &.maximized {
       height: 95vh;
       max-width: 1400px;
-      transform: scale(1.02);
+      /* Enhanced neuromorphic shadows for maximized state */
       box-shadow: 
-        0 20px 60px rgba(0, 0, 0, 0.4),
-        0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+        12px 12px 24px #d1d1d1,
+        -12px -12px 24px #ffffff;
     }
 
-    /* Remove excessive border animation */
-    &::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      border-radius: 24px;
-      padding: 2px;
-      background: linear-gradient(45deg, 
-        transparent, 
-        rgba(255, 152, 0, 0.2), 
-        rgba(255, 193, 7, 0.2), 
-        transparent,
-        rgba(255, 152, 0, 0.2));
-      background-size: 300% 300%;
-      animation: borderGlow 12s ease infinite;
-      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      mask-composite: xor;
-      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-      -webkit-mask-composite: xor;
-      pointer-events: none;
-      opacity: 0.5;
-    }
-
-    /* Subtle inner glow */
-    &::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 120%;
-      height: 120%;
-      background: radial-gradient(circle, 
-        rgba(255, 152, 0, 0.05) 0%, 
-        rgba(255, 193, 7, 0.05) 30%, 
-        transparent 70%);
-      transform: translate(-50%, -50%);
-      animation: innerGlow 15s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    @keyframes borderGlow {
-      0%, 100% {
-        background-position: 0% 50%;
-      }
-      50% {
-        background-position: 100% 50%;
-      }
-    }
-
-    @keyframes innerGlow {
-      0%, 100% {
-        opacity: 0.3;
-        transform: translate(-50%, -50%) scale(1);
-      }
-      50% {
-        opacity: 0.5;
-        transform: translate(-50%, -50%) scale(1.05);
-      }
+    /* Fullscreen mode - remove boundaries completely */
+    &.fullscreen {
+      width: 100%;
+      height: calc(100vh - 100px); /* Adjust height to account for wrapper padding */
+      max-width: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: #f0f0f0;
     }
   }
 
@@ -420,6 +311,16 @@ const StyledWrapper = styled.div`
     box-shadow: 
       inset 0 2px 4px rgba(255, 255, 255, 0.1),
       inset 0 -2px 4px rgba(0, 0, 0, 0.1);
+
+    /* Fullscreen mode styling */
+    .chat-container.fullscreen & {
+      border-radius: 0;
+      border: none;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(135deg, 
+        rgba(255, 152, 0, 0.8) 0%, 
+        rgba(255, 111, 0, 0.8) 100%);
+    }
   }
 
   .header-content {
@@ -695,7 +596,7 @@ const StyledWrapper = styled.div`
         0 6px 20px rgba(0, 0, 0, 0.15),
         0 0 0 2px rgba(255, 152, 0, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
-      transform: translateY(-2px);
+      /* Remove upward movement animation */
     }
   }
 
@@ -790,9 +691,21 @@ const StyledWrapper = styled.div`
   @media (max-width: 768px) {
     padding: 10px;
 
+    &.fullscreen {
+      padding-top: 70px; /* Reduced space for mobile menu button */
+      padding-left: 10px;
+      padding-right: 10px;
+      padding-bottom: 10px;
+    }
+
     .chat-container {
       height: 95vh;
       border-radius: 16px;
+      
+      &.fullscreen {
+        height: calc(100vh - 80px); /* Adjust for mobile */
+        border-radius: 8px; /* Keep slight border radius on mobile */
+      }
     }
 
     .chat-header {
@@ -820,9 +733,21 @@ const StyledWrapper = styled.div`
   @media (max-width: 480px) {
     padding: 5px;
 
+    &.fullscreen {
+      padding-top: 60px; /* Even more compact for small screens */
+      padding-left: 5px;
+      padding-right: 5px;
+      padding-bottom: 5px;
+    }
+
     .chat-container {
       height: 98vh;
       border-radius: 12px;
+      
+      &.fullscreen {
+        height: calc(100vh - 65px); /* Adjust for small screens */
+        border-radius: 6px;
+      }
     }
 
     .chat-header {

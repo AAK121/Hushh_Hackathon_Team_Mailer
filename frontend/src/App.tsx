@@ -304,7 +304,7 @@ function AppContent() {
         .menu-label {
           font-size: 0.875rem;
           font-weight: 500;
-          color: ${isSidebarOpen ? '#000000' : (activeView === 'ai-agents' && !showHITL) ? '#ffffff' : activeView === 'ai-calendar' ? '#ffffff' : activeView === 'agent-store' ? '#ffffff' : showHITL ? '#000000' : '#333333'};
+          color: ${isSidebarOpen ? '#000000' : '#000000'};
           transition: color 0.3s ease-in-out;
         }
 
