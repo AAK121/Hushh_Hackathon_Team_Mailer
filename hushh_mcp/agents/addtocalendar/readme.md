@@ -35,8 +35,7 @@ flowchart TD
     R --> U
     
     I --> X[Meeting Type Detection]
-    X --> Y[Priority Assignment]
-    Y --> L
+    X --> L
     
     style A fill:#e1f5fe
     style G fill:#fff3e0
