@@ -291,3 +291,6 @@ hushh_mcp/agents/*/.env
 hushh_mcp\agents\addtocalendar\.env
 hushh_mcp\agents\addtocalendar\credentials.json
 hushh_mcp\agents\addtocalendar\token_gmail_demo_user_encapsulated_001.json
+
+# Scripts for Videos
+MailerPanda_Backend_Video_Script.md

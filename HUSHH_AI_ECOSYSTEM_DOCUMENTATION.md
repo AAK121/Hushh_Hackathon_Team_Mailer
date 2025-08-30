@@ -97,8 +97,6 @@ Token Validation: Real-time cryptographic verification
 | `vault.write.email` | Send emails | High |
 | `vault.read.calendar` | View calendar events | Low |
 | `vault.write.calendar` | Create/modify events | Medium |
-| `vault.read.finance` | Access financial data | High |
-| `vault.write.finance` | Modify financial records | Critical |
 | `vault.read.contacts` | View contact information | Medium |
 | `vault.write.contacts` | Modify contact database | High |
 
@@ -190,88 +188,6 @@ Content-Type: application/json
 
 ---
 
-### 💰 ChanduFinance Agent
-
-**Purpose:** Personal financial advisor with real-time market data
-
-#### Technical Specifications
-- **AI Model:** Google Gemini 2.0 Flash
-- **Endpoint:** `/agents/chandufinance/execute`
-- **Data Sources:** Real-time financial APIs
-- **Storage:** Encrypted user financial profiles
-
-#### Core Features
-
-1. **Investment Analysis**
-   - Real-time stock price analysis
-   - Portfolio optimization recommendations
-   - Risk assessment based on user profile
-   - Market sentiment analysis
-
-2. **Financial Planning**
-   - Goal-based investment planning
-   - Retirement planning calculations
-   - Emergency fund analysis
-   - Tax optimization strategies
-
-3. **Educational Content**
-   - Personalized financial literacy content
-   - Investment concept explanations
-   - Behavioral finance coaching
-   - Market trend education
-
-4. **Portfolio Management**
-   - Asset allocation recommendations
-   - Rebalancing suggestions
-   - Performance tracking
-   - Risk monitoring
-
-#### Financial Profile Structure
-
-```json
-{
-  "user_id": "user_12345",
-  "personal_info": {
-    "age": 30,
-    "occupation": "Software Engineer",
-    "family_status": "married",
-    "dependents": 1
-  },
-  "financial_info": {
-    "monthly_income": 8000,
-    "monthly_expenses": 5000,
-    "current_savings": 25000,
-    "current_debt": 10000,
-    "investment_budget": 2000
-  },
-  "preferences": {
-    "risk_tolerance": "moderate",
-    "investment_experience": "intermediate",
-    "time_horizon": "long_term"
-  },
-  "goals": [
-    {
-      "name": "Emergency Fund",
-      "target_amount": 30000,
-      "target_date": "2026-08-30",
-      "priority": "high"
-    }
-  ]
-}
-```
-
-#### Key Implementation Methods
-
-```python
-# Core financial analysis methods
-def _personal_stock_analysis(user_id, parameters, token)
-def _portfolio_review(user_id, parameters, token)
-def _goal_progress_check(user_id, parameters, token)
-def _retirement_planning(user_id, parameters, token)
-def _emergency_fund_analysis(user_id, parameters, token)
-```
-
----
 
 ### 🧠 Relationship Memory Agent
 
@@ -677,40 +593,6 @@ POST /agents/mailerpanda/execute
 }
 ```
 
-#### 2. ChanduFinance Agent
-
-```http
-POST /agents/chandufinance/execute
-```
-
-**Request Body:**
-```json
-{
-  "user_id": "string",
-  "token": "consent_token",
-  "parameters": {
-    "command": "personal_stock_analysis|portfolio_review|setup_profile",
-    "ticker": "string",
-    "amount": "number",
-    "gemini_api_key": "string"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "status": "success|error",
-  "agent_id": "agent_chandufinance",
-  "user_id": "string",
-  "analysis": {
-    "recommendation": "string",
-    "risk_score": "number",
-    "confidence": "number"
-  },
-  "timestamp": "ISO_8601_datetime"
-}
-```
 
 #### 3. Relationship Memory Agent
 
@@ -879,8 +761,7 @@ if conversation_id not in chat_conversations:
 
 Each agent maintains specialized memory:
 
-**MailerPanda:** Campaign history and template storage  
-**ChanduFinance:** Encrypted financial profiles (`index.py` lines 170-265)  
+**MailerPanda:** Campaign history and template storage   
 **Relationship Memory:** Contact and interaction database  
 **Research Agent:** Session-based research notes  
 
@@ -957,20 +838,8 @@ class RelationshipMemoryState(TypedDict):
 
 ```python
 # Example: AI-powered investment newsletter
-# 1. ChanduFinance analyzes portfolio
 # 2. MailerPanda creates personalized content
 # 3. Relationship Memory tracks engagement
-
-# Step 1: Get financial insights
-financial_analysis = chandufinance_agent.handle(
-    user_id="user_123",
-    token=financial_consent_token,
-    parameters={
-        "command": "portfolio_review",
-        "include_recommendations": True
-    }
-)
-
 # Step 2: Generate personalized email content
 email_campaign = mailerpanda_agent.handle(
     user_id="user_123",
@@ -990,47 +859,8 @@ relationship_memory.handle(
 )
 ```
 
-### Research-Driven Financial Decisions
 
-```python
-# Example: Research paper influences investment strategy
-# 1. Research Agent finds relevant papers
-# 2. ChanduFinance incorporates insights
-# 3. Calendar Agent schedules review meetings
 
-# Research phase
-research_results = research_agent.handle(
-    user_id="user_123",
-    consent_tokens={"vault.read.file": research_token},
-    action="search_papers",
-    query="ESG investing performance 2025"
-)
-
-# Financial analysis with research context
-investment_strategy = chandufinance_agent.handle(
-    user_id="user_123",
-    token=financial_token,
-    parameters={
-        "command": "investment_education",
-        "topic": "ESG investing",
-        "research_context": research_results
-    }
-)
-
-# Schedule follow-up
-calendar_agent.handle(
-    user_id="user_123",
-    email_token=email_token,
-    calendar_token=calendar_token,
-    action="manual_event",
-    manual_event={
-        "title": "Review ESG Investment Strategy",
-        "description": "Based on recent research findings",
-        "date": "2025-09-15",
-        "time": "14:00"
-    }
-)
-```
 
 ### Proactive Relationship Management
 
