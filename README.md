@@ -80,6 +80,7 @@ Simple email sending service with Excel/CSV support and delivery tracking.
 
 ## 📚 Documentation
 
+- **[Complete Technical Documentation](HUSHH_AI_ECOSYSTEM_DOCUMENTATION.md)** - Comprehensive technical specifications, architecture, and implementation details
 - **[Complete API Reference](docs/api.md)** - Comprehensive API documentation for all agents
 - **[Agent Architecture Diagrams](hushh_mcp/agents/)** - Visual workflows for each agent
 - **[Setup Guide](#how-to-set-up-locally)** - Local development setup instructions
