@@ -34,8 +34,7 @@ flowchart TD
     O --> U
     R --> U
     
-    W[Event Categorization] --> X[Meeting Type Detection]
-    I --> W
+    I --> X[Meeting Type Detection]
     X --> Y[Priority Assignment]
     Y --> L
     
