@@ -22,6 +22,11 @@ python api.py
 
 <br/>
 
+# MockUps
+
+![alt text](https://github.com/AAK121/Hushh_Hackathon_Team_Mailer/blob/b55e770b1d25feba949f63d346ff77169bef23ab/submissions/frontend.png?raw=true)
+
+
 ## What it Does 
 
 ### Problem Statement 
