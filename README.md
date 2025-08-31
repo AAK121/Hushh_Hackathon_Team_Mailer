@@ -27,10 +27,6 @@ python api.py
 
 ## What it Does 
 
-### The Problem 
-Today's AI tools are scattered, don't work together, and often compromise your privacy. You need one tool for emails, another for finances, and they never remember what you talked about before. Most importantly, you have no control over how your personal data is used.
-
-### Our Solution 
 
 - **Smart AI Agents That Work Together**  
   Six specialized AI assistants that share context and work as a team to help you get things done.
