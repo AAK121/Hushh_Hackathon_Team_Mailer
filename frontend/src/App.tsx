@@ -24,7 +24,7 @@ interface AppState {
 }
 
 function AppContent() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, signOut } = useAuth();
   
   // State persistence functions
   const saveAppState = (state: AppState) => {
@@ -140,6 +140,16 @@ function AppContent() {
     setHitlPrompt('');
   };
 
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      clearAppState();
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
   const handleAgentStoreSelection = (agentId: string) => {
     setSelectedStoreAgent(agentId);
     setActiveView('selected-agent');
@@ -210,16 +220,12 @@ function AppContent() {
           <nav className="sidebar-nav">
             {[
               { label: 'Home', action: () => clearAppState(), icon: '🏠' },
-              { label: 'Agent Selection', action: () => handleViewChange('ai-agents'), icon: '🤖' },
-              { label: 'Agent Store', action: () => handleViewChange('agent-store'), icon: '🏪' },
-
               { label: 'MailerPanda Agent', action: () => handleAgentStoreSelection('agent_mailerpanda'), icon: '🐼' },
               { label: 'AI Calendar Agent', action: () => handleViewChange('ai-calendar'), icon: '📅' },
-              { label: 'Finance Manager', action: () => handleAgentStoreSelection('agent_finance'), icon: '💰' },
               { label: 'Relationship Manager', action: () => handleAgentStoreSelection('agent_relationship'), icon: '🤝' },
               { label: 'Research Assistant', action: () => handleAgentStoreSelection('agent_research'), icon: '🔬' },
-              { label: 'HITL Chat', action: () => handleShowHITL('Start a conversation'), icon: '💬' },
-              { label: 'Settings', action: () => {}, icon: '⚙️' }
+              { label: 'Settings', action: () => {}, icon: '⚙️' },
+              { label: 'Sign Out', action: handleSignOut, icon: '🚪' }
             ].map((item, index) => (
               <button
                 key={item.label}
@@ -304,7 +310,7 @@ function AppContent() {
         .menu-label {
           font-size: 0.875rem;
           font-weight: 500;
-          color: ${isSidebarOpen ? '#000000' : '#000000'};
+          color: ${isSidebarOpen ? '#000000' : (selectedStoreAgent === 'agent_mailerpanda' || selectedAIAgent === 'mass-mail' || activeView === 'ai-agents') ? '#000000' : '#ffffff'};
           transition: color 0.3s ease-in-out;
         }
 
@@ -399,15 +405,16 @@ function AppContent() {
         }
 
         .sidebar-content {
-          padding: 6rem 2rem 2rem;
+          padding: 8rem 2rem 2rem;
           height: 100%;
           display: flex;
           flex-direction: column;
           overflow: hidden;
+          justify-content: center;
         }
 
         .sidebar-header {
-          margin-bottom: 2rem;
+          margin-bottom: 3rem;
           flex-shrink: 0;
         }
 
@@ -432,6 +439,7 @@ function AppContent() {
           overflow-x: hidden;
           padding-right: 0.5rem;
           margin-right: -0.5rem;
+          justify-content: center;
         }
 
         .sidebar-nav::-webkit-scrollbar {

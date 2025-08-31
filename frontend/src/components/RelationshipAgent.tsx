@@ -1241,7 +1241,7 @@ Try saying something like:
           marginBottom: '1rem', 
           borderRadius: '0.5rem',
           fontSize: '0.9rem',
-          fontFamily: 'monospace'
+          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Inconsolata, "Roboto Mono", Consolas, "Courier New", monospace'
         }}>
           <strong>Debug Info:</strong><br/>
           Total Contacts: {contacts.length}<br/>
@@ -1438,7 +1438,7 @@ Try saying something like:
                     padding: '0.2rem 0.4rem',
                     borderRadius: '0.25rem',
                     fontSize: '0.9em',
-                    fontFamily: 'monospace'
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Inconsolata, "Roboto Mono", Consolas, "Courier New", monospace'
                   }}>{children}</code>,
                   pre: ({children}) => <pre style={{
                     backgroundColor: message.sender === 'user' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
@@ -1446,7 +1446,7 @@ Try saying something like:
                     borderRadius: '0.5rem',
                     overflow: 'auto',
                     fontSize: '0.9em',
-                    fontFamily: 'monospace',
+                    fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Monaco, Inconsolata, "Roboto Mono", Consolas, "Courier New", monospace',
                     margin: '0.5rem 0'
                   }}>{children}</pre>,
                   blockquote: ({children}) => <blockquote style={{
@@ -1820,6 +1820,7 @@ const styles = {
     padding: 'clamp(1rem, 4vw, 2rem)',
     boxSizing: 'border-box' as const,
     overflow: 'auto',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   wrapper: {
     maxWidth: '1400px',
@@ -1844,6 +1845,7 @@ const styles = {
     color: 'white',
     cursor: 'pointer',
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   title: {
     fontSize: 'clamp(1.5rem, 4vw, 2rem)',
@@ -1852,6 +1854,7 @@ const styles = {
     flex: '1 1 auto',
     textAlign: 'center' as const,
     minWidth: '200px',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   headerActions: {
     display: 'flex',
@@ -1867,6 +1870,7 @@ const styles = {
     color: 'white',
     cursor: 'pointer',
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   notification: {
     background: 'rgba(76, 175, 80, 0.9)',
@@ -1878,6 +1882,7 @@ const styles = {
     fontSize: '0.9rem',
     fontWeight: 'bold',
     boxShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   tabContainer: {
     display: 'flex',
@@ -1894,6 +1899,7 @@ const styles = {
     cursor: 'pointer',
     fontSize: '0.9rem',
     transition: 'all 0.3s ease',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   activeTab: {
     background: 'rgba(255, 255, 255, 0.3)',
@@ -1921,20 +1927,24 @@ const styles = {
     borderRadius: '0.75rem',
     padding: '1.5rem',
     textAlign: 'center' as const,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   statTitle: {
     fontSize: '0.9rem',
     opacity: 0.8,
     margin: '0 0 0.5rem 0',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   statValue: {
     fontSize: '2rem',
     fontWeight: 'bold',
     margin: '0.5rem 0',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   statSubtext: {
     fontSize: '0.8rem',
     opacity: 0.7,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   sectionHeader: {
     display: 'flex',
@@ -1945,6 +1955,7 @@ const styles = {
   sectionTitle: {
     fontSize: '1.5rem',
     margin: 0,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   addButton: {
     padding: '0.75rem 1.5rem',
@@ -1954,6 +1965,7 @@ const styles = {
     color: 'white',
     cursor: 'pointer',
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   itemsList: {
     display: 'flex',
@@ -1978,10 +1990,12 @@ const styles = {
     fontSize: '1.1rem',
     fontWeight: 'bold',
     marginBottom: '0.5rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   contactDetails: {
     opacity: 0.8,
     marginBottom: '0.5rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   contactTags: {
     display: 'flex',
@@ -1993,6 +2007,7 @@ const styles = {
     padding: '0.25rem 0.5rem',
     borderRadius: '1rem',
     fontSize: '0.75rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   contactActions: {
     display: 'flex',
@@ -2005,6 +2020,7 @@ const styles = {
     fontSize: '0.75rem',
     color: 'white',
     fontWeight: 'bold',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   memoryCard: {
     background: 'rgba(255, 255, 255, 0.1)',
@@ -2022,15 +2038,18 @@ const styles = {
   memoryDate: {
     opacity: 0.7,
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   memorySummary: {
     marginBottom: '0.75rem',
     lineHeight: '1.5',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   memoryLocation: {
     opacity: 0.8,
     fontSize: '0.9rem',
     marginBottom: '0.75rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   memoryTags: {
     display: 'flex',
@@ -2053,22 +2072,26 @@ const styles = {
   interactionDate: {
     opacity: 0.7,
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   interactionType: {
     opacity: 0.8,
     fontSize: '0.9rem',
     marginBottom: '0.5rem',
     textTransform: 'capitalize' as const,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   interactionDescription: {
     marginBottom: '0.5rem',
     lineHeight: '1.5',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   followUpRequired: {
     background: 'rgba(255, 165, 0, 0.3)',
     padding: '0.5rem',
     borderRadius: '0.5rem',
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   reminderCard: {
     background: 'rgba(255, 255, 255, 0.1)',
@@ -2086,15 +2109,18 @@ const styles = {
   reminderDate: {
     opacity: 0.7,
     fontSize: '0.9rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   reminderDescription: {
     marginBottom: '0.75rem',
     lineHeight: '1.5',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   reminderContact: {
     opacity: 0.8,
     fontSize: '0.9rem',
     marginBottom: '1rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   reminderToggle: {
     padding: '0.5rem 1rem',
@@ -2104,6 +2130,7 @@ const styles = {
     cursor: 'pointer',
     fontSize: '0.8rem',
     fontWeight: 'bold',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   chatContainer: {
     background: 'rgba(255, 255, 255, 0.05)',
@@ -2130,6 +2157,7 @@ const styles = {
     maxWidth: '80%',
     lineHeight: '1.8',
     userSelect: 'none' as const,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   chatMessages: {
     flex: 1,
@@ -2160,10 +2188,12 @@ const styles = {
   messageText: {
     marginBottom: '0.25rem',
     lineHeight: '1.4',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   messageTime: {
     fontSize: '0.75rem',
     opacity: 0.7,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   chatInput: {
     display: 'flex',
@@ -2181,6 +2211,7 @@ const styles = {
     color: 'white',
     fontSize: '1rem',
     outline: 'none',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   chatSendButton: {
     padding: '0.75rem 1.5rem',
@@ -2192,6 +2223,7 @@ const styles = {
     fontSize: '0.9rem',
     fontWeight: '500',
     transition: 'all 0.3s ease',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   modal: {
     position: 'fixed' as const,
@@ -2214,6 +2246,7 @@ const styles = {
     maxHeight: '90vh',
     overflow: 'auto',
     color: '#333',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   modalHeader: {
     display: 'flex',
@@ -2239,6 +2272,7 @@ const styles = {
     border: '1px solid #ddd',
     marginBottom: '1rem',
     fontSize: '1rem',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   textarea: {
     width: '100%',
@@ -2249,6 +2283,7 @@ const styles = {
     fontSize: '1rem',
     minHeight: '100px',
     resize: 'vertical' as const,
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   submitButton: {
     width: '100%',
@@ -2260,6 +2295,7 @@ const styles = {
     cursor: 'pointer',
     fontSize: '1rem',
     fontWeight: 'bold',
+    fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   }
 };
 
