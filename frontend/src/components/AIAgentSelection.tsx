@@ -155,6 +155,15 @@ Ask me anything about our agents, how to use them, or get started with the platf
 
   return (
     <StyledWrapper className={isFullscreen ? 'fullscreen' : ''}>
+      <div className="agent-selection-header">
+        <div className="agent-selection-logo">
+          <CpuChipIcon className="agent-selection-logo-icon" />
+          <span className="agent-selection-title">Hushh AI Agent Ecosystem</span>
+        </div>
+        <div className="agent-selection-subtitle">
+          <span>Choose and chat with your privacy-first AI agents</span>
+        </div>
+      </div>
       <div className={`chat-container ${isMaximized ? 'maximized' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
         <div className="messages-container">
           {messages.map((message) => (
@@ -235,14 +244,59 @@ const StyledWrapper = styled.div`
   min-height: 100vh;
   position: relative;
   overflow: hidden;
-
-  /* Simple white background */
   background: white;
-
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 20px;
+  justify-content: flex-start;
+  padding: 32px 20px 20px 20px;
+
+  /* Hide any external chat widgets or overlays */
+  & * [class*="tere"],
+  & * [class*="chat-widget"],
+  & * [class*="support-widget"] {
+    display: none !important;
+  }
+
+  .agent-selection-header {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto 32px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0 0 12px 0;
+    border-bottom: 2px solid #f3b519;
+  }
+  .agent-selection-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 0.25rem;
+  }
+  .agent-selection-logo-icon {
+    width: 40px;
+    height: 40px;
+    color: #f3b519;
+    filter: drop-shadow(0 2px 8px #ffe08288);
+  }
+  .agent-selection-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #22223b;
+    letter-spacing: 0.01em;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  .agent-selection-subtitle {
+    font-size: 1.1rem;
+    color: #444;
+    opacity: 0.85;
+    font-weight: 500;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    margin-bottom: 0.25rem;
+  }
 
   /* Fullscreen mode removes padding and centers content */
   &.fullscreen {
@@ -470,7 +524,7 @@ const StyledWrapper = styled.div`
   }
 
   .message.assistant .message-time {
-    color: #64748b;
+    color: #ffffffff;
   }
 
   /* Markdown Styling */

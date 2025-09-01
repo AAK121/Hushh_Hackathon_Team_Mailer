@@ -16,14 +16,27 @@ Imagine having a team of AI assistants that actually understand your needs and w
 git clone https://github.com/AAK121/Hushh_Hackathon_Team_Mailer.git
 cd Hushh_Hackathon_Team_Mailer
 pip install -r requirements.txt
-python api.py
+
+# Start the backend server (in background)
+start powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Dell\Hushh_Hackathon_Team_Mailer'; python api.py"
+
+# Start the frontend (in another terminal)
+cd frontend
+npm install
+npm run dev
 ```
 
 <br/>
 
-# MockUps
+# MockUps & Screenshots
 
-![alt text](https://github.com/AAK121/Hushh_Hackathon_Team_Mailer/blob/b55e770b1d25feba949f63d346ff77169bef23ab/submissions/frontend.png?raw=true)
+![Frontend Interface](https://github.com/AAK121/Hushh_Hackathon_Team_Mailer/blob/b55e770b1d25feba949f63d346ff77169bef23ab/submissions/frontend.png?raw=true)
+
+![MailerPanda Agent](submissions/mailerpanda.png)
+
+![AddToCalendar Agent](submissions/AddToCalendar.png)
+
+![Research Agent](submissions/Research%20Agent.png)
 
 ## What it Does 
 
@@ -53,6 +66,8 @@ python api.py
 - Human review required - you stay in control
 - Gets smarter over time with your feedback
 
+**📖 [Complete MailerPanda Documentation](hushh_mcp/agents/mailerpanda/README.md)**
+
 ### 💰 **ChanduFinance Agent** - Personal Financial Advisor
 **What it does:**
 - Gives you real-time market updates and investment tips
@@ -64,6 +79,8 @@ python api.py
 - Makes finance easy to understand for everyone
 - Real-time data from trusted sources
 - Educational approach to help you learn
+
+**📖 [Complete ChanduFinance Documentation](hushh_mcp/agents/chandufinance/README.md)**
 
 ### 🧠 **Relationship Memory Agent** - Remember Important Details
 **What it does:**
@@ -77,6 +94,8 @@ python api.py
 - Complete privacy control - you decide what to remember
 - Never forget important details about people you care about
 
+**📖 [Complete Relationship Memory Documentation](hushh_mcp/agents/relationship_memory/README.md)**
+
 ### 📅 **AddToCalendar Agent** - Smart Calendar Management
 **What it does:**
 - Automatically finds events and dates in your emails
@@ -88,6 +107,8 @@ python api.py
 - No more manual calendar entry
 - Understands context and natural language
 - Seamless Google Calendar integration
+
+**📖 [Complete AddToCalendar Documentation](hushh_mcp/agents/addtocalendar/readme.md)**
 
 ### 🔍 **Research Agent** - Information Gathering Assistant
 **What it does:**
@@ -101,6 +122,8 @@ python api.py
 - Academic-quality research capabilities
 - Clear, understandable summaries
 
+**📖 [Complete Research Agent Documentation](hushh_mcp/agents/research_agent/README.md)**
+
 ### 📨 **Basic Mailer Agent** - Simple Email Sending
 **What it does:**
 - Sends emails to lists from Excel/CSV files
@@ -113,14 +136,25 @@ python api.py
 - Works with your existing contact lists
 - No complexity when you just need basic functionality
 
+**📖 [Complete Basic Mailer Documentation](hushh_mcp/agents/Mailer/README.md)**
+
 ---
 
-## 📚 Documentation
+## 📚 Documentation & Agent References
 
+### **Main Documentation**
 - **[Complete Technical Documentation](HUSHH_AI_ECOSYSTEM_DOCUMENTATION.md)** - Comprehensive technical specifications
 - **[Complete API Reference](docs/api.md)** - API documentation for all agents
 - **[Agent Architecture](hushh_mcp/agents/)** - How each agent works
 - **[Setup Guide](#how-to-get-started)** - Get started in 5 minutes
+
+### **Individual Agent Documentation**
+- **📧 [MailerPanda Agent](hushh_mcp/agents/mailerpanda/README.md)** - Smart email marketing
+- **💰 [ChanduFinance Agent](hushh_mcp/agents/chandufinance/README.md)** - Personal financial advisor
+- **🧠 [Relationship Memory Agent](hushh_mcp/agents/relationship_memory/README.md)** - Contact management
+- **📅 [AddToCalendar Agent](hushh_mcp/agents/addtocalendar/readme.md)** - Calendar management
+- **🔍 [Research Agent](hushh_mcp/agents/research_agent/README.md)** - Information gathering
+- **📨 [Basic Mailer Agent](hushh_mcp/agents/Mailer/README.md)** - Simple email sending
 
 ---
 
@@ -198,11 +232,11 @@ MAILJET_API_SECRET=your_mailjet_secret
 ### **Start the Application**
 
 ```bash
-# Start the main server
-python api.py
+# Start the main server (in background)
+start powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Dell\Hushh_Hackathon_Team_Mailer'; python api.py"
 # Visit http://127.0.0.1:8001 to use the agents
 
-# For the web interface (optional)
+# For the web interface (in another terminal)
 cd frontend
 npm install
 npm run dev
@@ -250,7 +284,10 @@ Ready to try AI agents that actually respect your privacy?
 git clone https://github.com/AAK121/Hushh_Hackathon_Team_Mailer.git
 cd Hushh_Hackathon_Team_Mailer
 pip install -r requirements.txt
-python api.py
+
+# Start backend (in background)
+start powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Dell\Hushh_Hackathon_Team_Mailer'; python api.py"
+
 # Open http://127.0.0.1:8001 in your browser
 ```
 
