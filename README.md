@@ -6,7 +6,7 @@
 </div>
 
 ### Inspiration 
-Imagine having a team of AI assistants that actually understand your needs and work together seamlessly. **Hushh AI Agent Ecosystem** is a collection of smart AI agents that help you with email marketing, financial advice, research, calendar management, and remembering important details about your relationships—all while keeping your privacy secure.
+Imagine having a team of AI assistants that actually understand your needs and work together seamlessly. **Hushh AI Agent Ecosystem** is a collection of smart AI agents that help you with email marketing, research, calendar management, and remembering important details about your relationships—all while keeping your privacy secure.
 
 ### DEMO VIDEO:
 [Demonstration Video](https://drive.google.com/drive/folders/1RyGEkpi7KWCgS9ABf774KpVJNjQ8FRQ0?usp=sharing)
@@ -42,7 +42,7 @@ npm run dev
 
 
 - **Smart AI Agents That Work Together**  
-  Six specialized AI assistants that share context and work as a team to help you get things done.
+  Four specialized AI assistants that share context and work as a team to help you get things done.
 
 - **Your Data Stays Private**  
   Everything is encrypted and you control what data each agent can access. No surprises, no hidden data collection.
@@ -67,20 +67,6 @@ npm run dev
 - Gets smarter over time with your feedback
 
 **📖 [Complete MailerPanda Documentation](hushh_mcp/agents/mailerpanda/README.md)**
-
-### 💰 **ChanduFinance Agent** - Personal Financial Advisor
-**What it does:**
-- Gives you real-time market updates and investment tips
-- Explains complex financial concepts in simple terms
-- Tracks your portfolio and suggests improvements
-- Provides educational content about money management
-
-**Why it's special:**
-- Makes finance easy to understand for everyone
-- Real-time data from trusted sources
-- Educational approach to help you learn
-
-**📖 [Complete ChanduFinance Documentation](hushh_mcp/agents/chandufinance/README.md)**
 
 ### 🧠 **Relationship Memory Agent** - Remember Important Details
 **What it does:**
@@ -124,20 +110,6 @@ npm run dev
 
 **📖 [Complete Research Agent Documentation](hushh_mcp/agents/research_agent/README.md)**
 
-### 📨 **Basic Mailer Agent** - Simple Email Sending
-**What it does:**
-- Sends emails to lists from Excel/CSV files
-- Tracks email delivery status
-- Basic email templates and formatting
-- Perfect for simple email campaigns
-
-**Why it's special:**
-- Simple and reliable
-- Works with your existing contact lists
-- No complexity when you just need basic functionality
-
-**📖 [Complete Basic Mailer Documentation](hushh_mcp/agents/Mailer/README.md)**
-
 ---
 
 ## 📚 Documentation & Agent References
@@ -150,11 +122,9 @@ npm run dev
 
 ### **Individual Agent Documentation**
 - **📧 [MailerPanda Agent](hushh_mcp/agents/mailerpanda/README.md)** - Smart email marketing
-- **💰 [ChanduFinance Agent](hushh_mcp/agents/chandufinance/README.md)** - Personal financial advisor
 - **🧠 [Relationship Memory Agent](hushh_mcp/agents/relationship_memory/README.md)** - Contact management
 - **📅 [AddToCalendar Agent](hushh_mcp/agents/addtocalendar/readme.md)** - Calendar management
 - **🔍 [Research Agent](hushh_mcp/agents/research_agent/README.md)** - Information gathering
-- **📨 [Basic Mailer Agent](hushh_mcp/agents/Mailer/README.md)** - Simple email sending
 
 ---
 
@@ -167,8 +137,6 @@ Each agent has its own functions you can call. Send requests with your data and 
 ```json
 {
     "user_id": "user_123",
-    "contacts_file": "your_excel_file_data",
-    "campaign_type": "newsletter",
     "personalization": "high"
 }
 ```
@@ -268,7 +236,6 @@ npm run dev
 ### **Performance**
 Our agents are fast and reliable:
 - **MailerPanda**: Creates 100 emails per minute
-- **ChanduFinance**: Processes 200 requests per minute  
 - **Research Agent**: Handles 50 searches per minute
 - **Calendar Agent**: Manages 150 events per minute
 
