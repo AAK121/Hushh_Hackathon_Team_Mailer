@@ -1,0 +1,147 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GmailCat PDA - Smart Email to Calendar Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-cat"></i>
+                    <h1>GmailCat PDA</h1>
+                </div>
+                <div class="subtitle">
+                    <p>Powered by <span class="hushh-brand">HushMCP</span> - Smart Email to Calendar Assistant</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Feature Cards -->
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-envelope-open-text"></i>
+                    </div>
+                    <h3>Smart Email Analysis</h3>
+                    <p>AI-powered scanning of your Gmail inbox to identify events, meetings, and appointments automatically.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-calendar-plus"></i>
+                    </div>
+                    <h3>Automatic Calendar Creation</h3>
+                    <p>Seamlessly converts detected events into Google Calendar entries with proper date, time, and details.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Privacy-First Approach</h3>
+                    <p>Built with HushMCP framework ensuring your data privacy with explicit consent tokens and secure processing.</p>
+                </div>
+            </div>
+
+            <!-- Action Panel -->
+            <div class="action-panel">
+                <div class="panel-header">
+                    <h2>
+                        <i class="fas fa-magic"></i>
+                        Start Email Processing
+                    </h2>
+                    <p>Click the button below to scan your Gmail inbox and automatically create calendar events</p>
+                </div>
+
+                <div class="action-content">
+                    <button id="processBtn" class="process-btn">
+                        <i class="fas fa-play"></i>
+                        <span>Process Emails & Create Events</span>
+                    </button>
+                    
+                    <div class="status-indicator" id="statusIndicator">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Ready to process your emails</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Panel -->
+            <div class="results-panel" id="resultsPanel" style="display: none;">
+                <div class="panel-header">
+                    <h2>
+                        <i class="fas fa-chart-line"></i>
+                        Processing Results
+                    </h2>
+                </div>
+                <div class="results-content" id="resultsContent">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+                <div class="loading-content">
+                    <div class="loading-spinner">
+                        <i class="fas fa-cat"></i>
+                    </div>
+                    <h3>GmailCat is working...</h3>
+                    <p>Analyzing your emails and creating calendar events</p>
+                    <div class="loading-steps">
+                        <div class="step" id="step1">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Authenticating with Gmail</span>
+                        </div>
+                        <div class="step" id="step2">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>Scanning unread emails</span>
+                        </div>
+                        <div class="step" id="step3">
+                            <i class="fas fa-clock"></i>
+                            <span>AI event extraction</span>
+                        </div>
+                        <div class="step" id="step4">
+                            <i class="fas fa-clock"></i>
+                            <span>Creating calendar events</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="tech-badges">
+                    <span class="badge">
+                        <i class="fas fa-robot"></i>
+                        AI-Powered
+                    </span>
+                    <span class="badge">
+                        <i class="fas fa-shield-alt"></i>
+                        HushMCP Secure
+                    </span>
+                    <span class="badge">
+                        <i class="fab fa-google"></i>
+                        Google Integrated
+                    </span>
+                </div>
+                <p>&copy; 2025 GmailCat PDA - Built with HushMCP Framework</p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="{% static 'js/app.js' %}"></script>
+</body>
+</html>

@@ -10,9 +10,8 @@ import AgentStore from './components/AgentStore';
 import MailerPandaAgent from './components/MailerPandaAgent';
 import AddToCalendarAgent from './components/AddToCalendarAgent';
 import FinanceAgent from './components/FinanceAgent';
-import FinanceAgentDebug from './components/FinanceAgentDebug';
 import RelationshipAgent from './components/RelationshipAgent';
-import ResearchAgentNew from './components/ResearchAgentNew';
+import ResearchAgent from './components/ResearchAgent';
 
 // App State Interface for persistence
 interface AppState {
@@ -281,9 +280,9 @@ function AppContent() {
           ) : selectedStoreAgent === 'agent_finance' ? (
             <FinanceAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : selectedStoreAgent === 'agent_relationship' ? (
-            <RelationshipAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
+            <RelationshipAgent onBack={handleBackToAgentStore} />
           ) : selectedStoreAgent === 'agent_research' ? (
-            <ResearchAgentNew onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
+            <ResearchAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : (
             <div style={{ padding: '2rem', textAlign: 'center' }}>
               <h2>Agent not implemented yet</h2>

@@ -1,6 +1,6 @@
 import { tool, ToolSet } from 'ai';
 import { z } from 'zod';
-import { hushMCPAgentAPI } from '../services/hushMCPAgentAPI';
+// import { hushMCPAgentAPI } from '../services/hushMCPAgentAPI';
 
 const getWeatherInformation = tool({
   description: 'show the weather in a given city to the user',

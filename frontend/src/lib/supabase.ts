@@ -81,16 +81,19 @@ export const auth = {
       return { data: null, error: { message: 'Supabase not configured' } };
     }
     
+    // Get redirect URL from environment or use current origin
+    const redirectUrl = import.meta.env.VITE_REDIRECT_URL || window.location.origin;
+    
     // For Google, request additional scopes for Calendar and Gmail with offline access
     const options = provider === 'google' ? {
-      redirectTo: `${window.location.origin}`,
+      redirectTo: redirectUrl,
       scopes: 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
       queryParams: {
         access_type: 'offline',
         prompt: 'consent' // Use the modern OAuth 2.0 parameter instead of deprecated approval_prompt
       }
     } : {
-      redirectTo: `${window.location.origin}`
+      redirectTo: redirectUrl
     };
     
     const { data, error } = await supabase.auth.signInWithOAuth({

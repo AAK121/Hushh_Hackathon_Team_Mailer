@@ -1,0 +1,17 @@
+# Core Framework
+fastapi==0.111.0
+uvicorn==0.30.1
+pydantic==2.7.1
+
+# Environment & Config
+python-dotenv==1.0.1
+
+# Security & Crypto (Essential for hushh_mcp)
+cryptography==42.0.5
+pyjwt==2.8.0
+
+# HTTP Client
+httpx==0.27.0
+
+# File Upload
+python-multipart==0.0.9

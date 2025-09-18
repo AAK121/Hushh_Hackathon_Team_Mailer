@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
+
 interface AICalendarAgentProps {
   onBack: () => void;
 }
@@ -128,7 +130,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
       console.log('🔑 Creating consent tokens...');
       
       // Create email consent token
-      const emailTokenResponse = await fetch('http://127.0.0.1:8001/consent/token', {
+      const emailTokenResponse = await fetch(`${API_BASE_URL}/consent/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -149,7 +151,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
       const emailConsentToken = emailTokenData.token;
 
       // Create calendar consent token
-      const calendarTokenResponse = await fetch('http://127.0.0.1:8001/consent/token', {
+      const calendarTokenResponse = await fetch(`${API_BASE_URL}/consent/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -174,7 +176,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
       // Step 2: Execute the AddToCalendar agent with proper consent tokens
       console.log('🤖 Executing AddToCalendar agent...');
       
-      const executeResponse = await fetch('http://127.0.0.1:8001/agents/addtocalendar/execute', {
+      const executeResponse = await fetch(`${API_BASE_URL}/agents/addtocalendar/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -262,7 +264,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
     try {
       const selectedIndices = Array.from(selectedEvents);
       
-      const approvalResponse = await fetch('http://127.0.0.1:8001/agents/addtocalendar/approve', {
+      const approvalResponse = await fetch(`${API_BASE_URL}/agents/addtocalendar/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -312,7 +314,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
     setError(null);
 
     try {
-      const approvalResponse = await fetch('http://127.0.0.1:8001/agents/addtocalendar/approve', {
+      const approvalResponse = await fetch(`${API_BASE_URL}/agents/addtocalendar/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -360,7 +362,7 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
     setError(null);
 
     try {
-      const rejectionResponse = await fetch('http://127.0.0.1:8001/agents/addtocalendar/approve', {
+      const rejectionResponse = await fetch(`${API_BASE_URL}/agents/addtocalendar/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import remarkMath from 'remark-math';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
-import './ResearchAgentNew.css';
+import './ResearchAgent.css';
 import './force-cache-refresh.css';
 import './scrollbar-override.css';
 import { researchAgentApi, Paper } from '../services/ResearchAgentApi';
@@ -25,7 +25,7 @@ interface ChatMessage {
   timestamp: Date;
 }
 
-const ResearchAgentNew: React.FC<ResearchAgentNewProps> = ({ onBack, onSendToHITL }) => {
+const ResearchAgent: React.FC<ResearchAgentNewProps> = ({ onBack: _onBack, onSendToHITL: _onSendToHITL }) => {
   const { user } = useAuth();
   const [leftPanelWidth, setLeftPanelWidth] = useState(55); // Initial width as percentage
   const [isResizing, setIsResizing] = useState(false);
@@ -63,7 +63,7 @@ const ResearchAgentNew: React.FC<ResearchAgentNewProps> = ({ onBack, onSendToHIT
   const [currentNoteMessageId, setCurrentNoteMessageId] = useState<string | null>(null);
   
   // Upload-related state
-  const [uploadedPaper, setUploadedPaper] = useState<File | null>(null);
+  const [, setUploadedPaper] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedPaperData, setUploadedPaperData] = useState<Paper | null>(null);
   
@@ -341,10 +341,6 @@ You can now ask detailed questions about the content of this document!`,
   };
 
   // Notes functionality
-  const handleNotesModalOpen = () => {
-    setShowNotesModal(true);
-  };
-
   // Create a new blank note directly
   const handleCreateNewNote = async () => {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0];
@@ -1236,7 +1232,7 @@ You can now ask detailed questions about the content of this document!`,
       {/* Header with Search and Paper Selection */}
       <header className="app-header">
         <div className="header-content">
-          <h1><i className="fas fa-microscope"></i> Research Agent</h1>
+          <h1><i className="fas fa-microscope"></i> &nbsp; Research Agent</h1>
           <div className="search-controls">
             <div className="search-box">
               <input 
@@ -1313,7 +1309,7 @@ You can now ask detailed questions about the content of this document!`,
       </header>
 
       {/* Main Content Area */}
-      <main className="main-content">
+      <main className="research-main-content">
         <div className="panel-container" ref={containerRef}>
           {/* Left Panel: Paper Display */}
           <section 
@@ -1916,4 +1912,4 @@ You can now ask detailed questions about the content of this document!`,
   );
 };
 
-export default ResearchAgentNew;
+export default ResearchAgent;

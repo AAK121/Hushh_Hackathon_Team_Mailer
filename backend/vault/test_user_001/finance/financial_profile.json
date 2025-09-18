@@ -1,0 +1,14 @@
+{
+  "ciphertext": "GoCsNIeJpV2Tw51oeHSjlRmiqZV+PrKIk13v45BE9f3Kof4xa3KX5VVdBrVIm/brziWOBzd1dNZMkWvnE0GBBPkqAEWGjKWwGDD0pKVOpyHarSP7yHgPG1bwrW0p22BvtCVrY+1hsQYIZztSRcG45m0/fugSDuu3kzuoIeW3zdRrgpUvV4rkqP91dgK5lXc1T/IqphvdV94i9DCK/AvkC6RuB+d5eD/SnUyHg0iVFaeIuIGvp2w4cPfppI4PHycAQJjT8Eov1l5WfiTtbYgrhb+xV8ahT6p5eD8Zf7VmdzPHAhqenxsnDfYikmGZSHJOSfM5jPzQ+bSnGvyjYsQgrXFOYHqTNhhnNJaWZ52G6512PHSScBnwQcE1nEKwVkxxCiJkIG9cdy0Pg6HtDR3yCimslENnrMZZ6pEyGdrXv/7ipWDV0zNIMDGhtyUkmJZOo/qKqguwUvbqZnUmkjBfvklFVHEWwFbe0M+UsBoVMuswLibpTmdVBe/tU6QNoFcjeBuhvyuh0t4pdlJ4pePqkrbWOEuJbxhW6uHVBU1s7CfAVeLIdn8UaPqdQNpO/NE7CU48/stI2x8Txln5V8UTbhBRTWvnJyhSo1Xed0jiy2lbBNtWMbEEKdi4UAeD/jjnSE8P7XUMDBRUik14pxLVRxnkAh30FcLOO/36IbzifKH2mVrTS7YTx7KAvrIM6ebOSjlh3i1ehIwDcqqehMzhyA8PGjrjuX7YYIendlw9BpBDbHGALbB8MMu+Q8LSibYFBaEmiyDOXgyN9gVxQkFqn9dafwvDBcTS3VX6+AdYvk14cisN9ngORcx6781ca/3xqp0QrUBzBrnf2rnOx9TLkO+ikkIQXJMS6KgzP4MPhrJ8O3EiItXPhUnv9EscAxvNGf1hVjpQgFjkKsMr/bR2TtbNKyw7p4xC9+ZM6xo0TwVMFc+Io3oFM7JiGSIADt+gRZ64hSJEmTrPkAE7UzNxfJvpCbUDLETn59UrvbWvZqR/m5ZuKl6YQWcmd7RoU/u5Etsl4GCpyUYp+E8OerEzVuVYPht/DJYu5r9EO/yjSLVjc/H6A64OA0U9mKyEjUZl/d1vN8iv4StzqPRjOUVKzhODp16JxNJeR4mOogo7OcU1Cxav6fxS8cepDRTIJ5Kvt6QSGIwzuX7botxl10+gfcQ4XNwc/UxruklGYzvBityvXqB6Io8DjIp99zCSsoBiXfLEYdgYslmxwexf0UTobO2lvkqZZwjUzbDmjVLO9e0XDOKozu+RnMDWYODqA7pdrZv0wXkV1WkH39kUmzMPKj/lNgpjG7OhyTMJAysiLCQggS7pqQN1UbZWZh5+dcUTc4rSPLzTc7xa23/5rD1q5wsb0z6BimrQQZw5Xbv+mwoED7T9Xa0yISIgw0ELWaL4L+o7axE9nPqkPnFFO7zgPAvVTRuemg73mBDWCxWZ55GYmvQrP78GJSXsHcgoGkVnXthLkkCZj8FiZgL8u1sDUthoyNGBZ85jkg/wAmiY0BgJ9fFgQ08uQv+KIi4AUS789e1TEj3oHRDnNs97luK4j8xmz+Vilsk54o5bmfYRdLHFglprG6h2EChwwcubBFF4PHCQF+w=",
+  "iv": "UiFRwhnKpS7xLqas",
+  "tag": "mjYYqxYHLvjG6QS/fjid8w==",
+  "encoding": "base64",
+  "algorithm": "aes-256-gcm",
+  "metadata": {
+    "agent_id": "chandufinance",
+    "user_id": "test_user_001",
+    "scope": "vault.write.file",
+    "created_at": "2025-08-20T19:16:03.265388",
+    "data_type": "personal_financial_profile"
+  }
+}

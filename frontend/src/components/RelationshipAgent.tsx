@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.css'; // You can choose different themes
+import { useAuth } from '../contexts/AuthContext';
 
 interface Contact {
   id: string;
@@ -56,13 +57,17 @@ interface Memory {
 
 interface RelationshipAgentProps {
   onBack: () => void;
-  onSendToHITL?: (message: string, context: any) => void;
 }
 
-// Hardcoded vault key that matches the backend encryption key
-const RELATIONSHIP_VAULT_KEY = 'e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8';
-
-const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToHITL }) => {
+const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack }) => {
+  // Authentication context
+  const { user } = useAuth();
+  
+  // Ensure user is authenticated
+  if (!user) {
+    throw new Error('RelationshipAgent requires authenticated user');
+  }
+  
   // Tab state
   const [activeTab, setActiveTab] = useState<'chat' | 'dashboard' | 'contacts' | 'interactions' | 'reminders' | 'memories'>('chat');
   
@@ -73,7 +78,7 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
   const [memories, setMemories] = useState<Memory[]>([]);
   
   // Loading and session state
-  const [loading, setLoading] = useState(false);
+  const [loading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [startingSession, setStartingSession] = useState(false);
   const [notification, setNotification] = useState<string>('');
@@ -88,7 +93,6 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
   const [chatInput, setChatInput] = useState('');
   
   // UI state
-  const [showOverlay, setShowOverlay] = useState(false);
   const [showAddContact, setShowAddContact] = useState(false);
   const [showAddInteraction, setShowAddInteraction] = useState(false);
   const [showAddReminder, setShowAddReminder] = useState(false);
@@ -153,16 +157,15 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
       
       // Create real consent tokens for the relationship memory agent
       console.log('🎫 Creating consent tokens...');
-      const tokens = await hushMcpApi.createRelationshipTokens('demo_user');
+      const tokens = await hushMcpApi.createRelationshipTokens(user.id);
       console.log('✅ Tokens created:', Object.keys(tokens));
       
       // Use the relationship memory agent's execute endpoint to get data
       console.log('📡 Fetching contacts...');
       const contactsResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
+        user_id: user.id,
         tokens: tokens,
-        user_input: 'show my contacts',
-        vault_key: RELATIONSHIP_VAULT_KEY
+        user_input: 'show my contacts'
       });
       
       console.log('📞 Contacts Response:', contactsResponse);
@@ -175,10 +178,9 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
 
       console.log('📡 Fetching memories...');
       const memoriesResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
+        user_id: user.id,
         tokens: tokens,
-        user_input: 'show my memories',
-        vault_key: RELATIONSHIP_VAULT_KEY
+        user_input: 'show my memories'
       });
       
       console.log('🧠 Memories Response:', memoriesResponse);
@@ -191,10 +193,9 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
 
       console.log('📡 Fetching reminders...');
       const remindersResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
+        user_id: user.id,
         tokens: tokens,
-        user_input: 'show my reminders',
-        vault_key: RELATIONSHIP_VAULT_KEY
+        user_input: 'show my reminders'
       });
       
       console.log('⏰ Reminders Response:', remindersResponse);
@@ -207,10 +208,9 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
 
       console.log('📡 Fetching interactions...');
       const interactionsResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
+        user_id: user.id,
         tokens: tokens,
-        user_input: 'show my interactions',
-        vault_key: RELATIONSHIP_VAULT_KEY
+        user_input: 'show my interactions'
       });
       
       console.log('🤝 Interactions Response:', interactionsResponse);
@@ -236,8 +236,8 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
         
         try {
           const { hushMcpApi } = await import('../services/hushMcpApi');
-          await hushMcpApi.clearRelationshipVault('demo_user');
-          await hushMcpApi.initializeFreshVault('demo_user');
+          await hushMcpApi.clearRelationshipVault(user.id);
+          await hushMcpApi.initializeFreshVault(user.id);
           
           // Try loading data again after reset
           setTimeout(() => loadRealDataFromAgent(), 2000);
@@ -274,11 +274,11 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
       
       // First try to clear the vault completely
       console.log('🧹 Clearing relationship vault...');
-      await hushMcpApi.clearRelationshipVault('demo_user');
+      await hushMcpApi.clearRelationshipVault(user.id);
       
       // Initialize a fresh vault
       console.log('🔧 Initializing fresh vault...');
-      await hushMcpApi.initializeFreshVault('demo_user');
+      await hushMcpApi.initializeFreshVault(user.id);
       
       // Clear any cached data in frontend
       setContacts([]);
@@ -318,14 +318,14 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
       
       // Multiple vault clearing attempts
       try {
-        await hushMcpApi.clearRelationshipVault('demo_user');
+        await hushMcpApi.clearRelationshipVault(user.id);
         console.log('✅ First vault clear successful');
       } catch (e) {
         console.warn('⚠️ First vault clear failed, continuing...');
       }
       
       try {
-        await hushMcpApi.initializeFreshVault('demo_user');
+        await hushMcpApi.initializeFreshVault(user.id);
         console.log('✅ Fresh vault initialization successful');
       } catch (e) {
         console.warn('⚠️ Fresh vault init failed, continuing...');
@@ -609,11 +609,10 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
     try {
       setStartingSession(true);
       const { hushMcpApi } = await import('../services/hushMcpApi');
-      const tokens = await hushMcpApi.createRelationshipTokens('demo_user');
+      const tokens = await hushMcpApi.createRelationshipTokens(user.id);
       const res = await hushMcpApi.startRelationshipChat({
-        user_id: 'demo_user',
+        user_id: user.id,
         tokens,
-        vault_key: RELATIONSHIP_VAULT_KEY,
         session_name: 'default'
       });
       if (res?.session_id) setSessionId(res.session_id);
@@ -646,13 +645,13 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
     try {
       await startSessionIfNeeded();
       const { hushMcpApi } = await import('../services/hushMcpApi');
-      const tokens = await hushMcpApi.createRelationshipTokens('demo_user');
+      const tokens = await hushMcpApi.createRelationshipTokens(user.id);
       
       try {
         const res = await hushMcpApi.sendRelationshipChatMessage({
           session_id: sessionId || '',
           message: toSend,
-          user_id: 'demo_user',
+          user_id: user.id,
           consent_tokens: tokens
         });
 
@@ -680,9 +679,8 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
           
           // Recreate session
           const newSessionRes = await hushMcpApi.startRelationshipChat({
-            user_id: 'demo_user',
+            user_id: user.id,
             tokens,
-            vault_key: RELATIONSHIP_VAULT_KEY,
             session_name: 'default'
           });
           
@@ -693,7 +691,7 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack, onSendToH
             const retryRes = await hushMcpApi.sendRelationshipChatMessage({
               session_id: newSessionRes.session_id,
               message: toSend,
-              user_id: 'demo_user',
+              user_id: user.id,
               consent_tokens: tokens
             });
 
@@ -1069,8 +1067,8 @@ Try saying something like:
     try {
       const { hushMcpApi } = await import('../services/hushMcpApi');
       await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
-        tokens: await hushMcpApi.createRelationshipTokens('demo_user'),
+        user_id: user.id,
+        tokens: await hushMcpApi.createRelationshipTokens(user.id),
         user_input: `Add contact: ${contact.name}, email: ${contact.email}, company: ${contact.company || 'N/A'}`
       });
     } catch (e) {
@@ -1104,8 +1102,8 @@ Try saying something like:
     try {
       const { hushMcpApi } = await import('../services/hushMcpApi');
       await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
-        tokens: await hushMcpApi.createRelationshipTokens('demo_user'),
+        user_id: user.id,
+        tokens: await hushMcpApi.createRelationshipTokens(user.id),
         user_input: `Remember about ${memory.contactName}: ${memory.summary} ${memory.location ? `at ${memory.location}` : ''} ${memory.date ? `on ${memory.date}` : ''}`
       });
     } catch (e) {
@@ -1142,8 +1140,8 @@ Try saying something like:
     try {
       const { hushMcpApi } = await import('../services/hushMcpApi');
       await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
-        tokens: await hushMcpApi.createRelationshipTokens('demo_user'),
+        user_id: user.id,
+        tokens: await hushMcpApi.createRelationshipTokens(user.id),
         user_input: `Set reminder: ${reminder.title} for ${contactName} on ${reminder.dueDate}. ${reminder.description}`
       });
     } catch (e) {
@@ -1183,8 +1181,8 @@ Try saying something like:
       const { hushMcpApi } = await import('../services/hushMcpApi');
       const contactName = contacts.find(c => c.id === interaction.contactId)?.name || 'Unknown';
       await hushMcpApi.executeRelationshipMemory({
-        user_id: 'demo_user',
-        tokens: await hushMcpApi.createRelationshipTokens('demo_user'),
+        user_id: user.id,
+        tokens: await hushMcpApi.createRelationshipTokens(user.id),
         user_input: `Log interaction with ${contactName}: ${interaction.description} (${interaction.type}, ${interaction.sentiment})`
       });
     } catch (e) {
@@ -1596,12 +1594,6 @@ Try saying something like:
               title="Complete system reset - clears all data and starts fresh"
             >
               🔥 Complete Reset
-            </button>
-            <button
-              onClick={() => setShowOverlay(true)}
-              style={styles.detailsButton}
-            >
-              View Details
             </button>
           </div>
         </div>

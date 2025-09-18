@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 
 interface AgentFormData {
@@ -22,7 +21,7 @@ interface AgentAdminProps {
 }
 
 const AgentAdmin: React.FC<AgentAdminProps> = ({ onBack }) => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   

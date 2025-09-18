@@ -1,0 +1,42 @@
+# Development files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+
+# Environment and config
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md
+*.md
+
+# Scripts
+start.bat
+start.sh
+
+# Tests
+tests/
+
+# Large directories that shouldn't be deployed
+vault/
+.vercel/
+
+# Git
+.git/
+.gitignore

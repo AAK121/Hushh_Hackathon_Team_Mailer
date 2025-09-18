@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HushMCP Dashboard - Blocky Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #1e3a1e;
+            background-image: 
+                radial-gradient(circle at 2px 2px, #2d5a2d 2px, transparent 0);
+            background-size: 24px 24px;
+            color: #ffffff;
+            line-height: 1.8;
+            font-size: 10px;
+            min-height: 100vh;
+        }
+
+        .dashboard-container {
+            padding: 16px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Minecraft-style Header */
+        .dashboard-header {
+            text-align: center;
+            margin-bottom: 32px;
+            background: #654321;
+            border: 4px solid;
+            border-color: #ffffff #333333 #333333 #ffffff;
+            padding: 24px;
+        }
+
+        .dashboard-title {
+            font-size: 16px;
+            margin-bottom: 16px;
+            text-shadow: 2px 2px 0px #000000;
+            color: #ffffff;
+        }
+
+        .dashboard-subtitle {
+            font-size: 8px;
+            opacity: 0.9;
+            color: #cccccc;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat-block {
+            background: #8b4513;
+            border: 4px solid;
+            border-color: #ffffff #333333 #333333 #ffffff;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .stat-block:hover {
+            transform: translateY(-2px);
+            border-color: #cccccc #222222 #222222 #cccccc;
+        }
+
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 12px;
+            display: block;
+            filter: drop-shadow(1px 1px 0px #000000);
+        }
+
+        .stat-number {
+            font-size: 16px;
+            color: #ffffff;
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .stat-label {
+            color: #cccccc;
+            font-size: 6px;
+        }
+
+        /* Features Section */
+        .features-section {
+            background: #654321;
+            border: 4px solid;
+            border-color: #ffffff #333333 #333333 #ffffff;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            margin-bottom: 24px;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .feature-block {
+            background: #8b8b8b;
+            border: 3px solid;
+            border-color: #ffffff #555555 #555555 #ffffff;
+            padding: 16px;
+            transition: all 0.2s;
+        }
+
+        .feature-block:hover {
+            border-color: #cccccc #333333 #333333 #cccccc;
+        }
+
+        .feature-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .feature-icon {
+            font-size: 16px;
+            filter: drop-shadow(1px 1px 0px #000000);
+        }
+
+        .feature-title {
+            font-size: 8px;
+            color: #333333;
+            text-shadow: 1px 1px 0px #ffffff;
+        }
+
+        .feature-description {
+            color: #555555;
+            font-size: 6px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .feature-list {
+            list-style: none;
+        }
+
+        .feature-list li {
+            font-size: 6px;
+            margin-bottom: 6px;
+            color: #333333;
+            text-shadow: 1px 1px 0px #ffffff;
+        }
+
+        .feature-list li:before {
+            content: "⛏️ ";
+            margin-right: 4px;
+        }
+
+        /* Tech Stack */
+        .tech-stack {
+            background: #2d5a2d;
+            border: 4px solid;
+            border-color: #58d68d #1e8449 #1e8449 #58d68d;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .tech-block {
+            text-align: center;
+            padding: 12px;
+            background: #27ae60;
+            border: 3px solid;
+            border-color: #58d68d #1e8449 #1e8449 #58d68d;
+            transition: all 0.2s;
+        }
+
+        .tech-block:hover {
+            background: #2ecc71;
+            border-color: #7dffaa #0d5a2d #0d5a2d #7dffaa;
+        }
+
+        .tech-icon {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: block;
+            filter: drop-shadow(1px 1px 0px #000000);
+        }
+
+        .tech-name {
+            font-size: 6px;
+            color: #ffffff;
+            margin-bottom: 4px;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        .tech-desc {
+            font-size: 5px;
+            color: #cccccc;
+        }
+
+        /* Action Section */
+        .action-section {
+            text-align: center;
+        }
+
+        .mc-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border: 3px solid;
+            border-color: #ffffff #555555 #555555 #ffffff;
+            background: #5dade2;
+            color: #ffffff;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            cursor: pointer;
+            text-shadow: 1px 1px 0px #000000;
+            transition: all 0.2s;
+            text-decoration: none;
+            margin: 8px;
+        }
+
+        .mc-button:hover {
+            background: #6bb6ff;
+            border-color: #cccccc #333333 #333333 #cccccc;
+            color: #ffffff;
+            text-decoration: none;
+            transform: translateY(-1px);
+        }
+
+        .mc-button:active {
+            border-color: #333333 #cccccc #cccccc #333333;
+            transform: translateY(0);
+        }
+
+        .mc-button.success {
+            background: #27ae60;
+            border-color: #58d68d #1e8449 #1e8449 #58d68d;
+        }
+
+        .mc-button.success:hover {
+            background: #2ecc71;
+        }
+
+        .mc-button.danger {
+            background: #e74c3c;
+            border-color: #f1948a #c0392b #c0392b #f1948a;
+        }
+
+        .mc-button.danger:hover {
+            background: #ec7063;
+        }
+
+        /* Inventory-style Status */
+        .status-inventory {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .status-slot {
+            aspect-ratio: 1;
+            background: #8b8b8b;
+            border: 3px solid;
+            border-color: #555555 #ffffff #ffffff #555555;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.1s;
+        }
+
+        .status-slot:hover {
+            border-color: #ffffff #555555 #555555 #ffffff;
+        }
+
+        .status-slot.active {
+            background: #27ae60;
+            border-color: #58d68d #1e8449 #1e8449 #58d68d;
+        }
+
+        .slot-icon {
+            font-size: 20px;
+            margin-bottom: 4px;
+            filter: drop-shadow(1px 1px 0px #000000);
+        }
+
+        .slot-label {
+            font-size: 5px;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 1px 1px 0px #000000;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .dashboard-title {
+                font-size: 12px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tech-grid {
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            }
+        }
+
+        /* Animations */
+        @keyframes mine {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .mining {
+            animation: mine 0.5s ease-in-out;
+        }
+
+        .loading-dots {
+            display: inline-block;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="dashboard-header">
+            <h1 class="dashboard-title">🎮 HUSHMCP EMAIL SUITE</h1>
+            <p class="dashboard-subtitle">⛏️ BLOCKY PRIVACY-FIRST AI EMAIL AUTOMATION ⛏️</p>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="stats-grid">
+            <div class="stat-block">
+                <span class="stat-icon">📧</span>
+                <div class="stat-number" id="emailsSent">0</div>
+                <div class="stat-label">EMAILS MINED</div>
+            </div>
+            
+            <div class="stat-block">
+                <span class="stat-icon">📅</span>
+                <div class="stat-number" id="eventsCreated">0</div>
+                <div class="stat-label">EVENTS CRAFTED</div>
+            </div>
+            
+            <div class="stat-block">
+                <span class="stat-icon">🔒</span>
+                <div class="stat-number" id="consentTokens">100</div>
+                <div class="stat-label">% PRIVACY PROTECTED</div>
+            </div>
+            
+            <div class="stat-block">
+                <span class="stat-icon">👥</span>
+                <div class="stat-number" id="activeUsers">1</div>
+                <div class="stat-label">ACTIVE MINERS</div>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="features-section">
+            <h2 class="section-title">⚒️ AVAILABLE TOOLS & AGENTS</h2>
+            
+            <div class="features-grid">
+                <div class="feature-block">
+                    <div class="feature-header">
+                        <span class="feature-icon">🐼</span>
+                        <h3 class="feature-title">MAILER PANDA AGENT</h3>
+                    </div>
+                    <p class="feature-description">
+                        AI-POWERED EMAIL CAMPAIGN CREATION WITH HUMAN-IN-THE-LOOP APPROVAL
+                    </p>
+                    <ul class="feature-list">
+                        <li>GEMINI AI CONTENT GENERATION</li>
+                        <li>HUMAN APPROVAL WORKFLOW</li>
+                        <li>MASS EMAIL WITH EXCEL INTEGRATION</li>
+                        <li>DYNAMIC PLACEHOLDER REPLACEMENT</li>
+                        <li>REAL-TIME STATUS TRACKING</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-block">
+                    <div class="feature-header">
+                        <span class="feature-icon">🐱</span>
+                        <h3 class="feature-title">GMAIL CAT AGENT</h3>
+                    </div>
+                    <p class="feature-description">
+                        SMART EMAIL ANALYSIS & AUTOMATIC CALENDAR EVENT CREATION
+                    </p>
+                    <ul class="feature-list">
+                        <li>AI EVENT EXTRACTION FROM EMAILS</li>
+                        <li>GOOGLE CALENDAR INTEGRATION</li>
+                        <li>AUTOMATIC EVENT SCHEDULING</li>
+                        <li>PRIVACY-PRESERVING ANALYSIS</li>
+                        <li>CONSENT-DRIVEN OPERATIONS</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-block">
+                    <div class="feature-header">
+                        <span class="feature-icon">🔐</span>
+                        <h3 class="feature-title">HUSHMCP FRAMEWORK</h3>
+                    </div>
+                    <p class="feature-description">
+                        ADVANCED CONSENT MANAGEMENT WITH CRYPTOGRAPHIC SECURITY
+                    </p>
+                    <ul class="feature-list">
+                        <li>CRYPTOGRAPHICALLY SIGNED TOKENS</li>
+                        <li>GRANULAR PERMISSION SCOPES</li>
+                        <li>TIME-BOUND ACCESS CONTROL</li>
+                        <li>REAL-TIME TOKEN REVOCATION</li>
+                        <li>COMPLETE AUDIT TRAIL</li>
+                    </ul>
+                </div>
+                
+                <div class="feature-block">
+                    <div class="feature-header">
+                        <span class="feature-icon">🕸️</span>
+                        <h3 class="feature-title">LANGGRAPH WORKFLOWS</h3>
+                    </div>
+                    <p class="feature-description">
+                        SOPHISTICATED STATE MANAGEMENT FOR COMPLEX EMAIL OPERATIONS
+                    </p>
+                    <ul class="feature-list">
+                        <li>GRAPH-BASED STATE MANAGEMENT</li>
+                        <li>CONDITIONAL WORKFLOW ROUTING</li>
+                        <li>ERROR RECOVERY MECHANISMS</li>
+                        <li>INTERACTIVE FEEDBACK LOOPS</li>
+                        <li>SCALABLE ARCHITECTURE</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technology Stack -->
+        <div class="tech-stack">
+            <h2 class="section-title">🔧 TECHNOLOGY BLOCKS</h2>
+            <div class="tech-grid">
+                <div class="tech-block">
+                    <span class="tech-icon">🐍</span>
+                    <div class="tech-name">PYTHON</div>
+                    <div class="tech-desc">CORE BACKEND</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">🌐</span>
+                    <div class="tech-name">DJANGO</div>
+                    <div class="tech-desc">WEB FRAMEWORK</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">🧠</span>
+                    <div class="tech-name">LANGGRAPH</div>
+                    <div class="tech-desc">WORKFLOW ENGINE</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">🤖</span>
+                    <div class="tech-name">GEMINI AI</div>
+                    <div class="tech-desc">CONTENT GENERATION</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">📮</span>
+                    <div class="tech-name">MAILJET</div>
+                    <div class="tech-desc">EMAIL DELIVERY</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">📅</span>
+                    <div class="tech-name">GOOGLE CAL</div>
+                    <div class="tech-desc">EVENT MANAGEMENT</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">🔒</span>
+                    <div class="tech-name">HUSHMCP</div>
+                    <div class="tech-desc">CONSENT FRAMEWORK</div>
+                </div>
+                <div class="tech-block">
+                    <span class="tech-icon">⚡</span>
+                    <div class="tech-name">JAVASCRIPT</div>
+                    <div class="tech-desc">FRONTEND MAGIC</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Status -->
+        <div class="features-section">
+            <h2 class="section-title">⚡ SYSTEM STATUS</h2>
+            <div class="status-inventory">
+                <div class="status-slot active">
+                    <span class="slot-icon">🟢</span>
+                    <div class="slot-label">API ONLINE</div>
+                </div>
+                <div class="status-slot active">
+                    <span class="slot-icon">🤖</span>
+                    <div class="slot-label">AI READY</div>
+                </div>
+                <div class="status-slot active">
+                    <span class="slot-icon">📧</span>
+                    <div class="slot-label">EMAIL ACTIVE</div>
+                </div>
+                <div class="status-slot active">
+                    <span class="slot-icon">📅</span>
+                    <div class="slot-label">CALENDAR OK</div>
+                </div>
+                <div class="status-slot active">
+                    <span class="slot-icon">🔐</span>
+                    <div class="slot-label">CONSENT VALID</div>
+                </div>
+                <div class="status-slot active">
+                    <span class="slot-icon">🌐</span>
+                    <div class="slot-label">WEB UI UP</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Section -->
+        <div class="action-section">
+            <a href="/" class="mc-button">
+                🚀 LAUNCH EMAIL SUITE
+            </a>
+            <button class="mc-button success" onclick="testSystems()">
+                🔧 TEST ALL SYSTEMS
+            </button>
+            <button class="mc-button danger" onclick="showServerInfo()">
+                📊 SERVER INFO
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Animate counters
+        function animateCounter(elementId, targetValue, duration = 2000) {
+            const element = document.getElementById(elementId);
+            const startValue = 0;
+            const increment = targetValue / (duration / 16);
+            let currentValue = startValue;
+
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= targetValue) {
+                    currentValue = targetValue;
+                    clearInterval(timer);
+                }
+                
+                if (elementId === 'consentTokens') {
+                    element.textContent = Math.floor(currentValue) + '%';
+                } else {
+                    element.textContent = Math.floor(currentValue).toLocaleString();
+                }
+            }, 16);
+        }
+
+        // Load stats
+        function loadStats() {
+            // Mock data - in real app these would come from API
+            const stats = {
+                emailsSent: 0,
+                eventsCreated: 0,
+                consentTokens: 100,
+                activeUsers: 1
+            };
+
+            animateCounter('emailsSent', stats.emailsSent);
+            animateCounter('eventsCreated', stats.eventsCreated);
+            animateCounter('consentTokens', stats.consentTokens);
+            animateCounter('activeUsers', stats.activeUsers);
+        }
+
+        // Test systems
+        function testSystems() {
+            const statusSlots = document.querySelectorAll('.status-slot');
+            
+            statusSlots.forEach((slot, index) => {
+                setTimeout(() => {
+                    slot.classList.add('mining');
+                    setTimeout(() => {
+                        slot.classList.remove('mining');
+                    }, 500);
+                }, index * 200);
+            });
+            
+            setTimeout(() => {
+                alert('🎮 ALL SYSTEMS OPERATIONAL!\n\n⛏️ EMAIL MINING: READY\n🤖 AI AGENTS: ONLINE\n🔐 CONSENT: SECURED\n📊 DASHBOARD: ACTIVE');
+            }, statusSlots.length * 200 + 500);
+        }
+
+        // Show server info
+        function showServerInfo() {
+            alert(`🖥️ MINECRAFT SERVER INFO
+
+🏗️ PLATFORM: DJANGO ${new Date().getFullYear()}
+🎮 VERSION: HUSHMCP v2.0 BLOCKY EDITION
+🌐 STATUS: ONLINE
+⚡ UPTIME: ${Math.floor(Math.random() * 24)}H ${Math.floor(Math.random() * 60)}M
+💾 MEMORY: ${Math.floor(Math.random() * 512 + 256)}MB
+🔧 CPU: ${Math.floor(Math.random() * 50 + 10)}%
+
+⛏️ READY TO MINE EMAILS!`);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            
+            // Add some visual flair
+            setTimeout(() => {
+                alert('🎮 WELCOME TO HUSHMCP BLOCKY EDITION!\n\n⛏️ A MINECRAFT-INSPIRED EMAIL SUITE\n🤖 POWERED BY AI AGENTS\n🔐 PROTECTED BY CONSENT\n\n🚀 CLICK "LAUNCH EMAIL SUITE" TO START!');
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

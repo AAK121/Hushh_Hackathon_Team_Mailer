@@ -1,0 +1,14 @@
+{
+  "ciphertext": "XBLjZUzuTRg1zi5jezPUfiChAXNvm9/xvcH0xwvKxfOO0gPXsOstT8j06K09yTgdbHw0qxrDYKe0FibS7s5cZ1sa7bE3fkixz6tynxCug6IFqvFBaoDRmukZphGUlbauTINiotuBnkJ9gNP/ylLt/MXrpVj/tVl9f2KqvCGZi/mnqL0T2neF+cNmkf9bI8UjB1NTGxQz2azzuQd2i0AnDsGWevkXUPUwMs56AUtJdvc+c1M6+FRU56g/HI5aZHDtlExq+8PUnO54fMDNC59Rb3bXN43hIIw64l0/XqxDZow8TtugCiG0omNqGmKzobaEkJk5C+XRSv+NhnBHfNXxxLPSBOjTKXLbTdsGDST5YV3ym8RGk2wE0MQkhjDvAuRNW0MlZUOVdKa79sIGBEiBzZRGqEQpKnpDJuQio2+S3lhI6jR23MJkoy0Je6yzjKc/FFMP9BHqFmZkTJVZuQT2cKBy2KjOBBn8HnAQVC+hNgRTlSr/3zeZBO/uLAnFN80+hFGpog9oXlwJh5tW4q1qHCxK1UGYP3ul9QDr4nWxcTxJsCVSLLoS05f9DMDPH3qYE/y0SmJDlZJNG6DAFxXWwJ7LZ+Qe2q3CSHtu5BNxAvSRnGEJJJNJEvY5fv95A8BbV2Y0/g4otZculcrV4YwOFK2Kw7iGV09SXXRy1XDyQF/1ocOw+ip+YquV4fc8kbzsoLCKihRRq+ruUFbRomf1VZmrYacHdWY3MjA34088StB2E2Us",
+  "iv": "CtOqz2D3lhkUfgl0",
+  "tag": "3HsWBpfGYnFg+wX88dbSEg==",
+  "encoding": "base64",
+  "algorithm": "aes-256-gcm",
+  "metadata": {
+    "agent_id": "chandufinance",
+    "user_id": "test_user_dynamic",
+    "scope": "vault.write.file",
+    "created_at": "2025-08-21T21:03:45.298897",
+    "data_type": "personal_financial_profile"
+  }
+}

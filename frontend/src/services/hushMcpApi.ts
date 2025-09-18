@@ -1,8 +1,10 @@
 // HushMCP Agent API Service
+import { HushMCPTokenManager } from './tokenManager';
+
 const API_BASE_URL = import.meta.env.VITE_HUSHMCP_API_URL || 'http://127.0.0.1:8001';
 
-// Hardcoded vault key that matches the backend relationship memory agent
-const RELATIONSHIP_VAULT_KEY = 'e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8';
+// Initialize token manager
+const tokenManager = new HushMCPTokenManager();
 
 // Import EmailTemplate from MassMail.tsx
 // EmailTemplate interface
@@ -240,12 +242,31 @@ class HushMcpApiService {
     return this.makeRequest('/agents');
   }
 
-  // Create consent token
+  // Create consent token using the token manager
   async createConsentToken(request: ConsentTokenRequest): Promise<ConsentTokenResponse> {
-    return this.makeRequest('/consent/token', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    try {
+      const token = await tokenManager.getValidToken(
+        request.user_id, 
+        request.agent_id, 
+        request.scope
+      );
+      
+      if (!token) {
+        throw new Error('Failed to create consent token');
+      }
+      
+      // Get token info for response format
+      const tokenInfo = tokenManager.getTokenInfo(request.user_id, request.scope);
+      
+      return {
+        token: token,
+        expires_at: tokenInfo?.expires_at || Date.now() + (60 * 60 * 1000), // 1 hour default
+        scope: request.scope
+      };
+    } catch (error) {
+      console.error('Error creating consent token:', error);
+      throw error;
+    }
   }
 
   // AddToCalendar Agent Methods
@@ -287,8 +308,7 @@ class HushMcpApiService {
 
   // Quick calendar event creation method
   async createCalendarEvent(
-    userId: string, 
-    googleAccessToken: string,
+    userId: string,
     eventDetails: {
       title: string;
       date: string;
@@ -298,16 +318,50 @@ class HushMcpApiService {
       location?: string;
     }
   ): Promise<AddToCalendarResponse> {
+    // Automatically get a valid Google token
+    const googleToken = await this.getValidGoogleToken();
+    if (!googleToken) {
+      throw new Error('Unable to obtain valid Google access token. Please re-authenticate.');
+    }
+    
     const tokens = await this.createAddToCalendarTokens(userId);
     
     return this.executeAddToCalendar({
       user_id: userId,
       email_token: tokens.email_token,
       calendar_token: tokens.calendar_token,
-      google_access_token: googleAccessToken,
+      google_access_token: googleToken,
       action: 'manual_event',
       event_details: eventDetails
     });
+  }
+
+  // Helper method to get valid Google token with automatic refresh
+  private async getValidGoogleToken(): Promise<string | null> {
+    try {
+      // Check session storage for current token
+      const storedToken = sessionStorage.getItem('google_access_token');
+      const storedExpiry = sessionStorage.getItem('google_token_expiry');
+      
+      if (storedToken && storedExpiry) {
+        const expiry = parseInt(storedExpiry);
+        const now = Date.now();
+        
+        // If token is still valid (with 5-minute buffer), return it
+        if (expiry - now > 300000) {
+          return storedToken;
+        } else {
+          console.log('Google token expired or expiring soon, requires refresh');
+          // Token needs refresh - calling code should handle this
+          return null;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting valid Google token:', error);
+      return null;
+    }
   }
 
   // MailerPanda Agent Methods
@@ -555,8 +609,12 @@ class HushMcpApiService {
     consent_tokens?: Record<string, string>;
   }) {
     // Ensure we have required fields
+    if (!request.user_id) {
+      throw new Error('User ID is required for HushhMCP consent token validation');
+    }
+    
     const body = {
-      user_id: request.user_id || 'demo_user',
+      user_id: request.user_id,
       message: request.message,
       consent_tokens: request.consent_tokens || {},
       session_id: request.session_id
@@ -659,7 +717,6 @@ class HushMcpApiService {
         user_id: userId,
         tokens: tokens,
         user_input: 'clear all data and reset vault encryption',
-        vault_key: RELATIONSHIP_VAULT_KEY,
         is_startup: true
       });
     } catch (error) {
@@ -676,7 +733,6 @@ class HushMcpApiService {
         user_id: userId,
         tokens: tokens,
         user_input: 'initialize new vault with fresh encryption keys',
-        vault_key: RELATIONSHIP_VAULT_KEY,
         is_startup: true
       });
     } catch (error) {

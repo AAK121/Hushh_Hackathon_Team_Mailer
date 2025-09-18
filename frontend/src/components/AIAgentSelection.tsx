@@ -5,19 +5,11 @@ import remarkGfm from 'remark-gfm';
 import { 
   PaperAirplaneIcon, 
   CpuChipIcon, 
-  UserIcon,
-  Bars3Icon,
-  PlusIcon,
-  QuestionMarkCircleIcon,
-  ClockIcon,
-  Cog6ToothIcon,
-  ChatBubbleLeftRightIcon,
-  LightBulbIcon,
-  CodeBracketIcon,
-  PhotoIcon,
-  MicrophoneIcon,
-  MapIcon
+  UserIcon
 } from '@heroicons/react/24/outline';
+
+// Get API base URL from environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
 
 interface AIAgentSelectionProps {
   onSelectAgent?: (agent: 'mass-mail' | 'calendar') => void;
@@ -38,7 +30,7 @@ interface ChatResponse {
   session_id: string;
 }
 
-const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent, onShowHITL }) => {
+const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent: _onSelectAgent, onShowHITL: _onShowHITL }) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -67,7 +59,7 @@ Ask me anything about our agents, how to use them, or get started with the platf
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [userId, setUserId] = useState('default_user');
+  const [userId] = useState('default_user');
   const [isMaximized, setIsMaximized] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -101,7 +93,7 @@ Ask me anything about our agents, how to use them, or get started with the platf
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:8001/chat', {
+      const response = await fetch(`${API_BASE_URL}/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

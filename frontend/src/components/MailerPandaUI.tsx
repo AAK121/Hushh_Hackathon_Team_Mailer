@@ -3,6 +3,9 @@ import './MailerPandaUI.css';
 import { useAuth } from '../contexts/AuthContext';
 import { hushMcpApi } from '../services/hushMcpApi';
 
+// Get API base URL from environment
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
+
 // Interface definitions for backend integration
 interface GeneratedEmail {
   subject: string;
@@ -134,7 +137,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
       const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
 
       try {
-        const response = await fetch('http://127.0.0.1:8001/agents/mailerpanda/mass-email', {
+        const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -230,7 +233,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
         feedback: suggestion
       };
 
-      const response = await fetch('http://127.0.0.1:8001/agents/mailerpanda/mass-email/approve', {
+      const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -290,7 +293,7 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
         action: 'approve'
       };
 
-      const response = await fetch('http://127.0.0.1:8001/agents/mailerpanda/mass-email/approve', {
+      const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

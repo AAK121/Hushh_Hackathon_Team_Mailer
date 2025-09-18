@@ -73,7 +73,7 @@ class ResearchAgentApiService {
   private chatHistory: ChatMessage[] = [];
 
   constructor() {
-    this.baseUrl = 'http://localhost:8001'; // Main API server port
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app'; // Main API server port
     this.loadSessionFromStorage();
   }
 

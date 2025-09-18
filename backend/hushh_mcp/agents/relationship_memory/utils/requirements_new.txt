@@ -1,0 +1,24 @@
+# Database
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+alembic==1.12.1
+
+# Vector Database
+pinecone-client==2.2.4
+langchain==0.0.330
+google-generativeai==0.3.1
+langchain-google-genai==0.0.5
+
+# API Framework
+fastapi==0.104.1
+pydantic==2.4.2
+uvicorn==0.24.0
+
+# Task Queue
+celery==5.3.4
+redis==5.0.1
+
+# Utilities
+python-dotenv==1.0.0
+python-dateutil==2.8.2
+requests==2.31.0

@@ -44,7 +44,7 @@ export interface ChatResponse {
 class ResearchApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = 'http://localhost:8001') {
+  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001') {
     this.baseUrl = baseUrl;
   }
 
@@ -64,7 +64,11 @@ class ResearchApiService {
   /**
    * Search for academic papers
    */
-  async searchPapers(query: string, userId: string = 'demo_user'): Promise<SearchResponse> {
+  async searchPapers(query: string, userId: string): Promise<SearchResponse> {
+    if (!userId) {
+      throw new Error('User ID is required for HushhMCP consent token validation');
+    }
+    
     const response = await fetch(`${this.baseUrl}/research/search`, {
       method: 'POST',
       headers: {
@@ -188,19 +192,23 @@ class ResearchApiService {
   /**
    * Upload PDF for processing
    */
-  async uploadPDF(file: File, userId: string = 'demo_user'): Promise<{
+  async uploadPDF(file: File, userId: string, consentTokens: Record<string, string>): Promise<{
     status: string;
     paper_id: string;
     text_length: number;
     session_id: string;
   }> {
+    if (!userId) {
+      throw new Error('User ID is required for HushhMCP consent token validation');
+    }
+    if (!consentTokens || !consentTokens['vault:read:file'] || !consentTokens['vault:write:file']) {
+      throw new Error('Valid HushhMCP consent tokens are required for file operations');
+    }
+    
     const formData = new FormData();
     formData.append('file', file);
     formData.append('user_id', userId);
-    formData.append('consent_tokens', JSON.stringify({
-      'vault:read:file': 'demo_token',
-      'vault:write:file': 'demo_token'
-    }));
+    formData.append('consent_tokens', JSON.stringify(consentTokens));
 
     const response = await fetch(`${this.baseUrl}/agents/research/upload`, {
       method: 'POST',

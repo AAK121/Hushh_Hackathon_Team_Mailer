@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import API_CONFIG from '../config/api';
 
 interface CalendarEvent {
   summary: string;
@@ -28,7 +29,7 @@ interface AddToCalendarAgentProps {
 }
 
 const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
-  const { user } = useAuth();
+  const { user, getValidGoogleToken } = useAuth();
   const [loading, setLoading] = useState(false);
   const [processingResults, setProcessingResults] = useState<ProcessingResult[]>([]);
   const [showGoogleAuth, setShowGoogleAuth] = useState(false);
@@ -49,7 +50,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
     end_time: ''
   });
 
-  const API_BASE_URL = 'http://127.0.0.1:8001';
+  const API_BASE_URL = API_CONFIG.BASE_URL;
 
   useEffect(() => {
     loadProcessingHistory();
@@ -69,7 +70,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
 
   const createConsentToken = async (scope: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/consent/token`, {
+      const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.CONSENT_TOKEN}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -93,18 +94,39 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
     }
   };
 
-  const authenticateWithGoogle = () => {
-    // In a real implementation, this would use Google OAuth
-    const demoToken = 'ya29.demo_google_access_token_' + Date.now();
-    setGoogleAccessToken(demoToken);
-    setShowGoogleAuth(false);
-    alert('Google authentication successful! (Demo mode)');
+  const authenticateWithGoogle = async () => {
+    try {
+      // Get a valid Google token (automatically refreshes if needed)
+      const token = await getValidGoogleToken();
+      
+      if (token) {
+        setGoogleAccessToken(token);
+        setShowGoogleAuth(false);
+        console.log('✅ Google authentication successful with refreshed token');
+      } else {
+        throw new Error('Unable to obtain valid Google token. Please sign in with Google again.');
+      }
+    } catch (error) {
+      console.error('Google authentication failed:', error);
+      alert('Google authentication failed. Please try signing in again.');
+    }
   };
 
   const executeAddToCalendar = async () => {
-    if (!googleAccessToken && action !== 'analyze_only') {
-      setShowGoogleAuth(true);
-      return;
+    // For non-analyze actions, ensure we have a valid Google token
+    if (action !== 'analyze_only') {
+      try {
+        const token = await getValidGoogleToken();
+        if (!token) {
+          setShowGoogleAuth(true);
+          return;
+        }
+        setGoogleAccessToken(token);
+      } catch (error) {
+        console.error('Failed to get Google token:', error);
+        setShowGoogleAuth(true);
+        return;
+      }
     }
 
     setLoading(true);
@@ -128,7 +150,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
         max_emails: maxEmails
       };
 
-      const response = await fetch(`${API_BASE_URL}/agents/addtocalendar/execute`, {
+      const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.ADDTOCALENDAR_EXECUTE}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -423,6 +445,17 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
       fontSize: '1rem',
       minHeight: '80px',
       resize: 'vertical' as const,
+    },
+    tokenStatus: {
+      padding: '0.75rem 1rem',
+      background: 'rgba(16, 185, 129, 0.2)',
+      border: '1px solid rgba(16, 185, 129, 0.4)',
+      borderRadius: '0.5rem',
+      color: '#10b981',
+      fontSize: '0.9rem',
+      fontWeight: '600',
+      textAlign: 'center' as const,
+      margin: '0.5rem 0',
     }
   };
 
@@ -506,10 +539,16 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
           {!googleAccessToken && action !== 'analyze_only' && (
             <button 
               style={{...styles.actionButton, ...styles.googleButton}}
-              onClick={() => setShowGoogleAuth(true)}
+              onClick={authenticateWithGoogle}
             >
               🔐 Connect Google Calendar
             </button>
+          )}
+          
+          {googleAccessToken && action !== 'analyze_only' && (
+            <div style={styles.tokenStatus}>
+              ✅ Google Calendar Connected (Token Auto-Refreshed)
+            </div>
           )}
           
           <button 

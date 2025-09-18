@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { auth, isSupabaseConfigured } from '../lib/supabase'
+import { clearUserTokens } from '../services/tokenManager'
+import { createUserVault, getUserVaultInfo } from '../services/userVaultApi'
 
 interface AuthContextType {
   user: User | null
@@ -12,6 +14,10 @@ interface AuthContextType {
   signInWithOAuth: (provider: 'google' | 'github' | 'discord' | 'twitter') => Promise<{ error: any }>
   getValidGoogleToken: () => Promise<string | null>
   refreshGoogleToken: () => Promise<{ token: string | null; error: any }>
+  // New user vault methods
+  getUserId: () => string | null
+  initializeUserVault: () => Promise<void>
+  hasUserVault: () => Promise<boolean>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -36,37 +42,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('AuthProvider useEffect - isSupabaseConfigured:', isSupabaseConfigured);
     
-    // If Supabase is not configured, use demo authentication
+    // Require proper Supabase configuration - no demo mode
     if (!isSupabaseConfigured) {
-      console.log('🔧 Using demo authentication - Supabase not configured')
-      // Check for existing demo session
-      const savedUser = localStorage.getItem('hushhmail_demo_user')
-      if (savedUser) {
-        console.log('Found saved demo user:', savedUser);
-        const userData = JSON.parse(savedUser)
-        // Create a mock user object compatible with Supabase User type
-        const mockUser: User = {
-          id: userData.id || 'demo-user-' + Date.now(),
-          email: userData.email,
-          user_metadata: {
-            full_name: userData.name
-          },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: userData.created_at || new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        setUser(mockUser)
-      } else {
-        console.log('No saved demo user found');
-      }
-      setLoading(false)
-      return
+      throw new Error('� Supabase configuration is required. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
     }
 
-    console.log('✅ Supabase is configured, clearing demo user and checking session');
-    // Clear any demo user data when Supabase is configured
-    localStorage.removeItem('hushhmail_demo_user')
+    console.log('✅ Supabase is configured, checking session');
 
     // Get initial session from Supabase
     const getInitialSession = async () => {
@@ -123,39 +104,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true)
       
-      // Use demo authentication if Supabase is not configured
-      if (!isSupabaseConfigured) {
-        // Simple validation for demo
-        if (!email || !password) {
-          return { error: { message: 'Email and password are required' } }
-        }
-        
-        // Create mock user for demo
-        const mockUser: User = {
-          id: 'demo-user-' + Date.now(),
-          email: email,
-          user_metadata: {
-            full_name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)
-          },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        
-        // Save to localStorage for demo persistence
-        localStorage.setItem('hushhmail_demo_user', JSON.stringify({
-          id: mockUser.id,
-          email: mockUser.email,
-          name: mockUser.user_metadata.full_name,
-          created_at: mockUser.created_at
-        }))
-        
-        setUser(mockUser)
-        return { error: null }
-      }
-      
-      // Use Supabase authentication
+      // Use Supabase authentication only
       const { error } = await auth.signIn(email, password)
       
       if (error) {
@@ -176,39 +125,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true)
       
-      // Use demo authentication if Supabase is not configured
-      if (!isSupabaseConfigured) {
-        // Simple validation for demo
-        if (!email || !password) {
-          return { error: { message: 'Email and password are required' } }
-        }
-        
-        // Create mock user for demo
-        const mockUser: User = {
-          id: 'demo-user-' + Date.now(),
-          email: email,
-          user_metadata: {
-            full_name: name || email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)
-          },
-          app_metadata: {},
-          aud: 'authenticated',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }
-        
-        // Save to localStorage for demo persistence
-        localStorage.setItem('hushhmail_demo_user', JSON.stringify({
-          id: mockUser.id,
-          email: mockUser.email,
-          name: mockUser.user_metadata.full_name,
-          created_at: mockUser.created_at
-        }))
-        
-        setUser(mockUser)
-        return { error: null }
-      }
-      
-      // Use Supabase authentication
+      // Use Supabase authentication only
       const { error } = await auth.signUp(email, password, {
         data: { name }
       })
@@ -231,15 +148,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true)
       
-      // Use demo authentication if Supabase is not configured
-      if (!isSupabaseConfigured) {
-        localStorage.removeItem('hushhmail_demo_user')
-        setUser(null)
-        setSession(null)
-        return
-      }
-      
-      // Use Supabase authentication
+      // Use Supabase authentication only
       const { error } = await auth.signOut()
       if (error) {
         console.error('Sign out error:', error)
@@ -253,12 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signInWithOAuth = async (provider: 'google' | 'github' | 'discord' | 'twitter') => {
     try {
-      // Use demo authentication if Supabase is not configured
-      if (!isSupabaseConfigured) {
-        return { error: { message: `OAuth with ${provider} requires Supabase configuration. Please add your Supabase credentials to .env file.` } }
-      }
-      
-      // Use Supabase OAuth
+      // Use Supabase OAuth only
       const { error } = await auth.signInWithOAuth(provider);
       
       if (error) {
@@ -282,7 +186,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Check if we have a Google provider token
       const googleTokenData = session.provider_token;
-      const refreshToken = session.provider_refresh_token;
       
       if (!googleTokenData) {
         console.log('No Google token found in session');
@@ -361,16 +264,78 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // New user vault methods
+  const getUserId = (): string | null => {
+    return user?.id || null;
+  };
+
+  const initializeUserVault = async (): Promise<void> => {
+    const userId = getUserId();
+    if (!userId) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      // Check if user vault already exists
+      const vaultInfo = await getUserVaultInfo(userId);
+      
+      if (vaultInfo.result.total_vaults === 0) {
+        // Create default vault for new user
+        await createUserVault(userId, 'default', 'Default user vault');
+        console.log('✅ Created default vault for user:', userId);
+      } else {
+        console.log('🏛️ User vault already exists for:', userId);
+      }
+    } catch (error) {
+      console.error('Error initializing user vault:', error);
+      throw error;
+    }
+  };
+
+  const hasUserVault = async (): Promise<boolean> => {
+    const userId = getUserId();
+    if (!userId) {
+      return false;
+    }
+
+    try {
+      const vaultInfo = await getUserVaultInfo(userId);
+      return vaultInfo.result.total_vaults > 0;
+    } catch (error) {
+      console.error('Error checking user vault:', error);
+      return false;
+    }
+  };
+
+  // Initialize user vault when user logs in
+  useEffect(() => {
+    if (user && !loading) {
+      initializeUserVault().catch(console.error);
+    }
+  }, [user, loading]);
+
+  // Clear tokens when user logs out
+  const signOutWithCleanup = async (): Promise<void> => {
+    const userId = getUserId();
+    if (userId) {
+      clearUserTokens(userId);
+    }
+    await signOut();
+  };
+
   const value: AuthContextType = {
     user,
     session,
     loading,
     signIn,
     signUp,
-    signOut,
+    signOut: signOutWithCleanup,
     signInWithOAuth,
     getValidGoogleToken,
-    refreshGoogleToken
+    refreshGoogleToken,
+    getUserId,
+    initializeUserVault,
+    hasUserVault
   }
 
   return (

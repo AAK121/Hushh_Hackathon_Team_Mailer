@@ -3,7 +3,7 @@
  * Integrates with the new comprehensive finance endpoints
  */
 
-const BASE_URL = 'http://localhost:8001';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
 
 // Types for requests and responses
 export interface FinanceApiResponse {

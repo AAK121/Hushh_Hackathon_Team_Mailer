@@ -66,7 +66,7 @@ export type DraftEmail = {
   body: string;
 };
 
-const BASE_URL = 'http://127.0.0.1:8001/agents/mailerpanda';
+const BASE_URL = `${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001'}/agents/mailerpanda`;
 
 async function safeFetch(input: RequestInfo, init?: RequestInit) {
   try {
@@ -116,17 +116,6 @@ export const massMailApi = {
       };
       reader.onerror = error => reject(error);
     });
-  },
-
-  // Get default consent tokens (for demo purposes)
-  getDefaultConsentTokens(): Record<string, string> {
-    return {
-      'vault.read.email': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQucmVhZC5lbWFpbHwxNzU1OTQ2MzA5NjU0fDE3NTYwMzI3MDk2NTQ=.e98cb6fe90a9d4a6ded5bf2a37b25028d1ea82a7e5dde4223552a312dba75b36',
-      'vault.write.email': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQud3JpdGUuZW1haWx8MTc1NTk0NjMwOTY1NHwxNzU2MDMyNzA5NjU0.107cf985c5c82413b218a436e8206856b1f982e37a70d6c5ab2fabd97c0ef60e',
-      'vault.read.file': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQucmVhZC5maWxlfDE3NTU5NDYzMDk2NTR8MTc1NjAzMjcwOTY1NA==.5549616fd68e1a507ff89e18692134c8301d40ec077df18e62b803059ca17642',
-      'vault.write.file': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8dmF1bHQud3JpdGUuZmlsZXwxNzU1OTQ2MzA5NjU1fDE3NTYwMzI3MDk2NTU=.42fe283d1d7e27c05b31ad2b1370aac464e9b15c1a7b4740de335e349b5ee817',
-      'custom.temporary': 'HCT:ZnJvbnRlbmRfdXNlcl8xMjN8bWFpbGVycGFuZGF8Y3VzdG9tLnRlbXBvcmFyeXwxNzU1OTQ2MzA5NjU1fDE3NTYwMzI3MDk2NTU=.2c80196d5ae2f4709ee0c4b08531cacd15221bbee1c4a441a7f2b754e291e4d2'
-    };
   },
 
   // Legacy methods for backward compatibility (now deprecated)
