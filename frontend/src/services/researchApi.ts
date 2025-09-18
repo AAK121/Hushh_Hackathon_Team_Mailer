@@ -44,7 +44,7 @@ export interface ChatResponse {
 class ResearchApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001') {
+  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app') {
     this.baseUrl = baseUrl;
   }
 

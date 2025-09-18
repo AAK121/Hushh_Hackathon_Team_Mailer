@@ -1,7 +1,7 @@
 // HushMCP Agent API Service
 import { HushMCPTokenManager } from './tokenManager';
 
-const API_BASE_URL = import.meta.env.VITE_HUSHMCP_API_URL || 'http://127.0.0.1:8001';
+const API_BASE_URL = import.meta.env.VITE_HUSHMCP_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://hush-backend-sepia.vercel.app';
 
 // Initialize token manager
 const tokenManager = new HushMCPTokenManager();

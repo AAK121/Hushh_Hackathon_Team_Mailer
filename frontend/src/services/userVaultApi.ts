@@ -5,7 +5,7 @@
  * Each user has their own encryption keys managed by the backend.
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8001';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
 
 export interface UserVaultData {
   [key: string]: any;

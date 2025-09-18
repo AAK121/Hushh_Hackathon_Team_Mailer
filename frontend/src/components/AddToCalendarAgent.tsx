@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import API_CONFIG from '../config/api';
 
 interface CalendarEvent {
   summary: string;
@@ -50,7 +49,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
     end_time: ''
   });
 
-  const API_BASE_URL = API_CONFIG.BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
 
   useEffect(() => {
     loadProcessingHistory();
@@ -70,7 +69,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
 
   const createConsentToken = async (scope: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.CONSENT_TOKEN}`, {
+      const response = await fetch(`${API_BASE_URL}/consent/token`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -150,7 +149,7 @@ const AddToCalendarAgent: React.FC<AddToCalendarAgentProps> = ({ onBack }) => {
         max_emails: maxEmails
       };
 
-      const response = await fetch(`${API_BASE_URL}${API_CONFIG.ENDPOINTS.ADDTOCALENDAR_EXECUTE}`, {
+      const response = await fetch(`${API_BASE_URL}/agents/addtocalendar/execute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

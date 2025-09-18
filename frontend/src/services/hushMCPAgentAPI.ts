@@ -80,7 +80,7 @@ class HushMCPAgentAPI {
   private baseURL: string;
 
   constructor() {
-    this.baseURL = import.meta.env.VITE_HUSHMCP_API_URL || 'http://127.0.0.1:8001';
+    this.baseURL = import.meta.env.VITE_HUSHMCP_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://hush-backend-sepia.vercel.app';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
