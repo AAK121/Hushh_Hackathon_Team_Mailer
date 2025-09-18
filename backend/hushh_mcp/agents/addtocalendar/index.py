@@ -18,6 +18,7 @@ from ...operons.email_analysis import prioritize_emails_operon, categorize_email
 from hushh_mcp.trust.link import verify_trust_link
 from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
 from hushh_mcp.agents.addtocalendar.manifest import manifest
+from hushh_mcp.config import GOOGLE_OAUTH_TOKEN_URI, GOOGLE_CALENDAR_SCOPE
 import hashlib
 
 def _generate_encryption_key(user_id: str) -> str:
@@ -129,7 +130,7 @@ class AddToCalendarAgent:
                 credentials = Credentials(
                     token=access_token,
                     refresh_token=refresh_token,
-                    token_uri="https://oauth2.googleapis.com/token",
+                    token_uri=GOOGLE_OAUTH_TOKEN_URI,
                     client_id=client_id,
                     client_secret=client_secret
                 )
@@ -167,7 +168,7 @@ class AddToCalendarAgent:
             credentials = Credentials(
                 token=token_data.get('token'),
                 refresh_token=token_data.get('refresh_token'),
-                token_uri=token_data.get('token_uri', "https://oauth2.googleapis.com/token"),
+                token_uri=token_data.get('token_uri', GOOGLE_OAUTH_TOKEN_URI),
                 client_id=token_data.get('client_id'),
                 client_secret=token_data.get('client_secret'),
                 scopes=token_data.get('scopes', [])
@@ -761,7 +762,7 @@ class AddToCalendarAgent:
             raise PermissionError(f"Calendar Write Access Denied: {reason}")
 
         service = self._get_google_service('calendar', 'v3', 
-            ['https://www.googleapis.com/auth/calendar.events'], user_id)
+            [GOOGLE_CALENDAR_SCOPE], user_id)
         if not service:
             return {
                 'status': 'error',

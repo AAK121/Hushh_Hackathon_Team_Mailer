@@ -280,7 +280,7 @@ function AppContent() {
           ) : selectedStoreAgent === 'agent_finance' ? (
             <FinanceAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : selectedStoreAgent === 'agent_relationship' ? (
-            <RelationshipAgent onBack={handleBackToAgentStore} />
+            <RelationshipAgent onBack={() => {}} />
           ) : selectedStoreAgent === 'agent_research' ? (
             <ResearchAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : (

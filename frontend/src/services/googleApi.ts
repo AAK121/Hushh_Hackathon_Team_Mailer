@@ -120,7 +120,7 @@ class GoogleApiService {
             expiresAt: parseInt(storedExpiry)
           };
         } else {
-          console.log('No token available');
+          console.log('No token available in service');
           return null;
         }
       }
@@ -133,9 +133,16 @@ class GoogleApiService {
           const refreshResult = await this.tokenRefreshCallback();
           if (refreshResult.token) {
             this.currentToken.accessToken = refreshResult.token;
+            this.currentToken.expiresAt = Date.now() + (3600 * 1000); // Assume 1 hour expiry
             return refreshResult.token;
           } else {
             console.error('Failed to refresh token:', refreshResult.error);
+            
+            // Clear invalid token
+            this.currentToken = null;
+            sessionStorage.removeItem('google_access_token');
+            sessionStorage.removeItem('google_token_expiry');
+            
             return null;
           }
         } else {

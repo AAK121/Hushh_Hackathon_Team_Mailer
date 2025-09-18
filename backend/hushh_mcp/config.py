@@ -61,6 +61,25 @@ ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 AGENT_ID = os.getenv("AGENT_ID", "agent_hushh_default")
 HUSHH_HACKATHON = os.getenv("HUSHH_HACKATHON", "disabled").lower() == "enabled"
 
+# ==================== External API URLs ====================
+
+# ArXiv API URLs
+ARXIV_API_BASE_URL = os.getenv("ARXIV_API_BASE_URL", "http://export.arxiv.org/api/query")
+ARXIV_PDF_BASE_URL = os.getenv("ARXIV_PDF_BASE_URL", "https://arxiv.org/pdf")
+ARXIV_ABS_BASE_URL = os.getenv("ARXIV_ABS_BASE_URL", "https://arxiv.org/abs")
+
+# Google OAuth URLs
+GOOGLE_OAUTH_TOKEN_URI = os.getenv("GOOGLE_OAUTH_TOKEN_URI", "https://oauth2.googleapis.com/token")
+GOOGLE_CALENDAR_SCOPE = os.getenv("GOOGLE_CALENDAR_SCOPE", "https://www.googleapis.com/auth/calendar.events")
+
+# Other API URLs can be added here as needed
+# PUBMED_API_BASE_URL = os.getenv("PUBMED_API_BASE_URL", "https://eutils.ncbi.nlm.nih.gov/entrez/eutils")
+# SEMANTIC_SCHOLAR_API_BASE_URL = os.getenv("SEMANTIC_SCHOLAR_API_BASE_URL", "https://api.semanticscholar.org/graph/v1")
+
+# API Timeouts and limits
+API_REQUEST_TIMEOUT = int(os.getenv("API_REQUEST_TIMEOUT", "15"))  # seconds
+ARXIV_MAX_RESULTS = int(os.getenv("ARXIV_MAX_RESULTS", "10"))
+
 # ==================== Defaults Export ====================
 
 __all__ = [
@@ -73,5 +92,12 @@ __all__ = [
     "DEFAULT_TRUST_LINK_EXPIRY_MS",
     "ENVIRONMENT",
     "AGENT_ID",
-    "HUSHH_HACKATHON"
+    "HUSHH_HACKATHON",
+    "ARXIV_API_BASE_URL",
+    "ARXIV_PDF_BASE_URL",
+    "ARXIV_ABS_BASE_URL",
+    "GOOGLE_OAUTH_TOKEN_URI",
+    "GOOGLE_CALENDAR_SCOPE",
+    "API_REQUEST_TIMEOUT",
+    "ARXIV_MAX_RESULTS"
 ]

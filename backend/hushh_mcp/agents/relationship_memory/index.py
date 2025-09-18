@@ -18,9 +18,25 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# LangGraph imports
-from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, SystemMessage
+# LangGraph imports with fallback
+try:
+    from langgraph.graph import StateGraph, END
+    from langchain_core.messages import HumanMessage, SystemMessage
+    LANGGRAPH_AVAILABLE = True
+except ImportError:
+    print("Warning: LangGraph not available, using simplified implementation")
+    LANGGRAPH_AVAILABLE = False
+    # Fallback mock classes
+    class StateGraph:
+        def __init__(self, schema):
+            pass
+    class HumanMessage:
+        def __init__(self, content):
+            self.content = content
+    class SystemMessage:
+        def __init__(self, content):
+            self.content = content
+    END = "END"
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 

@@ -29,6 +29,29 @@ README.md
 # Scripts
 start.bat
 start.sh
+deploy.bat
+deploy.sh
+
+# Large directories that might cause size issues
+vault/
+tests/
+docs/
+
+# Large files
+*.pdf
+*.zip
+*.tar.gz
+*.png
+*.jpg
+*.jpeg
+
+# Keep only minimal requirements for deployment
+requirements_full.txt
+
+# Git
+.git/
+.gitignore
+start.sh
 
 # Tests
 tests/

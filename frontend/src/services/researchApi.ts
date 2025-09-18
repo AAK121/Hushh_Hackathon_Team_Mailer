@@ -265,11 +265,13 @@ export const truncateText = (text: string, maxLength: number): string => {
 };
 
 export const generateArxivUrl = (arxivId: string): string => {
-  return `https://arxiv.org/abs/${arxivId}`;
+  const baseUrl = import.meta.env.VITE_ARXIV_ABS_BASE_URL || 'https://arxiv.org/abs';
+  return `${baseUrl}/${arxivId}`;
 };
 
 export const generatePdfUrl = (arxivId: string): string => {
-  return `https://arxiv.org/pdf/${arxivId}.pdf`;
+  const baseUrl = import.meta.env.VITE_ARXIV_PDF_BASE_URL || 'https://arxiv.org/pdf';
+  return `${baseUrl}/${arxivId}.pdf`;
 };
 
 export default ResearchApiService;

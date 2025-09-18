@@ -192,6 +192,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null;
       }
 
+      // Check if we have session storage token (recently refreshed)
+      const storedToken = sessionStorage.getItem('google_access_token');
+      const storedExpiry = sessionStorage.getItem('google_token_expiry');
+      
+      if (storedToken && storedExpiry) {
+        const expiryTime = parseInt(storedExpiry);
+        const now = Date.now();
+        
+        // If stored token is still valid (with 5-minute buffer)
+        if (expiryTime - now > 300000) {
+          console.log('Using stored refreshed token');
+          return storedToken;
+        }
+      }
+
       // Check token expiration (Google tokens typically expire in 1 hour)
       const tokenExpiry = session.expires_at;
       const now = Math.floor(Date.now() / 1000);
@@ -224,6 +239,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       console.log('Refreshing Google token...');
 
+      // Check if client ID is available
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      if (!clientId) {
+        console.error('Google Client ID not configured');
+        return { token: null, error: { message: 'Google Client ID not configured' } };
+      }
+
       // Use Google's token refresh endpoint
       const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -231,7 +253,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
         body: new URLSearchParams({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+          client_id: clientId,
           refresh_token: refreshToken,
           grant_type: 'refresh_token',
         }),
@@ -240,6 +262,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (!response.ok) {
         const errorData = await response.text();
         console.error('Token refresh failed:', errorData);
+        
+        // If refresh token is invalid, user needs to re-authenticate
+        if (response.status === 400) {
+          return { token: null, error: { message: 'Refresh token expired. Please sign in again.', needsReauth: true } };
+        }
+        
         return { token: null, error: { message: 'Token refresh failed', details: errorData } };
       }
 
@@ -251,8 +279,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('Google token refreshed successfully');
         
         // Store the new token temporarily in session storage for immediate use
+        const expiryTime = Date.now() + ((tokenData.expires_in || 3600) * 1000);
         sessionStorage.setItem('google_access_token', tokenData.access_token);
-        sessionStorage.setItem('google_token_expiry', String(Date.now() + (tokenData.expires_in * 1000)));
+        sessionStorage.setItem('google_token_expiry', String(expiryTime));
         
         return { token: tokenData.access_token, error: null };
       }

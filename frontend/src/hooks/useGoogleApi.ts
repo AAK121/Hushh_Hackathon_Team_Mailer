@@ -19,12 +19,22 @@ export const useGoogleApi = () => {
         session.provider_refresh_token || undefined,
         expiresIn
       );
+    } else {
+      // Also check session storage for refreshed tokens
+      const storedToken = sessionStorage.getItem('google_access_token');
+      const storedExpiry = sessionStorage.getItem('google_token_expiry');
+      
+      if (storedToken && storedExpiry) {
+        const expiryTime = parseInt(storedExpiry);
+        const expiresIn = Math.max(0, (expiryTime - Date.now()) / 1000);
+        googleApiService.setToken(storedToken, undefined, expiresIn);
+      }
     }
   }, [session, refreshGoogleToken]);
 
   return {
     googleApi: googleApiService,
-    isAuthenticated: !!session?.provider_token,
+    isAuthenticated: !!session?.provider_token || !!sessionStorage.getItem('google_access_token'),
     refreshToken: refreshGoogleToken
   };
 };

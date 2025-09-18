@@ -194,8 +194,13 @@ Paper Summary: ${selectedPaper.summary}
 
 Paper ID: ${selectedPaper.arxiv_id}
 Categories: ${selectedPaper.categories.join(', ')}
+Published: ${selectedPaper.published}
 
-User Question: ${message}`;
+Current View: ${activeView === 'pdf' ? 'PDF viewer' : 'Abstract view'}
+
+User Question: ${message}
+
+Please provide a detailed response based on this paper's content and context.`;
       }
 
       // Send message to research agent API
@@ -213,10 +218,44 @@ User Question: ${message}`;
     } catch (error) {
       console.error('Failed to send message:', error);
       
-      // Display error message to user
+      // Display more helpful error message to user
+      let errorContent = '';
+      if (selectedPaper) {
+        errorContent = `I encountered an error while analyzing the paper "${selectedPaper.title}". This could be due to:
+
+• Network connectivity issues
+• Backend service temporarily unavailable
+• PDF content processing limitations
+
+**What you can try:**
+• Wait a moment and try asking again
+• Try asking a simpler question about the paper
+• Check if the paper PDF is accessible
+• Try searching for different papers
+
+**Your question was:** "${message}"
+
+**Technical error:** ${error instanceof Error ? error.message : 'Unknown error'}`;
+      } else {
+        errorContent = `I couldn't process your research question. This could be due to:
+
+• Network connectivity issues  
+• Backend research service unavailable
+• No paper currently selected for analysis
+
+**What you can try:**
+• Select a paper from search results first
+• Try searching for research papers on your topic
+• Wait a moment and try again
+
+**Your question was:** "${message}"
+
+**Technical error:** ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+      
       const errorMessage: ChatMessage = {
         id: generateId(),
-        content: `Sorry, I couldn't process your request. The research agent appears to be unavailable. Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: errorContent,
         role: 'ai',
         timestamp: new Date()
       };
@@ -259,16 +298,33 @@ User Question: ${message}`;
   const handlePaperSelect = (paper: Paper) => {
     setSelectedPaper(paper);
     
-    // Remove paper selection notification - user can see it's selected in the UI
-    /*
+    // Add helpful system message to guide users
     const systemMessage: ChatMessage = {
       id: generateId(),
-      content: `Selected paper: "${paper.title}" by ${paper.authors.join(', ')}. You can now ask questions about this paper.`,
+      content: `📄 **Selected Paper:** "${paper.title}"
+
+**Authors:** ${paper.authors.join(', ')}
+**Published:** ${paper.published}
+**Categories:** ${paper.categories.join(', ')}
+
+🤖 **I can help you with:**
+• Explaining the methodology and approach
+• Summarizing key findings and results  
+• Discussing limitations and implications
+• Answering specific questions about the content
+• Comparing with other research in the field
+
+💡 **Try asking:**
+• "What is the main contribution of this paper?"
+• "Explain the methodology used"
+• "What are the key findings?"
+• "What are the limitations of this study?"
+
+Switch to **PDF view** to see the full paper while we chat!`,
       role: 'system',
       timestamp: new Date()
     };
     addChatMessage(systemMessage);
-    */
   };
 
   // Handle paper upload
@@ -1142,7 +1198,8 @@ You can now ask detailed questions about the content of this document!`,
                     let pdfUrl = selectedPaper.pdf_url;
                     if (!pdfUrl && selectedPaper.arxiv_id) {
                       const arxivId = selectedPaper.arxiv_id.replace('arXiv:', '');
-                      pdfUrl = `https://arxiv.org/pdf/${arxivId}.pdf`;
+                      const baseUrl = import.meta.env.VITE_ARXIV_PDF_BASE_URL || 'https://arxiv.org/pdf';
+                      pdfUrl = `${baseUrl}/${arxivId}.pdf`;
                     }
                     
                     return pdfUrl ? (
@@ -1329,7 +1386,8 @@ You can now ask detailed questions about the content of this document!`,
                       let pdfUrl = selectedPaper.pdf_url;
                       if (!pdfUrl && selectedPaper.arxiv_id) {
                         const arxivId = selectedPaper.arxiv_id.replace('arXiv:', '');
-                        pdfUrl = `https://arxiv.org/pdf/${arxivId}.pdf`;
+                        const baseUrl = import.meta.env.VITE_ARXIV_PDF_BASE_URL || 'https://arxiv.org/pdf';
+                        pdfUrl = `${baseUrl}/${arxivId}.pdf`;
                       }
                       
                       if (pdfUrl) {

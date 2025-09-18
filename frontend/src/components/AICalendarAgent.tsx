@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import GoogleTokenError from './GoogleTokenError';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
 
@@ -48,7 +49,7 @@ interface EventModification {
 type WorkflowStep = 'setup' | 'review' | 'success' | 'transitioning';
 
 const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
-  const { user, getValidGoogleToken } = useAuth();
+  const { user, getValidGoogleToken, refreshGoogleToken } = useAuth();
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('setup');
   const [isProcessing, setIsProcessing] = useState(false);
   const [results, setResults] = useState<CalendarAgentResponse | null>(null);
@@ -119,7 +120,18 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
       const userId = data.session.user?.id;
 
       if (!googleToken) {
-        throw new Error('No valid Google token available. Please sign in with Google again.');
+        // Try one more time to refresh the token explicitly
+        console.log('🔄 No token found, attempting explicit refresh...');
+        const { token: refreshedToken, error: refreshError } = await refreshGoogleToken();
+        
+        if (refreshedToken) {
+          console.log('✅ Token refreshed successfully');
+          // Use the refreshed token
+        } else if (refreshError?.needsReauth) {
+          throw new Error('Your Google authentication has expired. Please sign out and sign in again with Google.');
+        } else {
+          throw new Error('No valid Google token available. Please sign in with Google again.');
+        }
       }
 
       console.log('🚀 Starting HushMCP Calendar Agent...');
@@ -493,13 +505,26 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
 
         {/* Error Display */}
         {error && (
-          <ErrorSection>
-            <ErrorTitle>❌ Error</ErrorTitle>
-            <ErrorText>{error}</ErrorText>
-            <ClearButton onClick={clearResults}>
-              Clear
-            </ClearButton>
-          </ErrorSection>
+          <>
+            {error.includes('Google token') || error.includes('Google authentication') || error.includes('sign in with Google') ? (
+              <GoogleTokenError 
+                error={error} 
+                onRetry={() => setError(null)}
+                onReauthenticate={() => {
+                  setError(null);
+                  // You could also trigger a re-auth flow here
+                }}
+              />
+            ) : (
+              <ErrorSection>
+                <ErrorTitle>❌ Error</ErrorTitle>
+                <ErrorText>{error}</ErrorText>
+                <ClearButton onClick={clearResults}>
+                  Clear
+                </ClearButton>
+              </ErrorSection>
+            )}
+          </>
         )}
 
         {/* Info Panel */}
@@ -781,13 +806,26 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
 
         {/* Error Display */}
         {error && (
-          <ErrorSection>
-            <ErrorTitle>❌ Error</ErrorTitle>
-            <ErrorText>{error}</ErrorText>
-            <ClearButton onClick={() => setError(null)}>
-              Clear
-            </ClearButton>
-          </ErrorSection>
+          <>
+            {error.includes('Google token') || error.includes('Google authentication') || error.includes('sign in with Google') ? (
+              <GoogleTokenError 
+                error={error} 
+                onRetry={() => setError(null)}
+                onReauthenticate={() => {
+                  setError(null);
+                  // You could also trigger a re-auth flow here
+                }}
+              />
+            ) : (
+              <ErrorSection>
+                <ErrorTitle>❌ Error</ErrorTitle>
+                <ErrorText>{error}</ErrorText>
+                <ClearButton onClick={() => setError(null)}>
+                  Clear
+                </ClearButton>
+              </ErrorSection>
+            )}
+          </>
         )}
       </MainContent>
     </>

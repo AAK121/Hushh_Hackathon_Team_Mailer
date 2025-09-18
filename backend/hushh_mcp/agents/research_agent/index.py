@@ -12,7 +12,27 @@ from typing import Dict, Any, List, Optional, TypedDict
 from pathlib import Path
 
 # LangGraph and LangChain imports
-from langgraph.graph import StateGraph, START, END
+try:
+    from langgraph.graph import StateGraph, START, END
+    LANGGRAPH_AVAILABLE = True
+except ImportError:
+    print("Warning: langgraph not available, using simplified workflow")
+    LANGGRAPH_AVAILABLE = False
+    # Create minimal fallback classes
+    class StateGraph:
+        def __init__(self, state_class):
+            self.state_class = state_class
+        def add_node(self, name, func):
+            pass
+        def add_edge(self, from_node, to_node):
+            pass
+        def set_entry_point(self, node):
+            pass
+        def compile(self):
+            return self
+    START = "START"
+    END = "END"
+
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
@@ -29,7 +49,14 @@ from fastapi import UploadFile
 from hushh_mcp.constants import ConsentScope
 from hushh_mcp.consent.token import validate_token
 from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
-from hushh_mcp.config import VAULT_ENCRYPTION_KEY
+from hushh_mcp.config import (
+    VAULT_ENCRYPTION_KEY, 
+    ARXIV_API_BASE_URL,
+    ARXIV_PDF_BASE_URL,
+    ARXIV_ABS_BASE_URL,
+    API_REQUEST_TIMEOUT,
+    ARXIV_MAX_RESULTS
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -72,14 +99,17 @@ class ResearchAgent:
             google_api_key=os.environ.get("GOOGLE_API_KEY", "AIzaSyAYIuaAQJxmuspF5tyDEpJ3iYm6gVVQZOo")
         )
         
-        # Create LangGraph workflow
-        self.workflow = self._create_workflow()
+        # Create LangGraph workflow (if available)
+        if LANGGRAPH_AVAILABLE:
+            self.workflow = self._create_workflow()
+            logger.info("🔬 Research Agent initialized with LangGraph workflow")
+        else:
+            self.workflow = None
+            logger.info("🔬 Research Agent initialized with simplified workflow (langgraph not available)")
         
         # Storage for papers and sessions
         self.papers_dir = Path("vault/research_papers")
         self.papers_dir.mkdir(parents=True, exist_ok=True)
-        
-        logger.info("🔬 Research Agent initialized with LangGraph workflow")
     
     def _create_workflow(self) -> StateGraph:
         """Create the LangGraph workflow for research operations."""
@@ -230,13 +260,13 @@ Return ONLY the optimized search query, nothing else."""),
             query = state["query"]
             logger.info(f"🔍 Searching arXiv for: {query}")
             
-            # arXiv API search with timeout
-            base_url = "http://export.arxiv.org/api/query?"
+            # arXiv API search with configurable timeout
             search_query = f"search_query=all:{query}"
-            params = f"{search_query}&start=0&max_results=10&sortBy=relevance&sortOrder=descending"
+            max_results = ARXIV_MAX_RESULTS
+            params = f"{search_query}&start=0&max_results={max_results}&sortBy=relevance&sortOrder=descending"
             
-            # Add timeout to prevent hanging
-            response = requests.get(f"{base_url}{params}", timeout=15)
+            # Use configurable URLs and timeout
+            response = requests.get(f"{ARXIV_API_BASE_URL}?{params}", timeout=API_REQUEST_TIMEOUT)
             
             if response.status_code != 200:
                 raise Exception(f"arXiv API error: {response.status_code}")
@@ -269,8 +299,8 @@ Return ONLY the optimized search query, nothing else."""),
                     "summary": entry.summary.replace('\n', ' ').strip(),
                     "published": getattr(entry, 'published', '')[:10],  # Just date part
                     "updated": getattr(entry, 'updated', ''),
-                    "pdf_url": f"https://arxiv.org/pdf/{arxiv_id}.pdf",
-                    "abs_url": f"https://arxiv.org/abs/{arxiv_id}",
+                    "pdf_url": f"{ARXIV_PDF_BASE_URL}/{arxiv_id}.pdf",
+                    "abs_url": f"{ARXIV_ABS_BASE_URL}/{arxiv_id}",
                     "categories": categories,
                     "arxiv_id": arxiv_id
                 }
@@ -1178,7 +1208,7 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                 else:
                     # Automatically download and process PDF if not in storage
                     logger.info(f"📥 Paper {paper_id} not found in storage, attempting to download...")
-                    pdf_url = f"https://arxiv.org/pdf/{paper_id}.pdf"
+                    pdf_url = f"{ARXIV_PDF_BASE_URL}/{paper_id}.pdf"
                     paper_content = self._download_and_process_pdf(paper_id, pdf_url)
                     
                     if paper_content:

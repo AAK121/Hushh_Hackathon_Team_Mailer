@@ -81,8 +81,11 @@ export const auth = {
       return { data: null, error: { message: 'Supabase not configured' } };
     }
     
-    // Get redirect URL from environment or use current origin
-    const redirectUrl = import.meta.env.VITE_REDIRECT_URL || window.location.origin;
+    // Always use current domain for redirect - no environment fallback
+    // This ensures we stay on the same deployment after login
+    const redirectUrl = window.location.origin;
+    
+    console.log('🔄 OAuth Redirect URL:', redirectUrl); // Debug log
     
     // For Google, request additional scopes for Calendar and Gmail with offline access
     const options = provider === 'google' ? {

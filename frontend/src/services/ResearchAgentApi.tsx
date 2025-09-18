@@ -73,7 +73,7 @@ class ResearchAgentApiService {
   private chatHistory: ChatMessage[] = [];
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app'; // Main API server port
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-dmbw9wk6b-jarvis-635b16ce.vercel.app'; // Updated deployment URL
     this.loadSessionFromStorage();
   }
 
@@ -199,22 +199,9 @@ class ResearchAgentApiService {
   }
 
   /**
-   * Get session context for API calls
-   */
-  private getSessionContext(): any {
-    return {
-      session_id: this.sessionId,
-      current_paper: this.sessionMemory?.currentPaper,
-      chat_history: this.chatHistory.slice(-10),
-      selected_papers: this.sessionMemory?.context.selectedPapers || [],
-      current_topic: this.sessionMemory?.context.currentTopic
-    };
-  }
-
-  /**
    * Search for academic papers on arXiv
    */
-  async searchPapers(query: string, maxResults: number = 20): Promise<SearchResponse> {
+  async searchPapers(query: string, _maxResults: number = 20): Promise<SearchResponse> {
     try {
       this.initializeSession();
       this.addMessageToHistory(`Searching for: ${query}`, 'user');
@@ -224,8 +211,7 @@ class ResearchAgentApiService {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: query.trim(),
-          max_results: maxResults,
-          ...this.getSessionContext()
+          user_id: 'frontend_user'
         })
       });
 
@@ -240,7 +226,8 @@ class ResearchAgentApiService {
         
         if (!pdfUrl && arxivId) {
           const cleanArxivId = arxivId.replace('arXiv:', '').trim();
-          if (cleanArxivId) pdfUrl = `https://arxiv.org/pdf/${cleanArxivId}.pdf`;
+          const baseUrl = import.meta.env.VITE_ARXIV_PDF_BASE_URL || 'https://arxiv.org/pdf';
+          if (cleanArxivId) pdfUrl = `${baseUrl}/${cleanArxivId}.pdf`;
         }
 
         return {
@@ -286,11 +273,10 @@ class ResearchAgentApiService {
         message: message.trim(),
         user_id: userId,
         paper_id: paperId || 'general',
-        format_math: true,
-        preserve_structure: true,
-        prevent_hallucination: true,
-        stick_to_content: true,
-        ...this.getSessionContext()
+        conversation_history: this.chatHistory.slice(-10).map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }))
       };
 
       const response = await fetch(`${this.baseUrl}/research/chat`, {
@@ -611,8 +597,9 @@ class ResearchAgentApiService {
       
       if (!pdfUrl && paper.arxiv_id) {
         const arxivId = paper.arxiv_id.replace('arXiv:', '').trim();
+        const baseUrl = import.meta.env.VITE_ARXIV_PDF_BASE_URL || 'https://arxiv.org/pdf';
         if (arxivId) {
-          pdfUrl = `https://arxiv.org/pdf/${arxivId}.pdf`;
+          pdfUrl = `${baseUrl}/${arxivId}.pdf`;
         }
       }
 
@@ -1000,10 +987,13 @@ class ResearchAgentApiService {
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('user_id', userId);
-      formData.append('consent_tokens', JSON.stringify(consentTokens));
 
-      const response = await fetch(`${this.baseUrl}/agents/research/upload`, {
+      // Create URL with query parameters
+      const uploadUrl = new URL(`${this.baseUrl}/agents/research/upload`);
+      uploadUrl.searchParams.append('user_id', userId);
+      uploadUrl.searchParams.append('consent_tokens', JSON.stringify(consentTokens));
+
+      const response = await fetch(uploadUrl.toString(), {
         method: 'POST',
         body: formData
       });
