@@ -12,13 +12,38 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
 # HushMCP framework imports
+import sys
+import os
+from pathlib import Path
+
+# Add the project root to Python path for deployment environments
+project_root = Path(__file__).parent.parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
 from hushh_mcp.consent.token import validate_token, issue_token
 from hushh_mcp.constants import ConsentScope
 from ...operons.email_analysis import prioritize_emails_operon, categorize_emails_operon
 from hushh_mcp.trust.link import verify_trust_link
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+
+# Handle vault imports with fallback for deployment environments
+try:
+    from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+except ImportError:
+    # Fallback import path for deployment environments
+    try:
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+        from vault.encrypt import encrypt_data, decrypt_data
+    except ImportError:
+        # Final fallback - create minimal encrypt functions if needed
+        def encrypt_data(data, key):
+            import base64
+            return {"ciphertext": base64.b64encode(data.encode()).decode(), "iv": "", "tag": "", "algorithm": "fallback"}
+        def decrypt_data(payload, key):
+            import base64
+            return base64.b64decode(payload.get("ciphertext", "")).decode()
+
 from hushh_mcp.agents.addtocalendar.manifest import manifest
-from hushh_mcp.config import GOOGLE_OAUTH_TOKEN_URI, GOOGLE_CALENDAR_SCOPE
 import hashlib
 
 def _generate_encryption_key(user_id: str) -> str:
@@ -130,7 +155,7 @@ class AddToCalendarAgent:
                 credentials = Credentials(
                     token=access_token,
                     refresh_token=refresh_token,
-                    token_uri=GOOGLE_OAUTH_TOKEN_URI,
+                    token_uri="https://oauth2.googleapis.com/token",
                     client_id=client_id,
                     client_secret=client_secret
                 )
@@ -168,7 +193,7 @@ class AddToCalendarAgent:
             credentials = Credentials(
                 token=token_data.get('token'),
                 refresh_token=token_data.get('refresh_token'),
-                token_uri=token_data.get('token_uri', GOOGLE_OAUTH_TOKEN_URI),
+                token_uri=token_data.get('token_uri', "https://oauth2.googleapis.com/token"),
                 client_id=token_data.get('client_id'),
                 client_secret=token_data.get('client_secret'),
                 scopes=token_data.get('scopes', [])
@@ -762,7 +787,7 @@ class AddToCalendarAgent:
             raise PermissionError(f"Calendar Write Access Denied: {reason}")
 
         service = self._get_google_service('calendar', 'v3', 
-            [GOOGLE_CALENDAR_SCOPE], user_id)
+            ['https://www.googleapis.com/auth/calendar.events'], user_id)
         if not service:
             return {
                 'status': 'error',

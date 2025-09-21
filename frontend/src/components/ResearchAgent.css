@@ -68,7 +68,7 @@ body {
 
 .header-content h1 {
     padding-left: 6rem;
-    font-size: 1.2rem;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
     margin: 0;
@@ -76,8 +76,7 @@ body {
     flex-shrink: 0;
     z-index: 10;
     position: relative;
-    transition: padding-left 0.3s ease-in-out;
-
+    transition: padding-left 0.3s ease-in-out
 }
 
 .header-content .search-controls{
@@ -127,6 +126,7 @@ body {
 }
 
 .search-btn, .analyze-btn {
+    margin-left: 0.5rem;
     padding: 0.6rem 1rem;
     background: #3498db;
     color: white;
@@ -431,7 +431,6 @@ body {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 20.5rem);
     min-height: 500px;
     padding: 0;
     margin: 0;
@@ -731,7 +730,6 @@ body {
     margin: 0;
     background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%);
     line-height: 1.6;
-    max-height: calc(100vh - 27.5rem);
     min-height: 18.75rem;
     scroll-behavior: smooth;
     scrollbar-width: thick !important;
@@ -1361,11 +1359,11 @@ body {
 .chat-input-container {
     background: white;
     border-top: 1px solid #e5e7eb;
-    padding: 0;
+    padding: 0.25rem 0 0 0;
     margin: 0;
     box-shadow: none;
-    z-index: 10;
     border-radius: 0;
+    position: relative;
 }
 
 .quick-actions {
@@ -1376,11 +1374,13 @@ body {
     display: flex;
     align-items: flex-end;
     background: #f0f4f9;
-    padding: 0.5rem 1rem;
-    margin: 0;
+    padding: 0.4rem 0.8rem;
+    margin: 0.25rem 0.5rem 0.5rem 0.5rem;
     border-radius: 1.5rem;
     border: 0.0625rem solid #e5e7eb;
     transition: all 0.3s ease;
+    position: relative;
+    z-index: 101 !important;
 }
 
 .chat-input:focus-within {
@@ -1399,8 +1399,12 @@ body {
     font-weight: 400;
     resize: none;
     color: #282828;
-    line-height: 0;
-    min-height: 0rem;
+    line-height: 1.5;
+    min-height: 1rem;
+    pointer-events: auto !important;
+    user-select: text !important;
+    z-index: 102 !important;
+    position: relative;
 }
 
 .chat-input textarea::placeholder {
@@ -1418,13 +1422,16 @@ body {
     border: none;
     border-radius: 50%;
     cursor: pointer;
-    transition: all 0.3s ease;
+    color: #4b90ff;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 2.75rem;
-    height: 2.75rem;
-    flex-shrink: 0;
+    min-width: 2.5rem;
+    min-height: 2.5rem;
+    position: relative;
+    z-index: 103 !important;
+    pointer-events: auto !important;
 }
 
 .send-btn:hover {
@@ -1471,10 +1478,11 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 6px 15px;
     background: #2c3e50;
     color: white;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
+    min-height: 35px;
 }
 
 .status-left, .status-right {
@@ -3235,6 +3243,7 @@ body {
     z-index: 1 !important;
     margin: 0 !important;
     border: none !important;
+    padding-left: 7vw;
 }
 
 /* Force main content to take full available width */

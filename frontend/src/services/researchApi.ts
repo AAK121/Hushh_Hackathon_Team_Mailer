@@ -1,5 +1,8 @@
 // Research Agent API Service
-// Handles communication with the research backend
+// Handles communication with the research service
+
+// Backend URL for Research Service
+const RESEARCH_SERVICE_URL = 'https://hush-backend-sepia.vercel.app';
 
 export interface Paper {
   id: string;
@@ -44,7 +47,7 @@ export interface ChatResponse {
 class ResearchApiService {
   private baseUrl: string;
 
-  constructor(baseUrl: string = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app') {
+  constructor(baseUrl: string = RESEARCH_SERVICE_URL) {
     this.baseUrl = baseUrl;
   }
 

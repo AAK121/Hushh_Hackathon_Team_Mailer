@@ -1,0 +1,14 @@
+# Memory Agent Requirements (Simplified for Railway)
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.3
+python-dotenv==1.0.0
+
+# AI for relationship analysis (simplified)
+langchain-google-genai==1.0.6
+
+# Security and encryption
+cryptography==41.0.7
+
+# File handling
+aiofiles==23.1.0

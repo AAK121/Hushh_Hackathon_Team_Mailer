@@ -8,8 +8,6 @@ import './App.css';
 import AICalendarAgent from './components/AICalendarAgent';
 import AgentStore from './components/AgentStore';
 import MailerPandaAgent from './components/MailerPandaAgent';
-import AddToCalendarAgent from './components/AddToCalendarAgent';
-import FinanceAgent from './components/FinanceAgent';
 import RelationshipAgent from './components/RelationshipAgent';
 import ResearchAgent from './components/ResearchAgent';
 
@@ -275,10 +273,6 @@ function AppContent() {
         ) : activeView === 'selected-agent' ? (
           selectedStoreAgent === 'agent_mailerpanda' ? (
             <MailerPandaAgent onBack={handleBackToAgentStore} />
-          ) : selectedStoreAgent === 'agent_addtocalendar' ? (
-            <AddToCalendarAgent onBack={handleBackToAgentStore} />
-          ) : selectedStoreAgent === 'agent_finance' ? (
-            <FinanceAgent onBack={handleBackToAgentStore} onSendToHITL={handleSendToHITL} />
           ) : selectedStoreAgent === 'agent_relationship' ? (
             <RelationshipAgent onBack={() => {}} />
           ) : selectedStoreAgent === 'agent_research' ? (

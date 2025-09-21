@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api.py"
+    }
+  ],
+  "env": {
+    "ADDTOCALENDAR_SERVICE_URL": "https://hush-backend-sepia.vercel.app",
+    "MAILERPANDA_SERVICE_URL": "https://hush-backend-sepia.vercel.app",
+    "RESEARCH_SERVICE_URL": "https://hush-backend-sepia.vercel.app",
+    "FINANCE_SERVICE_URL": "https://hush-backend-sepia.vercel.app",
+    "MEMORY_SERVICE_URL": "https://hush-backend-sepia.vercel.app"
+  }
+}

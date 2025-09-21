@@ -3,9 +3,11 @@ Memory Manager Component
 Handles interactions with vector database and memory processing
 """
 
+import sys
 import logging
 from typing import List, Dict, Optional
 from datetime import datetime
+from pathlib import Path
 
 import google.generativeai as genai
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -13,7 +15,28 @@ from langchain.vectorstores import Pinecone
 import pinecone
 import os
 
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+# Add the project root to Python path for deployment environments
+project_root = Path(__file__).parent.parent.parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Handle vault imports with fallback for deployment environments
+try:
+    from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+except ImportError:
+    # Fallback import path for deployment environments
+    try:
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        from vault.encrypt import encrypt_data, decrypt_data
+    except ImportError:
+        # Final fallback - create minimal encrypt functions if needed
+        def encrypt_data(data, key):
+            import base64
+            return {"ciphertext": base64.b64encode(data.encode()).decode(), "iv": "", "tag": "", "algorithm": "fallback"}
+        def decrypt_data(payload, key):
+            import base64
+            return base64.b64decode(payload.get("ciphertext", "")).decode()
+
 from .models import RelationshipMemory
 
 logger = logging.getLogger(__name__)

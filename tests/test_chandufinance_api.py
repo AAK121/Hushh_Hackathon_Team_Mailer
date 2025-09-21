@@ -16,7 +16,7 @@ from datetime import datetime, timedelta
 class ChanduFinanceAPITester:
     """Comprehensive test suite for ChanduFinance API"""
     
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "https://hush-backend-sepia.vercel.app"):
         self.base_url = base_url
         self.user_id = "api_test_user_001"
         self.token = None
@@ -340,7 +340,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(description="Test ChanduFinance API")
-    parser.add_argument("--url", default="http://localhost:8000", help="API base URL")
+    parser.add_argument("--url", default="https://hush-backend-sepia.vercel.app", help="API base URL")
     args = parser.parse_args()
     
     tester = ChanduFinanceAPITester(args.url)

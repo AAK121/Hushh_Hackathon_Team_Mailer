@@ -100,11 +100,11 @@ const AIAgentChat: React.FC<AIAgentChatProps> = ({
 
     try {
       // Create consent tokens for email assistance using authenticated user
-      // This follows the same pattern as MassMail component for proper authorization
+      // This follows the same pattern as MailerPanda component for proper authorization
       const consentTokens = await hushMcpApi.createMailerPandaTokens(user.id);
       
       // Call the MailerPanda execute endpoint with proper authentication
-      // Using the same service as MassMail but in interactive mode for email assistance
+      // Using the same service as MailerPanda but in interactive mode for email assistance
       const response = await hushMcpApi.executeMailerPanda({
         user_id: user.id,
         user_input: input,
@@ -114,7 +114,6 @@ const AIAgentChat: React.FC<AIAgentChatProps> = ({
         recipient_emails: [],
         require_approval: false,
         use_ai_generation: true,
-        body: currentEmailDraft,
       });
 
       // Extract the AI response and any updated email content

@@ -8,6 +8,7 @@ import 'katex/dist/katex.min.css';
 import './ResearchAgent.css';
 import './force-cache-refresh.css';
 import './scrollbar-override.css';
+import logo from '../assets/logo.png';
 import { researchAgentApi, Paper } from '../services/ResearchAgentApi';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -68,7 +69,6 @@ const ResearchAgent: React.FC<ResearchAgentNewProps> = ({ onBack: _onBack, onSen
   const [uploadedPaperData, setUploadedPaperData] = useState<Paper | null>(null);
   
   const containerRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizing || !containerRef.current) return;
@@ -266,6 +266,7 @@ Please provide a detailed response based on this paper's content and context.`;
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
+    console.log('Key pressed:', e.key, 'shiftKey:', e.shiftKey);
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
@@ -1128,22 +1129,14 @@ You can now ask detailed questions about the content of this document!`,
 
   // Add a test message on component mount to show chat is working
   useEffect(() => {
-    // Remove the chat activation message - not needed
-    /*
-    const timer = setTimeout(() => {
-      if (chatMessages.length === 0) {
-        const systemMessage: ChatMessage = {
-          id: generateId(),
-          content: 'Chat functionality is now active! Try typing a message below.',
-          role: 'system',
-          timestamp: new Date()
-        };
-        addChatMessage(systemMessage);
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-    */
+    // Add a debug message about input functionality
+    const testMessage: ChatMessage = {
+      id: generateId(),
+      content: '🎯 **Chat is Ready!** Try typing in the input box below. You should see your text appear as you type.\n\n**Debug Info:**\n- Click the input area to focus\n- Type your message\n- Press Enter or click send button\n- If you still can\'t type, check your browser console for errors',
+      role: 'system',
+      timestamp: new Date()
+    };
+    addChatMessage(testMessage);
   }, []);
 
   const renderPaperContent = () => {
@@ -1169,12 +1162,7 @@ You can now ask detailed questions about the content of this document!`,
                   <p>{selectedPaper.summary}</p>
                   <div className="paper-actions">
                     <p><strong>💡 Need full paper analysis?</strong></p>
-                    <p>This shows only the abstract. For detailed analysis of the full paper:</p>
-                    <ol>
-                      <li>Download the PDF: <a href={selectedPaper.pdf_url} target="_blank" rel="noopener noreferrer" className="pdf-link">📄 Download PDF</a></li>
-                      <li>Upload it using the file upload feature</li>
-                      <li>Ask questions about the full content</li>
-                    </ol>
+                    <p>This shows only the abstract. For detailed analysis of the full paper, press the PDF view button above.</p>
                   </div>
                 </div>
               </div>
@@ -1289,7 +1277,7 @@ You can now ask detailed questions about the content of this document!`,
       {/* Header with Search and Paper Selection */}
       <header className="app-header">
         <div className="header-content">
-          <h1><i className="fas fa-microscope"></i> &nbsp; Research Agent</h1>
+          <img src={logo} width={100} height={100} alt="Research Agent Logo" />
           <div className="search-controls">
             <div className="search-box">
               <input 
@@ -1299,12 +1287,13 @@ You can now ask detailed questions about the content of this document!`,
                 autoComplete="off"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
+                onKeyUp={(e) => {
                   if (e.key === 'Enter') {
                     handleSearch();
                   }
                 }}
               />
+
               <button 
                 id="searchBtn" 
                 className="search-btn"
@@ -1406,29 +1395,7 @@ You can now ask detailed questions about the content of this document!`,
                 >
                   <i className="fas fa-external-link-alt"></i> Open in New Tab
                 </button>
-                <button 
-                  id="summaryBtn" 
-                  className="control-btn"
-                  disabled={!selectedPaper}
-                  onClick={async () => {
-                    if (selectedPaper) {
-                      try {
-                        const summary = await researchAgentApi.generateSummary(selectedPaper.id);
-                        const summaryMessage: ChatMessage = {
-                          id: generateId(),
-                          content: `Summary for "${selectedPaper.title}": ${summary}`,
-                          role: 'ai',
-                          timestamp: new Date()
-                        };
-                        addChatMessage(summaryMessage);
-                      } catch (error) {
-                        // Summary generation failed - silently ignore
-                      }
-                    }
-                  }}
-                >
-                  <i className="fas fa-magic"></i> Generate Summary
-                </button>
+                
                 <div className="view-toggle">
                   <button 
                     id="abstractViewBtn" 
@@ -1468,12 +1435,6 @@ You can now ask detailed questions about the content of this document!`,
             style={{ width: `${100 - leftPanelWidth}%` }}
           >
             <div className="panel-header">
-              <h2>
-                <i className="fas fa-robot"></i> AI Research Assistant
-                {selectedNotesName !== 'current' && (
-                  <span className="current-note-indicator"> - {selectedNotesName}</span>
-                )}
-              </h2>
               <div className="agent-controls">
                 <div className="notes-selector">
                   <select 
@@ -1687,15 +1648,29 @@ You can now ask detailed questions about the content of this document!`,
                       placeholder="Ask me about the paper, request explanations, or ask for specific notes..."
                       rows={1}
                       value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyPress={handleKeyPress}
+                      onChange={(e) => {
+                        console.log('Input change:', e.target.value);
+                        setChatInput(e.target.value);
+                      }}
+                      onKeyDown={handleKeyPress}
+                      onFocus={() => console.log('Input focused')}
+                      onBlur={() => console.log('Input blurred')}
+                      onClick={() => console.log('Input clicked')}
                       disabled={isSendingMessage}
+                      style={{ 
+                        pointerEvents: 'auto', 
+                        userSelect: 'text',
+                        zIndex: 1000,
+                        position: 'relative'
+                      }}
+                      autoFocus={false}
                     />
                     <button 
                       id="sendChatBtn" 
                       className="send-btn"
                       onClick={handleSendMessage}
                       disabled={isSendingMessage || !chatInput.trim()}
+                      style={{ zIndex: 1001, position: 'relative' }}
                     >
                       <i className={isSendingMessage ? "fas fa-spinner fa-spin" : "fas fa-paper-plane"}></i>
                     </button>
@@ -1708,29 +1683,7 @@ You can now ask detailed questions about the content of this document!`,
         </div>
       </main>
 
-      {/* Status Bar */}
-      <footer className="status-bar">
-        <div className="status-left">
-          <span id="connectionStatus" className="status-item">
-            <i className={`fas fa-circle ${connectionStatus === 'connected' ? 'connected' : 'disconnected'}`}></i> 
-            {connectionStatus === 'connected' ? 'API Connected' : 'API Disconnected'}
-          </span>
-          <span id="paperStatus" className="status-item">
-            <i className="fas fa-file"></i> 
-            {selectedPaper ? `Selected: ${selectedPaper.title.substring(0, 30)}...` : 'No paper selected'}
-          </span>
-        </div>
-        <div className="status-right">
-          <span id="searchStatus" className="status-item">
-            <i className="fas fa-search"></i> 
-            {searchResults.length > 0 ? `${searchResults.length} papers found` : 'No search results'}
-          </span>
-          <span id="chatStatus" className="status-item">
-            <i className="fas fa-comments"></i> 
-            {chatMessages.length} messages
-          </span>
-        </div>
-      </footer>
+      
 
       {/* Loading Overlay */}
       <div id="loadingOverlay" className="loading-overlay hidden">

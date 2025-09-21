@@ -73,7 +73,7 @@ class ResearchAgentApiService {
   private chatHistory: ChatMessage[] = [];
 
   constructor() {
-    this.baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-dmbw9wk6b-jarvis-635b16ce.vercel.app'; // Updated deployment URL
+    this.baseUrl = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app'; // Updated deployment URL
     this.loadSessionFromStorage();
   }
 

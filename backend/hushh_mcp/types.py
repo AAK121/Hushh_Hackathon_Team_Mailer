@@ -1,5 +1,7 @@
 # hushh_mcp/types.py
 
+from __future__ import annotations
+
 from typing import Literal, TypedDict, Optional, NewType
 from pydantic import BaseModel, Field
 from datetime import datetime

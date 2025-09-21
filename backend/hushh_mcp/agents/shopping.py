@@ -1,5 +1,7 @@
 # hushh_mcp/agents/shopping.py
 
+from __future__ import annotations
+
 from typing import List
 from hushh_mcp.consent.token import validate_token
 from hushh_mcp.constants import ConsentScope

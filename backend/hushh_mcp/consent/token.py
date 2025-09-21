@@ -1,5 +1,7 @@
 # hushh_mcp/consent/token.py
 
+from __future__ import annotations
+
 import hmac
 import hashlib
 import base64

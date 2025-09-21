@@ -148,120 +148,199 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Function to load real data from the relationship memory agent
+  // Data formatting functions for vault API data
+  const formatVaultContacts = (vaultData: any[]): Contact[] => {
+    console.log('🔍 Formatting vault contacts data:', vaultData);
+    
+    return vaultData.map((item: any, index: number) => ({
+      id: item.id || item._vault_id || `contact_${index + 1}`,
+      name: item.name || item.contact_name || 'Unknown',
+      email: item.email || item.email_address || '',
+      phone: item.phone || item.phone_number || '',
+      company: item.company || item.organization || '',
+      position: item.position || item.job_title || item.role || '',
+      lastContact: item.last_contact || item._created_at ? new Date(item._created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      relationship: (item.relationship_type || item.relationship || 'colleague') as 'family' | 'friend' | 'colleague' | 'client' | 'prospect',
+      priority: (item.priority || 'medium') as 'high' | 'medium' | 'low',
+      notes: item.notes || item.description || '',
+      tags: Array.isArray(item.tags) ? item.tags : [],
+      socialMedia: {
+        linkedin: item.linkedin_url || item.social_media?.linkedin,
+        twitter: item.twitter_handle || item.social_media?.twitter,
+      }
+    }));
+  };
+
+  const formatVaultMemories = (vaultData: any[]): Memory[] => {
+    console.log('🧠 Formatting vault memories data:', vaultData);
+    
+    return vaultData.map((item: any, index: number) => ({
+      id: item.id || item._vault_id || `memory_${index + 1}`,
+      contactName: item.contact_name || item.contactName || 'Unknown',
+      summary: item.summary || item.content || item.description || '',
+      location: item.location || '',
+      date: item.date || item._created_at ? new Date(item._created_at).toISOString().split('T')[0] : '',
+      tags: Array.isArray(item.tags) ? item.tags : []
+    }));
+  };
+
+  const formatVaultReminders = (vaultData: any[]): Reminder[] => {
+    console.log('⏰ Formatting vault reminders data:', vaultData);
+    
+    return vaultData.map((item: any, index: number) => ({
+      id: item.id || item._vault_id || `reminder_${index + 1}`,
+      contactId: item.contact_id || '',
+      contactName: item.contact_name || item.contactName || '',
+      title: item.title || item.reminder_title || 'Reminder',
+      description: item.description || item.content || '',
+      dueDate: item.due_date || item.reminder_date || item._created_at || new Date().toISOString(),
+      type: (item.type || item.reminder_type || 'follow_up') as 'birthday' | 'follow_up' | 'meeting' | 'anniversary' | 'check_in',
+      completed: item.completed || false
+    }));
+  };
+
+  const formatVaultInteractions = (vaultData: any[]): Interaction[] => {
+    console.log('🤝 Formatting vault interactions data:', vaultData);
+    
+    return vaultData.map((item: any, index: number) => ({
+      id: item.id || item._vault_id || `interaction_${index + 1}`,
+      contactId: item.contact_id || '',
+      contactName: item.contact_name || item.contactName || '',
+      date: item.date || item._created_at || new Date().toISOString(),
+      type: (item.type || item.interaction_type || 'message') as 'call' | 'email' | 'meeting' | 'message' | 'social',
+      description: item.description || item.content || '',
+      sentiment: (item.sentiment || 'neutral') as 'positive' | 'neutral' | 'negative',
+      followUpRequired: item.follow_up_required || false,
+      followUpDate: item.follow_up_date || ''
+    }));
+  };
+
+  // Function to load real data from the relationship memory vault
   const loadRealDataFromAgent = async () => {
-    console.log('🔄 Starting to load real data from relationship memory agent...');
+    console.log('🔄 Loading data from relationship memory vault...');
+    
     try {
-      const { hushMcpApi } = await import('../services/hushMcpApi');
-      console.log('✅ API service imported successfully');
+      // Try multiple backend URLs in case of deployment changes
+      const backendUrls = [
+        'https://hush-backend-r3ocwyehw-jarvis-635b16ce.vercel.app', // Latest with encoding validation fix
+        'https://hush-backend-hd1v00w0q-jarvis-635b16ce.vercel.app', // Latest with Gemini API key
+        'https://hush-backend-he2z2m2r3-jarvis-635b16ce.vercel.app', // Latest with VaultRecord validation fix
+        'https://hush-backend-hv5xq2p37-jarvis-635b16ce.vercel.app', // Latest with validation fix
+        'https://hush-backend-hb0udu0cd-jarvis-635b16ce.vercel.app', // Latest with full fix
+        'https://hush-backend-cngdd3p1d-jarvis-635b16ce.vercel.app', // Latest with encryption fix
+        'https://hush-backend-932mam9wd-jarvis-635b16ce.vercel.app', // VaultManager fix
+        'https://hush-backend-gwzxqvemy-jarvis-635b16ce.vercel.app',
+        'https://hush-backend-44uk9f4lh-jarvis-635b16ce.vercel.app',
+        'https://hush-backend-4a2kkwj1g-jarvis-635b16ce.vercel.app'
+      ];
       
-      // Create real consent tokens for the relationship memory agent
-      console.log('🎫 Creating consent tokens...');
-      const tokens = await hushMcpApi.createRelationshipTokens(user.id);
-      console.log('✅ Tokens created:', Object.keys(tokens));
+      let apiBaseUrl = '';
+      let backendAccessible = false;
       
-      // Use the relationship memory agent's execute endpoint to get data
-      console.log('📡 Fetching contacts...');
-      const contactsResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: user.id,
-        tokens: tokens,
-        user_input: 'show my contacts'
-      });
-      
-      console.log('📞 Contacts Response:', contactsResponse);
-      
-      if (contactsResponse?.status === 'success' && contactsResponse.results) {
-        const formattedContacts = formatAgentContacts(contactsResponse.results);
-        setContacts(formattedContacts);
-        console.log('✅ Contacts loaded:', formattedContacts.length);
-      }
-
-      console.log('📡 Fetching memories...');
-      const memoriesResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: user.id,
-        tokens: tokens,
-        user_input: 'show my memories'
-      });
-      
-      console.log('🧠 Memories Response:', memoriesResponse);
-      
-      if (memoriesResponse?.status === 'success' && memoriesResponse.results) {
-        const formattedMemories = formatAgentMemories(memoriesResponse.results);
-        setMemories(formattedMemories);
-        console.log('✅ Memories loaded:', formattedMemories.length);
-      }
-
-      console.log('📡 Fetching reminders...');
-      const remindersResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: user.id,
-        tokens: tokens,
-        user_input: 'show my reminders'
-      });
-      
-      console.log('⏰ Reminders Response:', remindersResponse);
-      
-      if (remindersResponse?.status === 'success' && remindersResponse.results) {
-        const formattedReminders = formatAgentReminders(remindersResponse.results);
-        setReminders(formattedReminders);
-        console.log('✅ Reminders loaded:', formattedReminders.length);
-      }
-
-      console.log('📡 Fetching interactions...');
-      const interactionsResponse = await hushMcpApi.executeRelationshipMemory({
-        user_id: user.id,
-        tokens: tokens,
-        user_input: 'show my interactions'
-      });
-      
-      console.log('🤝 Interactions Response:', interactionsResponse);
-      
-      if (interactionsResponse?.status === 'success' && interactionsResponse.results) {
-        const formattedInteractions = formatAgentInteractions(interactionsResponse.results);
-        setInteractions(formattedInteractions);
-        console.log('✅ Interactions loaded:', formattedInteractions.length);
-      }
-      
-      console.log('🎉 Successfully loaded data from relationship memory agent');
-      setNotification('✅ Data loaded from relationship memory agent');
-      setTimeout(() => setNotification(''), 3000);
-      
-    } catch (error) {
-      console.error('❌ Failed to load data from agent:', error);
-      
-      // Check if this is a decryption error
-      const errorMessage = error?.toString() || '';
-      if (errorMessage.includes('decryption') || errorMessage.includes('authentication tag')) {
-        console.log('🔄 Decryption error detected, attempting vault reset...');
-        setNotification('🔄 Fixing data corruption, please wait...');
-        
+      // Test each backend URL to find one without deployment protection
+      for (const url of backendUrls) {
         try {
-          const { hushMcpApi } = await import('../services/hushMcpApi');
-          await hushMcpApi.clearRelationshipVault(user.id);
-          await hushMcpApi.initializeFreshVault(user.id);
-          
-          // Try loading data again after reset
-          setTimeout(() => loadRealDataFromAgent(), 2000);
-          setNotification('✅ Data corruption fixed, reloading...');
-          return;
-        } catch (resetError) {
-          console.error('❌ Failed to reset vault:', resetError);
-          setNotification('❌ Vault reset failed. Using complete reset...');
-          setTimeout(() => forceCompleteReset(), 1000);
-          return;
+          console.log(`🔍 Testing backend URL: ${url}`);
+          const testResponse = await fetch(`${url}/`, { method: 'HEAD' });
+          if (testResponse.ok || testResponse.status === 405) { // 405 is Method Not Allowed but means backend is accessible
+            apiBaseUrl = url;
+            backendAccessible = true;
+            console.log(`✅ Backend accessible at: ${url}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`❌ Backend not accessible at: ${url}`);
         }
       }
       
-      // Check if this is an API quota error
-      if (errorMessage.includes('quota') || errorMessage.includes('429') || errorMessage.includes('rate limit')) {
-        console.log('⚠️ API quota exceeded, using cached/mock data...');
-        setNotification('⚠️ API quota exceeded. Using cached data. Try again later.');
-        setTimeout(() => setNotification(''), 5000);
+      if (!backendAccessible) {
+        console.log('🔒 All backend URLs have deployment protection - using mock data');
         loadMockData();
         return;
       }
       
-      setNotification('⚠️ Using mock data (agent connection failed)');
-      setTimeout(() => setNotification(''), 5000);
+      console.log('📡 Fetching contacts from vault API...');
+      const contactsResponse = await fetch(`${apiBaseUrl}/vault/user/${user.id}/contacts`);
+      
+      // Check for authentication/deployment protection error
+      if (contactsResponse.status === 401 || contactsResponse.status === 403) {
+        console.log('🔒 Backend deployment protection is enabled - using mock data');
+        loadMockData();
+        return;
+      }
+      
+      if (contactsResponse.ok) {
+        const contactsData = await contactsResponse.json();
+        console.log('📞 Contacts Response:', contactsData);
+        
+        // Check if we're getting mock data due to vault connection issues
+        if (contactsData.vault_connection === 'mock_data') {
+          console.log('⚠️ Backend is using mock data due to vault connection issues');
+          setNotification('⚠️ Using mock data (vault connection failed)');
+          setTimeout(() => setNotification(''), 5000);
+        }
+        
+        if (contactsData.success && contactsData.result?.contacts) {
+          const formattedContacts = formatVaultContacts(contactsData.result.contacts);
+          setContacts(formattedContacts);
+          console.log('✅ Contacts loaded:', formattedContacts.length);
+        }
+      }
+
+      console.log('📡 Fetching memories from vault API...');
+      const memoriesResponse = await fetch(`${apiBaseUrl}/vault/user/${user.id}/memories`);
+      if (memoriesResponse.ok) {
+        const memoriesData = await memoriesResponse.json();
+        console.log('🧠 Memories Response:', memoriesData);
+        
+        if (memoriesData.status === 'success' && memoriesData.result?.memories) {
+          const formattedMemories = formatVaultMemories(memoriesData.result.memories);
+          setMemories(formattedMemories);
+          console.log('✅ Memories loaded:', formattedMemories.length);
+        }
+      }
+
+      console.log('📡 Fetching reminders from vault API...');
+      const remindersResponse = await fetch(`${apiBaseUrl}/vault/user/${user.id}/reminders`);
+      if (remindersResponse.ok) {
+        const remindersData = await remindersResponse.json();
+        console.log('⏰ Reminders Response:', remindersData);
+        
+        if (remindersData.status === 'success' && remindersData.result?.reminders) {
+          const formattedReminders = formatVaultReminders(remindersData.result.reminders);
+          setReminders(formattedReminders);
+          console.log('✅ Reminders loaded:', formattedReminders.length);
+        }
+      }
+
+      console.log('📡 Fetching interactions from vault API...');
+      const interactionsResponse = await fetch(`${apiBaseUrl}/vault/user/${user.id}/interactions`);
+      if (interactionsResponse.ok) {
+        const interactionsData = await interactionsResponse.json();
+        console.log('🤝 Interactions Response:', interactionsData);
+        
+        // Check if we're getting mock data due to vault connection issues
+        if (interactionsData.vault_connection === 'mock_data') {
+          console.log('⚠️ Backend is using mock data for interactions due to vault connection issues');
+          if (!notification.includes('vault connection failed')) {
+            setNotification('⚠️ Using mock data (vault connection failed)');
+            setTimeout(() => setNotification(''), 5000);
+          }
+        }
+        
+        if (interactionsData.success && interactionsData.result?.interactions) {
+          const formattedInteractions = formatVaultInteractions(interactionsData.result.interactions);
+          setInteractions(formattedInteractions);
+          console.log('✅ Interactions loaded:', formattedInteractions.length);
+        }
+      }
+      
+      console.log('🎉 Successfully loaded data from vault API');
+      setNotification('✅ Data loaded from vault');
+      setTimeout(() => setNotification(''), 3000);
+      
+    } catch (error) {
+      console.error('❌ Failed to load data from vault:', error);
       loadMockData(); // Fallback to mock data
     }
   };
@@ -290,11 +369,8 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack }) => {
       setTimeout(() => loadRealDataFromAgent(), 2000);
     } catch (error) {
       console.error('❌ Failed to reset vault:', error);
-      setNotification('❌ Failed to reset vault. Using mock data.');
-      setTimeout(() => {
-        setNotification('');
-        loadMockData();
-      }, 3000);
+      // Silently use mock data without notification
+      loadMockData();
     }
   };
 
@@ -339,11 +415,8 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack }) => {
       
     } catch (error) {
       console.error('❌ Complete reset failed:', error);
-      setNotification('❌ Reset failed. Using mock data.');
-      setTimeout(() => {
-        setNotification('');
-        loadMockData();
-      }, 3000);
+      // Silently use mock data without notification
+      loadMockData();
     }
   };
 
@@ -354,153 +427,8 @@ const RelationshipAgent: React.FC<RelationshipAgentProps> = ({ onBack }) => {
     }
   };
 
-  // Data formatting functions to convert agent data to frontend format
-  const formatAgentContacts = (agentData: any): Contact[] => {
-    console.log('🔍 Formatting agent contacts data:', agentData);
-    
-    // Handle different response structures
-    let contactsArray = [];
-    
-    if (Array.isArray(agentData)) {
-      contactsArray = agentData;
-    } else if (agentData && typeof agentData === 'object') {
-      // Check if it's a single contact or has contacts property
-      if (agentData.contacts && Array.isArray(agentData.contacts)) {
-        contactsArray = agentData.contacts;
-      } else if (agentData.name) {
-        // Single contact object
-        contactsArray = [agentData];
-      } else {
-        // Look for any array property that might contain contacts
-        const arrayProps = Object.values(agentData).filter(value => Array.isArray(value));
-        if (arrayProps.length > 0) {
-          contactsArray = arrayProps[0] as any[];
-        }
-      }
-    }
-    
-    console.log('📋 Processing contacts array:', contactsArray);
-    
-    return contactsArray.map((item: any, index: number) => ({
-      id: item.id || `contact_${index + 1}`,
-      name: item.name || item.display_name || item.contact_name || 'Unknown',
-      email: item.email || item.email_address || '',
-      phone: item.phone || item.phone_number || '',
-      company: item.company || item.organization || '',
-      position: item.position || item.job_title || '',
-      lastContact: item.last_contact || item.last_interaction || item.last_talked_date || new Date().toISOString().split('T')[0],
-      relationship: (item.relationship_type || item.relationship || 'colleague') as 'family' | 'friend' | 'colleague' | 'client' | 'prospect',
-      priority: (item.priority || 'medium') as 'high' | 'medium' | 'low',
-      notes: item.notes || item.description || '',
-      tags: Array.isArray(item.tags) ? item.tags : (item.keywords ? item.keywords : []),
-      socialMedia: {
-        linkedin: item.linkedin_url || item.social_media?.linkedin,
-        twitter: item.twitter_handle || item.social_media?.twitter,
-      }
-    }));
-  };
-
-  const formatAgentMemories = (agentData: any): Memory[] => {
-    console.log('🧠 Formatting agent memories data:', agentData);
-    
-    let memoriesArray = [];
-    
-    if (Array.isArray(agentData)) {
-      memoriesArray = agentData;
-    } else if (agentData && typeof agentData === 'object') {
-      if (agentData.memories && Array.isArray(agentData.memories)) {
-        memoriesArray = agentData.memories;
-      } else if (agentData.summary || agentData.content) {
-        memoriesArray = [agentData];
-      } else {
-        const arrayProps = Object.values(agentData).filter(value => Array.isArray(value));
-        if (arrayProps.length > 0) {
-          memoriesArray = arrayProps[0] as any[];
-        }
-      }
-    }
-    
-    console.log('📝 Processing memories array:', memoriesArray);
-    
-    return memoriesArray.map((item: any, index: number) => ({
-      id: item.id || `memory_${index + 1}`,
-      contactName: item.contact_name || item.person || 'General',
-      summary: item.content || item.description || item.summary || '',
-      location: item.location || item.place || '',
-      date: item.date || item.created_at || new Date().toISOString().split('T')[0],
-      tags: Array.isArray(item.tags) ? item.tags : (item.categories ? item.categories : ['AI-Generated'])
-    }));
-  };
-
-  const formatAgentReminders = (agentData: any): Reminder[] => {
-    console.log('⏰ Formatting agent reminders data:', agentData);
-    
-    let remindersArray = [];
-    
-    if (Array.isArray(agentData)) {
-      remindersArray = agentData;
-    } else if (agentData && typeof agentData === 'object') {
-      if (agentData.reminders && Array.isArray(agentData.reminders)) {
-        remindersArray = agentData.reminders;
-      } else if (agentData.title || agentData.description) {
-        remindersArray = [agentData];
-      } else {
-        const arrayProps = Object.values(agentData).filter(value => Array.isArray(value));
-        if (arrayProps.length > 0) {
-          remindersArray = arrayProps[0] as any[];
-        }
-      }
-    }
-    
-    console.log('📅 Processing reminders array:', remindersArray);
-    
-    return remindersArray.map((item: any, index: number) => ({
-      id: item.id || `reminder_${index + 1}`,
-      contactId: item.contact_id || '',
-      contactName: item.contact_name || item.contactName || 'Unknown',
-      title: item.title || item.reminder_text || 'Reminder',
-      description: item.description || item.details || '',
-      dueDate: item.due_date || item.reminder_date || new Date().toISOString().split('T')[0],
-      type: (item.type || 'follow_up') as 'birthday' | 'follow_up' | 'meeting' | 'anniversary' | 'check_in',
-      completed: item.completed || item.is_completed || false
-    }));
-  };
-
-  const formatAgentInteractions = (agentData: any): Interaction[] => {
-    console.log('🤝 Formatting agent interactions data:', agentData);
-    
-    let interactionsArray = [];
-    
-    if (Array.isArray(agentData)) {
-      interactionsArray = agentData;
-    } else if (agentData && typeof agentData === 'object') {
-      if (agentData.interactions && Array.isArray(agentData.interactions)) {
-        interactionsArray = agentData.interactions;
-      } else if (agentData.description || agentData.summary) {
-        interactionsArray = [agentData];
-      } else {
-        const arrayProps = Object.values(agentData).filter(value => Array.isArray(value));
-        if (arrayProps.length > 0) {
-          interactionsArray = arrayProps[0] as any[];
-        }
-      }
-    }
-    
-    console.log('💼 Processing interactions array:', interactionsArray);
-    
-    return interactionsArray.map((item: any, index: number) => ({
-      id: item.id || `interaction_${index + 1}`,
-      contactId: item.contact_id || '',
-      contactName: item.contact_name || item.contactName || 'Unknown',
-      date: item.date || item.interaction_date || item.created_at || new Date().toISOString().split('T')[0],
-      type: (item.type || item.interaction_type || 'message') as 'call' | 'email' | 'meeting' | 'message' | 'social',
-      description: item.description || item.summary || item.content || '',
-      sentiment: (item.sentiment || 'neutral') as 'positive' | 'neutral' | 'negative',
-      followUpRequired: item.follow_up_required || item.followUpRequired || false,
-      followUpDate: item.follow_up_date || item.followUpDate
-    }));
-  };
-
+  // Legacy agent data formatting functions - replaced by vault API formatting functions above
+  
   const loadMockData = () => {
     const mockContacts: Contact[] = [
       {

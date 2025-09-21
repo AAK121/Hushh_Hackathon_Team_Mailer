@@ -37,15 +37,13 @@ const AIAgentSelection: React.FC<AIAgentSelectionProps> = ({ onSelectAgent: _onS
       role: 'assistant',
       content: `# Welcome to Hushh AI Agent Ecosystem! 🚀
 
-I'm your AI assistant, here to help you navigate our privacy-first AI platform with 6 specialized agents:
+I'm your AI assistant, here to help you navigate our privacy-first AI platform with 4 specialized agents:
 
 **🤖 Available Agents:**
 - **📧 MailerPanda**: AI-powered email marketing with human oversight
-- **💰 ChanduFinance**: Personal financial advisor with real-time market data  
 - **🧠 Relationship Memory**: Persistent context and cross-agent memory
 - **📅 AddToCalendar**: Intelligent calendar management with Google sync
 - **🔍 Research Agent**: Multi-source information gathering and analysis
-- **📨 Basic Mailer**: Simple email sending with Excel/CSV support
 
 **🔐 Privacy-First Features:**
 - Cryptographic consent management (HushhMCP)
@@ -147,15 +145,6 @@ Ask me anything about our agents, how to use them, or get started with the platf
 
   return (
     <StyledWrapper className={isFullscreen ? 'fullscreen' : ''}>
-      <div className="agent-selection-header">
-        <div className="agent-selection-logo">
-          <CpuChipIcon className="agent-selection-logo-icon" />
-          <span className="agent-selection-title">Hushh AI Agent Ecosystem</span>
-        </div>
-        <div className="agent-selection-subtitle">
-          <span>Choose and chat with your privacy-first AI agents</span>
-        </div>
-      </div>
       <div className={`chat-container ${isMaximized ? 'maximized' : ''} ${isFullscreen ? 'fullscreen' : ''}`}>
         <div className="messages-container">
           {messages.map((message) => (

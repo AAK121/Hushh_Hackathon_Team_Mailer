@@ -3,9 +3,6 @@ import './MailerPandaUI.css';
 import { useAuth } from '../contexts/AuthContext';
 import { hushMcpApi } from '../services/hushMcpApi';
 
-// Get API base URL from environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
-
 // Interface definitions for backend integration
 interface GeneratedEmail {
   subject: string;
@@ -27,6 +24,8 @@ interface CampaignResponse {
   processing_time?: number;
   emails_sent?: number;
   recipients_processed?: number;
+  results?: any; // For flexible response handling
+  [key: string]: any; // Allow additional dynamic properties
 }
 
 interface MailerPandaUIProps {
@@ -50,7 +49,6 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
 
   // State to hold the response from the backend
   const [generatedEmail, setGeneratedEmail] = useState<GeneratedEmail>({ subject: '', content: '' });
-  const [campaignId, setCampaignId] = useState<string>('');
 
   // State for loading indicators
   const [isLoading, setIsLoading] = useState(false);
@@ -63,21 +61,6 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     if (file) {
       setExcelFile(file);
     }
-  };
-
-  // Convert file to base64 for backend
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const result = reader.result as string;
-        // Remove the data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64, prefix
-        const base64 = result.split(',')[1];
-        resolve(base64);
-      };
-      reader.onerror = error => reject(error);
-    });
   };
 
   const handleGenerateClick = async () => {
@@ -96,11 +79,6 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     setError(''); // Clear any previous errors
 
     try {
-      let excelFileData = '';
-      if (excelFile) {
-        excelFileData = await fileToBase64(excelFile);
-      }
-
       // Generate fresh consent tokens using the same pattern as AIAgentChat
       console.log("Generating fresh consent tokens for user:", user.id);
       let consentTokens;
@@ -114,87 +92,60 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
         return;
       }
 
-      // Prepare request for our MailerPanda backend
-      const requestBody = {
-        user_id: user.id, // Use actual user ID from auth
-        user_input: userInput,
-        excel_file_data: excelFileData,
-        excel_file_name: excelFile?.name || '',
-        mode: 'interactive', // Must be one of: 'interactive', 'headless'
-        use_context_personalization: useContextPersonalization, // NEW: Context personalization toggle
-        personalization_mode: 'aggressive', // or 'conservative'
-        // Add API keys for email sending
-        google_api_key: 'AIzaSyCYmItUaAVeo1pRFnBdFPqTibIqas17TBI',
-        mailjet_api_key: 'cca56ed08f5272f813370d7fc5a34a24',
-        mailjet_api_secret: '60fb43675233e2ac775f1c6cb8fe455c',
-        consent_tokens: consentTokens // Use freshly generated tokens
-      };
-
-      console.log("Request body:", requestBody);
-
-      // Create an AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
-
-      try {
-        const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId); // Clear timeout if request succeeds
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Backend error:', errorText);
-          throw new Error(`Backend error: ${response.status} - ${errorText}`);
-        }
-
-        const data: CampaignResponse = await response.json();
-        console.log("Backend response:", data);
-
-      // Check if we got a proper response with email template
-      if (data.email_template && (data.status === 'complete' || data.status === 'awaiting_approval' || data.status === 'completed')) {
-        // Set the generated email content
-        setGeneratedEmail({
-          subject: data.email_template.subject || 'Generated Email',
-          content: data.email_template.body || 'No content generated'
-        });
-        
-        setCampaignId(data.campaign_id || '');
-        setUiState('DRAFT_REVIEW'); // Move to review stage
-        
-        console.log("Email template extracted:", data.email_template);
-      } else if (data.status === 'error') {
-        // Handle different types of errors
-        let errorMessage = 'Unknown error occurred';
-        
-        if (data.errors && data.errors.length > 0) {
-          errorMessage = data.errors.join(', ');
-        } else if (data.message) {
-          errorMessage = data.message;
-        }
-        
-        // Check for quota errors specifically
-        if (errorMessage.includes('exceeded your current quota') || errorMessage.includes('429')) {
-          errorMessage = 'Google AI quota exceeded. Please wait a few minutes and try again, or consider upgrading your Google AI plan.';
-        }
-        
-        throw new Error(errorMessage);
-      } else {
-        throw new Error(`Unexpected response: ${data.status} - ${JSON.stringify(data)}`);
-      }
+      // Use hushMcpApi to send request with proper API configuration
+      // Include sample recipient emails if no Excel file is provided
+      const recipientEmails = excelFile ? undefined : [
+        'test1@example.com',
+        'test2@example.com'
+      ];
       
-      } catch (fetchError) {
-        clearTimeout(timeoutId); // Clear timeout on error
-        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
-          throw new Error('Request timed out. The AI generation is taking longer than expected. Please try again.');
-        }
-        throw fetchError; // Re-throw other fetch errors
+      const data: CampaignResponse = await hushMcpApi.executeMailerPanda({
+        user_id: user.id,
+        user_input: `Please generate an email template with subject and body for: ${userInput}. 
+                     Requirements: 
+                     - Return email_template with subject and body fields
+                     - Excel file: ${excelFile ? excelFile.name : 'none provided'}
+                     - Personalization: ${useContextPersonalization ? 'enabled' : 'disabled'}
+                     - This is for review approval, not immediate sending
+                     - Ensure the response includes email_template.subject and email_template.body`,
+        mode: 'interactive',
+        consent_tokens: consentTokens,
+        sender_email: user.email || 'test@example.com',
+        recipient_emails: recipientEmails,
+        require_approval: true,
+        use_ai_generation: true,
+        
+        // Personalization settings (matching backend expectations)
+        enable_description_personalization: useContextPersonalization,
+        excel_file_path: excelFile ? excelFile.name : undefined,
+        personalization_mode: 'smart',
+        
+        // API keys (get from environment or use fallback)
+        google_api_key: import.meta.env.VITE_GOOGLE_API_KEY || import.meta.env.VITE_OPENAI_API_KEY || 'AIzaSyCyTIMomAZ-EtebfSToII2gwLo8pInVXwY',
+        mailjet_api_key: 'cca56ed08f5272f813370d7fc5a34a24',
+        mailjet_api_secret: '60fb43675233e2ac775f1c6cb8fe455c'
+      });
+
+      console.log("Backend response:", data);
+      console.log("Response status:", data.status);
+      console.log("Email template:", data.email_template);
+      console.log("Emails sent:", data.emails_sent);
+      console.log("Full response JSON:", JSON.stringify(data, null, 2));
+
+      // Simple, strict handling - no fallbacks at all
+      if (data.status === 'completed' && data.emails_sent !== undefined && data.emails_sent > 0) {
+        // Emails were sent directly
+        setUiState('SENT');
+      } else if (data.email_template && data.email_template.subject && data.email_template.body) {
+        // Valid email template received
+        setGeneratedEmail({
+          subject: data.email_template.subject,
+          content: data.email_template.body
+        });
+        setUiState('DRAFT_REVIEW');
+      } else {
+        // Any other case is an error - show exactly what happened
+        throw new Error(`Backend Error - Status: ${data.status} | Email Template: ${data.email_template ? 'Present but incomplete' : 'Missing'} | Full Response: ${JSON.stringify(data)}`);
       }
       
     } catch (error) {
@@ -225,42 +176,25 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     setIsLoading(true);
 
     try {
-      // Send approval request with modification feedback
-      const approvalRequest = {
-        user_id: user?.id || 'frontend_user_123', // Use actual user ID from auth
-        campaign_id: campaignId,
-        action: 'modify',
-        feedback: suggestion
-      };
-
-      const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(approvalRequest)
+      // Send approval request with modification feedback using hushMcpApi
+      const data = await hushMcpApi.executeMailerPanda({
+        user_id: user?.id || 'frontend_user_123',
+        user_input: `Modify email with feedback: ${suggestion}. Please regenerate the email template based on this feedback and return email_template with subject and body fields.`,
+        mode: 'interactive',
+        consent_tokens: {},
+        require_approval: true,
+        use_ai_generation: true
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Backend error: ${response.status} - ${errorText}`);
-      }
-
-      const data = await response.json();
       console.log("Modification response:", data);
 
       // Check if we got a new email template
-      if (data.email_template && (data.status === 'awaiting_approval' || data.status === 'complete')) {
+      if (data.email_template && (data.status === 'awaiting_approval' || data.status === 'completed')) {
         // Update the generated email content with the modified version
         setGeneratedEmail({
           subject: data.email_template.subject || 'Modified Email',
           content: data.email_template.body || 'No content generated'
         });
-        
-        // Update campaign ID if it changed
-        if (data.campaign_id) {
-          setCampaignId(data.campaign_id);
-        }
         
         // Clear the suggestion and go back to review state
         setSuggestion('');
@@ -286,26 +220,15 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     setIsLoading(true);
 
     try {
-      // Send final approval to backend
-      const approvalRequest = {
-        user_id: user?.id || 'frontend_user_123', // Use actual user ID from auth
-        campaign_id: campaignId,
-        action: 'approve'
-      };
-
-      const response = await fetch(`${API_BASE_URL}/agents/mailerpanda/mass-email/approve`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(approvalRequest)
+      // Send final approval using hushMcpApi
+      const data = await hushMcpApi.executeMailerPanda({
+        user_id: user?.id || 'frontend_user_123',
+        user_input: 'Final approval - send emails',
+        mode: 'batch',
+        consent_tokens: {},
+        require_approval: false
       });
 
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
-      }
-
-      const data = await response.json();
       console.log("Final approval response:", data);
 
       setUiState('SENT');
@@ -328,7 +251,6 @@ function MailerPandaUI({ onBack }: MailerPandaUIProps) {
     setExcelFile(null);
     setSuggestion('');
     setGeneratedEmail({ subject: '', content: '' });
-    setCampaignId('');
   };
 
   // --- Render Functions for each UI State ---

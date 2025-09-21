@@ -1,5 +1,7 @@
 # hushh_mcp/trust/link.py
 
+from __future__ import annotations
+
 import hmac
 import hashlib
 import time

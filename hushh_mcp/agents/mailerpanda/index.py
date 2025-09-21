@@ -13,9 +13,54 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # HushMCP framework imports
 from hushh_mcp.consent.token import validate_token, issue_token
 from hushh_mcp.constants import ConsentScope
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
 from hushh_mcp.trust.link import create_trust_link, verify_trust_link
 from hushh_mcp.operons.verify_email import verify_email_operon
+
+# Vault encryption functions - implemented directly for compatibility
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidTag
+import base64
+from hushh_mcp.types import EncryptedPayload
+
+def encrypt_data(plaintext: str, key_hex: str) -> EncryptedPayload:
+    """Encrypt data using AES-256-GCM - Direct implementation for compatibility."""
+    try:
+        IV_LENGTH = 12  # GCM recommended IV size
+        ALGORITHM_NAME = "aes-256-gcm"
+        
+        key = bytes.fromhex(key_hex)
+        iv = os.urandom(IV_LENGTH)
+        
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        
+        ciphertext = encryptor.update(plaintext.encode('utf-8')) + encryptor.finalize()
+        
+        return EncryptedPayload(
+            encrypted_data=base64.b64encode(ciphertext).decode('utf-8'),
+            iv=base64.b64encode(iv).decode('utf-8'),
+            tag=base64.b64encode(encryptor.tag).decode('utf-8'),
+            algorithm=ALGORITHM_NAME
+        )
+    except Exception as e:
+        raise ValueError(f"Encryption failed: {e}")
+
+def decrypt_data(encrypted_payload: EncryptedPayload, key_hex: str) -> str:
+    """Decrypt data using AES-256-GCM - Direct implementation for compatibility."""
+    try:
+        key = bytes.fromhex(key_hex)
+        iv = base64.b64decode(encrypted_payload.iv)
+        tag = base64.b64decode(encrypted_payload.tag)
+        ciphertext = base64.b64decode(encrypted_payload.encrypted_data)
+        
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        return plaintext.decode('utf-8')
+    except Exception as e:
+        raise ValueError(f"Decryption failed: {e}")
 
 # Import the manifest to access agent details
 from hushh_mcp.agents.mailerpanda.manifest import manifest
@@ -1612,11 +1657,20 @@ customized email content here
             print(f"🔒 Vault Storage Keys: {list(final_state.get('vault_storage', {}).keys())}")
             print(f"🔗 Trust Links Created: {len(final_state.get('trust_links', []))}")
             
+            # 🚀 CRITICAL DEBUG: Log approval status logic
+            print(f"\n🔍 [APPROVAL DEBUG] mode: '{mode}'")
+            print(f"🔍 [APPROVAL DEBUG] final_state.get('frontend_approved', False): {final_state.get('frontend_approved', False)}")
+            print(f"🔍 [APPROVAL DEBUG] final_state.get('send_approved', False): {final_state.get('send_approved', False)}")
+            print(f"🔍 [APPROVAL DEBUG] final_state.get('email_template'): {final_state.get('email_template')}")
+            print(f"🔍 [APPROVAL DEBUG] final_state.get('subject'): {final_state.get('subject')}")
+            print(f"🔍 [APPROVAL DEBUG] final_state keys: {list(final_state.keys())}")
+            
             # 🚀 CRITICAL FIX: Check if workflow ended for approval
             # If in interactive mode and not approved, it requires approval
             if (mode == "interactive" and 
-                not final_state.get("approved", False) and 
+                not final_state.get("frontend_approved", False) and 
                 not final_state.get("send_approved", False)):
+                print(f"🔍 [APPROVAL DEBUG] ✅ RETURNING AWAITING_APPROVAL")
                 # Return approval-required result with complete state data
                 return {
                     "status": "awaiting_approval",
@@ -1635,6 +1689,7 @@ customized email content here
                     "hushh_mcp_compliant": True
                 }
             else:
+                print(f"🔍 [APPROVAL DEBUG] ❌ RETURNING COMPLETE")
                 # Complete execution result
                 return {
                     "status": "complete",

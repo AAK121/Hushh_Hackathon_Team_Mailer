@@ -455,11 +455,8 @@ const AICalendarAgent: React.FC<AICalendarAgentProps> = ({ onBack }) => {
               value={action}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setAction(e.target.value as any)}
             >
-              <option value="extract_events">🔍 Extract Events (HITL Review)</option>
               <option value="comprehensive_analysis">🚀 Full Analysis + Auto-Create</option>
-              <option value="analyze_only">👁️ Analyze Only (Preview)</option>
-              <option value="manual_event">✏️ Manual Event Creation</option>
-            </Select>
+             </Select>
           </FormGroup>
 
           <FormGroup>

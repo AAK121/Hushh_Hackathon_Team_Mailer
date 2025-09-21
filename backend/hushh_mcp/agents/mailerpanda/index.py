@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import os
 import json
-import pandas as pd
+import openpyxl
 import re
 import base64
 from datetime import datetime, timedelta, timezone
 from mailjet_rest import Client
-from typing import List, Dict, Annotated, Optional
+from typing import List, Dict, Optional
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -13,44 +15,121 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # HushMCP framework imports
 from hushh_mcp.consent.token import validate_token, issue_token
 from hushh_mcp.constants import ConsentScope
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
 from hushh_mcp.trust.link import create_trust_link, verify_trust_link
 from hushh_mcp.operons.verify_email import verify_email_operon
+
+# Vault encryption functions - implemented directly for compatibility
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidTag
+import base64
+from hushh_mcp.types import EncryptedPayload
+
+def encrypt_data(plaintext: str, key_hex: str) -> EncryptedPayload:
+    """Encrypt data using AES-256-GCM - Direct implementation for compatibility."""
+    try:
+        IV_LENGTH = 12  # GCM recommended IV size
+        ALGORITHM_NAME = "aes-256-gcm"
+        
+        key = bytes.fromhex(key_hex)
+        iv = os.urandom(IV_LENGTH)
+        
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=default_backend())
+        encryptor = cipher.encryptor()
+        
+        ciphertext = encryptor.update(plaintext.encode('utf-8')) + encryptor.finalize()
+        
+        return EncryptedPayload(
+            encrypted_data=base64.b64encode(ciphertext).decode('utf-8'),
+            iv=base64.b64encode(iv).decode('utf-8'),
+            tag=base64.b64encode(encryptor.tag).decode('utf-8'),
+            algorithm=ALGORITHM_NAME
+        )
+    except Exception as e:
+        raise ValueError(f"Encryption failed: {e}")
+
+def decrypt_data(encrypted_payload: EncryptedPayload, key_hex: str) -> str:
+    """Decrypt data using AES-256-GCM - Direct implementation for compatibility."""
+    try:
+        key = bytes.fromhex(key_hex)
+        iv = base64.b64decode(encrypted_payload.iv)
+        tag = base64.b64decode(encrypted_payload.tag)
+        ciphertext = base64.b64decode(encrypted_payload.encrypted_data)
+        
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=default_backend())
+        decryptor = cipher.decryptor()
+        
+        plaintext = decryptor.update(ciphertext) + decryptor.finalize()
+        return plaintext.decode('utf-8')
+    except Exception as e:
+        raise ValueError(f"Decryption failed: {e}")
 
 # Import the manifest to access agent details
 from hushh_mcp.agents.mailerpanda.manifest import manifest
 
+def read_excel_to_dict_list(file_path):
+    """Read Excel file and return list of dictionaries using openpyxl"""
+    workbook = openpyxl.load_workbook(file_path, read_only=True)
+    sheet = workbook.active
+    
+    # Get headers from first row
+    headers = []
+    for cell in sheet[1]:
+        headers.append(cell.value)
+    
+    # Get data rows
+    data = []
+    for row in sheet.iter_rows(min_row=2, values_only=True):
+        row_dict = {}
+        for i, value in enumerate(row):
+            if i < len(headers) and headers[i]:
+                row_dict[headers[i]] = value
+        if any(row_dict.values()):  # Only add non-empty rows
+            data.append(row_dict)
+    
+    workbook.close()
+    return data, headers
+
+def check_column_exists(data, column_name):
+    """Check if column exists in data and count non-null values"""
+    if not data:
+        return False, 0
+    
+    exists = column_name in data[0]
+    count = sum(1 for row in data if row.get(column_name) is not None and str(row.get(column_name)).strip())
+    return exists, count
+
 class AgentState(TypedDict):
-    user_input: Annotated[str, lambda old, new: new]
-    email_template: Annotated[str, lambda old, new: new]
-    subject: Annotated[str, lambda old, new: new]
-    mass: Annotated[bool, lambda old, new: new]
-    user_feedback: Annotated[str, lambda old, new: new]
-    feedback_history: Annotated[list, lambda old, new: new]  # ✨ NEW: Store all feedback history
-    approved: Annotated[bool, lambda old, new: new]
-    user_email: Annotated[str, lambda old, new: new]
-    receiver_email: Annotated[list[str], lambda old, new: new]
-    consent_tokens: Annotated[Dict[str, str], lambda old, new: new]
-    user_id: Annotated[str, lambda old, new: new]
-    campaign_id: Annotated[str, lambda old, new: new]
-    vault_storage: Annotated[Dict, lambda old, new: new]
-    # ✨ NEW: Personalization fields
-    enable_description_personalization: Annotated[bool, lambda old, new: new]
-    excel_file_path: Annotated[str, lambda old, new: new]
-    personalization_mode: Annotated[str, lambda old, new: new]
-    personalized_count: Annotated[int, lambda old, new: new]
-    standard_count: Annotated[int, lambda old, new: new]
-    description_column_detected: Annotated[bool, lambda old, new: new]
-    # ✨ CRITICAL FIX: Frontend approval fields
-    mode: Annotated[str, lambda old, new: new]
-    frontend_approved: Annotated[bool, lambda old, new: new]
-    send_approved: Annotated[bool, lambda old, new: new]
-    # ✨ EMAIL SENDING RESULTS FIELDS
-    total_sent: Annotated[int, lambda old, new: new]
-    total_failed: Annotated[int, lambda old, new: new]
-    send_results: Annotated[list, lambda old, new: new]
-    # ✨ PRE-APPROVED TEMPLATE SUPPORT
-    use_pre_approved: Annotated[bool, lambda old, new: new]
+    user_input: str
+    email_template: str
+    subject: str
+    mass: bool
+    user_feedback: str
+    feedback_history: list  # Store all feedback history
+    approved: bool
+    user_email: str
+    receiver_email: list
+    consent_tokens: dict
+    user_id: str
+    campaign_id: str
+    vault_storage: dict
+    # Personalization fields
+    enable_description_personalization: bool
+    excel_file_path: str
+    personalization_mode: str
+    personalized_count: int
+    standard_count: int
+    description_column_detected: bool
+    # Frontend approval fields
+    mode: str
+    frontend_approved: bool
+    send_approved: bool
+    # EMAIL SENDING RESULTS FIELDS
+    total_sent: int
+    total_failed: int
+    send_results: list
+    # PRE-APPROVED TEMPLATE SUPPORT
+    use_pre_approved: bool
 
 class SafeDict(dict):
     """Custom dict that handles missing placeholders gracefully."""
@@ -62,7 +141,7 @@ class MassMailerAgent:
     Advanced AI-powered mass mailer agent with complete HushMCP integration,
     including consent validation, vault storage, trust links, and operons.
     """
-    def __init__(self, api_keys: Dict[str, str] = None):
+    def __init__(self, api_keys: dict = None):
         """Initialize the mass mailer agent with dynamic API key support."""
         # Store dynamic API keys
         self.api_keys = api_keys or {}
@@ -119,7 +198,7 @@ class MassMailerAgent:
             print("⚠️ No Google API key provided. AI content generation may be limited.")
             self.llm = None
 
-    def _validate_consent_for_operation(self, consent_tokens: Dict[str, str], operation: str, user_id: str) -> bool:
+    def _validate_consent_for_operation(self, consent_tokens: dict, operation: str, user_id: str) -> bool:
         """
         Validates consent tokens for specific operations based on HushMCP scopes.
         
@@ -173,7 +252,7 @@ class MassMailerAgent:
         print(f"✅ All consent requirements satisfied for operation: {operation}")
         return True
 
-    def _store_in_vault(self, data: Dict, vault_key: str, user_id: str, consent_tokens: Dict[str, str]) -> str:
+    def _store_in_vault(self, data: dict, vault_key: str, user_id: str, consent_tokens: dict) -> str:
         """
         Securely stores data in the HushMCP vault with encryption.
         
@@ -209,7 +288,7 @@ class MassMailerAgent:
         
         return vault_key
 
-    def _retrieve_from_vault(self, vault_key: str, user_id: str, consent_tokens: Dict[str, str]) -> Optional[Dict]:
+    def _retrieve_from_vault(self, vault_key: str, user_id: str, consent_tokens: dict) -> dict:
         """
         Retrieves and decrypts data from the HushMCP vault.
         
@@ -271,7 +350,7 @@ class MassMailerAgent:
             print(f"⚠️  Trust link creation failed: {e}")
             return None
 
-    def _save_user_email_memory(self, user_id: str, email_data: Dict, consent_tokens: Dict[str, str]) -> str:
+    def _save_user_email_memory(self, user_id: str, email_data: dict, consent_tokens: dict) -> str:
         """
         Saves user's email writing preferences and style to persistent vault storage.
         
@@ -368,7 +447,7 @@ class MassMailerAgent:
             print(f"⚠️ Failed to save email memory: {e}")
             return ""
 
-    def _load_user_email_memory(self, user_id: str, consent_tokens: Dict[str, str]) -> Optional[Dict]:
+    def _load_user_email_memory(self, user_id: str, consent_tokens: dict) -> dict:
         """
         Loads user's email writing preferences and style from persistent vault storage.
         
@@ -421,7 +500,7 @@ class MassMailerAgent:
             print(f"⚠️ Failed to load email memory: {e}")
             return None
 
-    def _analyze_user_style_from_memory(self, memory_data: Dict) -> str:
+    def _analyze_user_style_from_memory(self, memory_data: dict) -> str:
         """
         Analyzes user's previous emails and feedback to create a style guide.
         
@@ -577,7 +656,7 @@ class MassMailerAgent:
             "receiver_email": receiver_emails
         }
 
-    def _read_contacts_with_consent(self, user_id: str, consent_tokens: Dict[str, str], excel_file_path: str = None) -> List[Dict]:
+    def _read_contacts_with_consent(self, user_id: str, consent_tokens: dict, excel_file_path: str = None) -> list:
         """Reads contact data from the local Excel file with proper consent validation."""
         # Validate consent for file access
         self._validate_consent_for_operation(consent_tokens, "contact_management", user_id)
@@ -597,19 +676,18 @@ class MassMailerAgent:
             raise FileNotFoundError(f"Contacts file not found at: {contacts_file}")
         
         print(f"📂 Reading contacts file: {os.path.basename(contacts_file)}")
-        df = pd.read_excel(contacts_file)
+        data, headers = read_excel_to_dict_list(contacts_file)
         
         # Check if description column exists
-        if 'description' in df.columns:
-            desc_count = df['description'].notna().sum()
+        desc_exists, desc_count = check_column_exists(data, 'description')
+        if desc_exists:
             print(f"✨ Found description column with {desc_count} personalized entries")
         else:
             print("📝 No description column found, using standard templates")
         
         # Validate email addresses using HushMCP operon
         validated_contacts = []
-        for _, row in df.iterrows():
-            contact_dict = row.to_dict()
+        for contact_dict in data:
             email = contact_dict.get('email', '')
             
             # Use HushMCP verify_email operon
@@ -746,8 +824,8 @@ class MassMailerAgent:
         try:
             contacts = self._read_contacts_with_consent(state["user_id"], state["consent_tokens"], state.get("excel_file_path"))
             if contacts:
-                df = pd.DataFrame(contacts)
-                available_columns = list(df.columns)
+                # Get available columns from first contact
+                available_columns = list(contacts[0].keys()) if contacts else []
                 
                 allowed_placeholders = [f"{{{col}}}" for col in available_columns]
                 placeholders_str = ", ".join(allowed_placeholders)
@@ -1059,12 +1137,18 @@ Write a professional email based on this input:
             print("🔄 [DEBUG] Routing back to 'llm_writer' based on user feedback.")
             return "llm_writer"
             
-        # If in interactive mode and no feedback is given, the workflow
-        # should pause and wait for external approval.
+        # CRITICAL FIX: In interactive mode, if we have an email template but no approval,
+        # we should end the workflow so the backend can return "awaiting_approval" status
+        # instead of continuing to completion
         mode = state.get('mode', 'interactive')
-        if mode == 'interactive':
-            print("⏸️ [DEBUG] Ending graph to await external approval/feedback.")
+        if mode == 'interactive' and state.get('email_template'):
+            print("⏸️ [DEBUG] Ending graph to await external approval/feedback - email template ready.")
             return "__end__"
+            
+        # If not approved and no email template yet, continue the workflow
+        if mode == 'interactive':
+            print("🔄 [DEBUG] No email template yet, continuing workflow...")
+            return "llm_writer"
             
         # If not approved and no other condition is met (e.g., in headless mode),
         # end the workflow.
@@ -1240,22 +1324,22 @@ customized email content here
                     print("⚠️ [DEBUG] No validated contacts found. Ending email sending.")
                     return {"status": "complete", "total_sent": 0, "total_failed": 0}
 
-                df = pd.DataFrame(contacts)
-                print(f"🚀 [DEBUG] Created DataFrame with {len(df)} rows")
+                print(f"🚀 [DEBUG] Processing {len(contacts)} contacts")
                 
-                if 'Status' not in df.columns:
-                    df['Status'] = ""
+                # Add Status field to each contact if not present
+                for contact in contacts:
+                    if 'Status' not in contact:
+                        contact['Status'] = ""
 
                 print("🚀 [DEBUG] About to start contact loop...")
-                for i, row in df.iterrows():
-                    print(f"🚀 [DEBUG] Processing contact {i}: {row.get('email', 'no email')}")
+                for i, contact_dict in enumerate(contacts):
+                    print(f"🚀 [DEBUG] Processing contact {i}: {contact_dict.get('email', 'no email')}")
                     
-                    contact_dict = row.to_dict()
                     if not contact_dict.get('email_validated', False):
                         print(f"⚠️ [DEBUG] Skipping invalid email: {contact_dict.get('email', 'N/A')}")
                         continue
                     
-                    print(f"🚀 [DEBUG] About to send email to {row.get('email')}")
+                    print(f"🚀 [DEBUG] About to send email to {contact_dict.get('email')}")
                     
                     try:
                         from_email = sender_email if sender_email else os.environ.get("SENDER_EMAIL")
@@ -1270,7 +1354,7 @@ customized email content here
                         personalization_enabled = state.get('enable_description_personalization', False)
                         
                         if personalization_enabled and contact_description and contact_description.strip():
-                            print(f"✨ [DEBUG] Using AI personalization for {row.get('name')} with description: {contact_description[:50]}...")
+                            print(f"✨ [DEBUG] Using AI personalization for {contact_dict.get('name')} with description: {contact_description[:50]}...")
                             
                             # Use AI to customize the email based on the description
                             customized = self._customize_email_with_description(
@@ -1297,7 +1381,7 @@ customized email content here
                             if not personalization_enabled:
                                 print(f"📝 [DEBUG] AI personalization is DISABLED for this campaign")
                             elif not contact_description:
-                                print(f"📝 [DEBUG] No description found for {row.get('name')}, using standard template")
+                                print(f"📝 [DEBUG] No description found for {contact_dict.get('name')}, using standard template")
                             
                             # Fall back to simple placeholder replacement
                             personalized_subject = subject.format_map(safe_contact)
@@ -1313,10 +1397,10 @@ customized email content here
                         print(f"🔍 [DEBUG] Subject before replacement: {subject}")
                         print(f"🔍 [DEBUG] Contact data: {dict(contact_dict)}")
 
-                        print(f"🚀 [DEBUG] Calling _send_email_via_mailjet for {row['email']}")
+                        print(f"🚀 [DEBUG] Calling _send_email_via_mailjet for {contact_dict['email']}")
                         result = self._send_email_via_mailjet(
-                            to_email=row["email"],
-                            to_name=row.get("name", ""),
+                            to_email=contact_dict["email"],
+                            to_name=contact_dict.get("name", ""),
                             subject=personalized_subject,
                             content=personalized_content,
                             from_email=from_email,
@@ -1325,14 +1409,14 @@ customized email content here
                         )
                         print(f"🚀 [DEBUG] Got result from _send_email_via_mailjet: {result}")
                         
-                        df.loc[i, 'Status'] = result['status_code']
+                        contact_dict['Status'] = result['status_code']
                         results.append(result)
                         
                     except Exception as e:
-                        print(f"❌ [DEBUG] Error processing contact {row.get('email')}: {e}")
-                        df.loc[i, 'Status'] = "error"
+                        print(f"❌ [DEBUG] Error processing contact {contact_dict.get('email')}: {e}")
+                        contact_dict['Status'] = "error"
                         results.append({
-                            "email": row["email"],
+                            "email": contact_dict["email"],
                             "status_code": "error", 
                             "error": str(e),
                             "campaign_id": campaign_id,
@@ -1471,7 +1555,7 @@ customized email content here
                 "approval_action": approval_action
             }
 
-    def handle(self, user_id: str, consent_tokens: Dict[str, str], user_input: str, 
+    def handle(self, user_id: str, consent_tokens: dict, user_input: str, 
                mode: str = "interactive", enable_description_personalization: bool = False,
                excel_file_path: str = None, personalization_mode: str = "conservative",
                frontend_approved: bool = False, send_approved: bool = False, **parameters):
@@ -1612,13 +1696,24 @@ customized email content here
             print(f"🔒 Vault Storage Keys: {list(final_state.get('vault_storage', {}).keys())}")
             print(f"🔗 Trust Links Created: {len(final_state.get('trust_links', []))}")
             
-            # 🚀 CRITICAL FIX: Check if workflow ended for approval
+            # � ENHANCED DEBUG LOGGING
+            print(f"🔍 [CRITICAL DEBUG] Mode: {mode}")
+            print(f"🔍 [CRITICAL DEBUG] final_state.approved: {final_state.get('approved', False)}")
+            print(f"🔍 [CRITICAL DEBUG] final_state.send_approved: {final_state.get('send_approved', False)}")
+            print(f"🔍 [CRITICAL DEBUG] final_state.email_template: {final_state.get('email_template', '')[:50]}...")
+            print(f"🔍 [CRITICAL DEBUG] final_state.subject: {final_state.get('subject', '')}")
+            
+            # �🚀 CRITICAL FIX: Check if workflow ended for approval
             # If in interactive mode and not approved, it requires approval
-            if (mode == "interactive" and 
-                not final_state.get("approved", False) and 
-                not final_state.get("send_approved", False)):
+            approval_condition = (mode == "interactive" and 
+                                not final_state.get("approved", False) and 
+                                not final_state.get("send_approved", False))
+            
+            print(f"🔍 [CRITICAL DEBUG] Should require approval: {approval_condition}")
+            
+            if approval_condition:
                 # Return approval-required result with complete state data
-                return {
+                result = {
                     "status": "awaiting_approval",
                     "agent_id": self.agent_id,
                     "agent_version": self.version,
@@ -1634,9 +1729,11 @@ customized email content here
                     "final_state": final_state,
                     "hushh_mcp_compliant": True
                 }
+                print(f"🔍 [CRITICAL DEBUG] Returning awaiting_approval result: {result}")
+                return result
             else:
                 # Complete execution result
-                return {
+                result = {
                     "status": "complete",
                     "agent_id": self.agent_id,
                     "agent_version": self.version,
@@ -1658,6 +1755,8 @@ customized email content here
                     "final_state": final_state,
                     "hushh_mcp_compliant": True
                 }
+                print(f"🔍 [CRITICAL DEBUG] Returning complete result: {result}")
+                return result
             
         except PermissionError as e:
             print(f"🚫 Permission denied: {e}")

@@ -1,0 +1,25 @@
+# Research Agent Requirements
+fastapi==0.104.1
+uvicorn==0.24.0
+pydantic==2.5.3
+python-dotenv==1.0.0
+requests==2.31.0
+
+# AI for research analysis
+langchain-google-genai==1.0.6
+
+# Research tools
+arxiv==2.1.0
+feedparser==6.0.10
+
+# PDF processing
+PyPDF2==3.0.1
+
+# Document processing
+beautifulsoup4==4.12.2
+
+# Security
+cryptography==41.0.7
+
+# File handling
+aiofiles==23.1.0

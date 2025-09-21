@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from hushh_mcp.constants import ConsentScope
 
 manifest = {

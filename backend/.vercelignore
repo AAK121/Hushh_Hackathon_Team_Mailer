@@ -33,9 +33,12 @@ deploy.bat
 deploy.sh
 
 # Large directories that might cause size issues
-vault/
+
 tests/
 docs/
+
+# Exclude heavy agent modules for size optimization
+
 
 # Large files
 *.pdf

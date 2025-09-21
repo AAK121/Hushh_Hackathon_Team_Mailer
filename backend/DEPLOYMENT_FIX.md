@@ -18,7 +18,7 @@ The issue was caused by:
 - Updated `python-multipart` to compatible version (0.0.9)
 
 ### 2. Added runtime.txt
-- Specified Python 3.11 for Vercel deployment
+- Specified Python 3.12.3 for Vercel deployment
 
 ### 3. Updated vercel.json
 - Added maxLambdaSize configuration

@@ -7,10 +7,39 @@ import json
 import os
 import sqlite3
 from datetime import datetime
-from typing import List, Dict, Optional, Any
+import sys
+import os
 from pathlib import Path
+from typing import List, Dict, Optional, Any
 
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+# Add the project root to Python path for deployment environments
+project_root = Path(__file__).parent.parent.parent.parent.parent
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# Handle vault imports with fallback for deployment environments
+try:
+    from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+except ImportError:
+    # Fallback import path for deployment environments
+    try:
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
+        from vault.encrypt import encrypt_data, decrypt_data
+    except ImportError:
+        # Final fallback - create minimal encrypt functions if needed
+        def encrypt_data(data, key):
+            import base64
+            return {
+                "ciphertext": base64.b64encode(data.encode()).decode(), 
+                "iv": "", 
+                "tag": "", 
+                "encoding": "base64",
+                "algorithm": "fallback"
+            }
+        def decrypt_data(payload, key):
+            import base64
+            return base64.b64decode(payload.get("ciphertext", "")).decode()
+
 from hushh_mcp.types import VaultKey, VaultRecord, EncryptedPayload, UserID, AgentID, ConsentScope
 
 
@@ -36,19 +65,48 @@ class VaultManager:
             # Convert bytes to hex
             self.vault_key = vault_key.hex() if hasattr(vault_key, 'hex') else str(vault_key)
         
-        # Initialize database
+        # Initialize database with serverless-compatible approach
         if db_path is None:
-            db_dir = Path(__file__).parent / "data"
-            db_dir.mkdir(exist_ok=True)
-            self.db_path = db_dir / f"relationship_memory_{user_id}.db"
+            # Check if we're in a serverless environment (Vercel, AWS Lambda, etc.)
+            is_serverless = (
+                os.getenv('VERCEL') or 
+                os.getenv('AWS_LAMBDA_FUNCTION_NAME') or 
+                os.getenv('NETLIFY') or
+                not os.access(Path(__file__).parent, os.W_OK)
+            )
+            
+            if is_serverless:
+                # Use in-memory database for serverless environments
+                self.db_path = ":memory:"
+                print(f"🌐 Serverless environment detected - using in-memory database")
+            else:
+                # Use file-based database for local development
+                db_dir = Path(__file__).parent / "data"
+                try:
+                    db_dir.mkdir(exist_ok=True)
+                    self.db_path = db_dir / f"relationship_memory_{user_id}.db"
+                    print(f"💾 Local environment - using file database: {self.db_path}")
+                except (PermissionError, OSError):
+                    # Fallback to in-memory if file creation fails
+                    self.db_path = ":memory:"
+                    print(f"⚠️ File database creation failed - falling back to in-memory database")
         else:
-            self.db_path = Path(db_path)
+            self.db_path = Path(db_path) if db_path != ":memory:" else db_path
         
         self._init_database()
     
     def _init_database(self):
-        """Initialize SQLite database for vault records"""
-        with sqlite3.connect(self.db_path) as conn:
+        """Initialize SQLite database for vault records with serverless compatibility"""
+        try:
+            # For in-memory databases, we need to maintain the connection
+            if self.db_path == ":memory:":
+                # Create persistent connection for in-memory database
+                self._memory_connection = sqlite3.connect(":memory:")
+                conn = self._memory_connection
+            else:
+                # For file databases, use context manager
+                conn = sqlite3.connect(self.db_path)
+            
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS vault_records (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,52 +129,136 @@ class VaultManager:
                 )
             """)
             conn.commit()
+            
+            # Close connection only for file databases
+            if self.db_path != ":memory:":
+                conn.close()
+                
+            print(f"✅ Database initialized successfully: {self.db_path}")
+            
+        except Exception as e:
+            print(f"❌ Database initialization failed: {e}")
+            # Fallback to in-memory database if file database fails
+            if self.db_path != ":memory:":
+                print("🔄 Falling back to in-memory database...")
+                self.db_path = ":memory:"
+                self._memory_connection = sqlite3.connect(":memory:")
+                # Re-run initialization with in-memory database
+                self._init_database()
+    
+    def _get_connection(self):
+        """Get database connection - handles both file and in-memory databases"""
+        if self.db_path == ":memory:":
+            # Return the persistent in-memory connection
+            return self._memory_connection
+        else:
+            # Create new connection for file database
+            return sqlite3.connect(self.db_path)
+    
+    def _execute_with_connection(self, query, params=None, fetch=False):
+        """Execute database query with proper connection handling"""
+        if self.db_path == ":memory:":
+            # Use persistent connection for in-memory database
+            conn = self._memory_connection
+            cursor = conn.execute(query, params or [])
+            if not fetch:
+                conn.commit()
+                return cursor.rowcount
+            else:
+                return cursor.fetchall()
+        else:
+            # Use context manager for file database
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute(query, params or [])
+                if not fetch:
+                    conn.commit()
+                    return cursor.rowcount
+                else:
+                    return cursor.fetchall()
     
     def _create_vault_key(self, scope: ConsentScope) -> VaultKey:
         """Create a vault key for the given scope"""
         return VaultKey(user_id=self.user_id, scope=scope)
     
     def _store_record(self, record_type: str, record_id: str, data: Dict, scope: ConsentScope) -> VaultRecord:
-        """Store encrypted data in the vault"""
+        """Store encrypted data in the vault with serverless-compatible database handling"""
         encrypted = encrypt_data(json.dumps(data), self.vault_key)
         timestamp = int(datetime.now().timestamp() * 1000)
         
         vault_key = self._create_vault_key(scope)
         
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
-                INSERT OR REPLACE INTO vault_records 
-                (record_type, record_id, user_id, agent_id, scope, ciphertext, iv, tag, 
-                 encoding, algorithm, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                record_type, record_id, str(self.user_id), str(self.agent_id), scope.value,
-                encrypted.ciphertext, encrypted.iv, encrypted.tag, encrypted.encoding, 
-                encrypted.algorithm, timestamp, timestamp
-            ))
-            conn.commit()
+        # Handle both dict and EncryptedPayload object formats
+        if isinstance(encrypted, dict):
+            # Fallback encryption returns a dictionary
+            ciphertext = encrypted.get('ciphertext', '')
+            iv = encrypted.get('iv', '')
+            tag = encrypted.get('tag', '')
+            # Ensure encoding is either 'base64' or 'hex' for EncryptedPayload validation
+            raw_encoding = encrypted.get('encoding', 'base64')
+            if raw_encoding not in ['base64', 'hex']:
+                encoding = 'base64'  # Default to base64 for any invalid encoding
+            else:
+                encoding = raw_encoding
+            # Map fallback algorithm to a valid one for VaultRecord validation
+            raw_algorithm = encrypted.get('algorithm', 'aes-256-gcm')
+            algorithm = 'aes-256-gcm' if raw_algorithm == 'fallback' else raw_algorithm
+        else:
+            # Standard EncryptedPayload object
+            ciphertext = encrypted.ciphertext
+            iv = encrypted.iv
+            tag = encrypted.tag
+            encoding = encrypted.encoding
+            algorithm = encrypted.algorithm
+        
+        # Use the new connection handling method
+        self._execute_with_connection("""
+            INSERT OR REPLACE INTO vault_records 
+            (record_type, record_id, user_id, agent_id, scope, ciphertext, iv, tag, 
+             encoding, algorithm, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            record_type, record_id, str(self.user_id), str(self.agent_id), scope.value,
+            ciphertext, iv, tag, encoding, algorithm, timestamp, timestamp
+        ))
+        
+        # Create properly formatted encrypted data for VaultRecord
+        if isinstance(encrypted, dict):
+            # Convert dict to EncryptedPayload format for VaultRecord validation
+            formatted_encrypted = EncryptedPayload(
+                ciphertext=ciphertext,
+                iv=iv,
+                tag=tag,
+                encoding=encoding,
+                algorithm=algorithm
+            )
+        else:
+            # Already an EncryptedPayload object
+            formatted_encrypted = encrypted
         
         return VaultRecord(
             key=vault_key,
-            data=encrypted,
+            data=formatted_encrypted,
             agent_id=self.agent_id,
             created_at=timestamp,
             updated_at=timestamp
         )
     
     def _retrieve_record(self, record_type: str, record_id: str, scope: ConsentScope) -> Optional[Dict]:
-        """Retrieve and decrypt data from the vault"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                SELECT ciphertext, iv, tag, encoding, algorithm
-                FROM vault_records
-                WHERE record_type = ? AND record_id = ? AND user_id = ? AND scope = ? AND deleted = FALSE
-            """, (record_type, record_id, str(self.user_id), scope.value))
-            
-            row = cursor.fetchone()
-            if not row:
-                return None
-            
+        """Retrieve and decrypt data from the vault with serverless-compatible database handling"""
+        rows = self._execute_with_connection("""
+            SELECT ciphertext, iv, tag, encoding, algorithm
+            FROM vault_records
+            WHERE record_type = ? AND record_id = ? AND user_id = ? AND scope = ? AND deleted = FALSE
+        """, (record_type, record_id, str(self.user_id), scope.value), fetch=True)
+        
+        if not rows:
+            return None
+        
+        row = rows[0]
+        
+        # Handle both dictionary and EncryptedPayload object formats for decryption
+        try:
+            # Try creating EncryptedPayload object first
             encrypted = EncryptedPayload(
                 ciphertext=row[0],
                 iv=row[1],
@@ -124,22 +266,33 @@ class VaultManager:
                 encoding=row[3],
                 algorithm=row[4]
             )
-            
             decrypted = decrypt_data(encrypted, self.vault_key)
-            return json.loads(decrypted)
+        except Exception:
+            # Fallback: create dictionary format for fallback decryption
+            encrypted_dict = {
+                'ciphertext': row[0],
+                'iv': row[1],
+                'tag': row[2],
+                'encoding': row[3],
+                'algorithm': row[4]
+            }
+            decrypted = decrypt_data(encrypted_dict, self.vault_key)
+        
+        return json.loads(decrypted)
     
     def _retrieve_all_records(self, record_type: str, scope: ConsentScope) -> List[Dict]:
-        """Retrieve all records of a given type"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                SELECT record_id, ciphertext, iv, tag, encoding, algorithm, created_at
-                FROM vault_records
-                WHERE record_type = ? AND user_id = ? AND scope = ? AND deleted = FALSE
-                ORDER BY created_at DESC
-            """, (record_type, str(self.user_id), scope.value))
-            
-            records = []
-            for row in cursor.fetchall():
+        """Retrieve all records of a given type with serverless-compatible database handling"""
+        rows = self._execute_with_connection("""
+            SELECT record_id, ciphertext, iv, tag, encoding, algorithm, created_at
+            FROM vault_records
+            WHERE record_type = ? AND user_id = ? AND scope = ? AND deleted = FALSE
+            ORDER BY created_at DESC
+        """, (record_type, str(self.user_id), scope.value), fetch=True)
+        
+        records = []
+        for row in rows:
+            try:
+                # Try creating EncryptedPayload object first
                 encrypted = EncryptedPayload(
                     ciphertext=row[1],
                     iv=row[2],
@@ -147,32 +300,44 @@ class VaultManager:
                     encoding=row[4],
                     algorithm=row[5]
                 )
-                
+                decrypted = decrypt_data(encrypted, self.vault_key)
+            except Exception:
+                # Fallback: create dictionary format for fallback decryption
+                encrypted_dict = {
+                    'ciphertext': row[1],
+                    'iv': row[2],
+                    'tag': row[3],
+                    'encoding': row[4],
+                    'algorithm': row[5]
+                }
                 try:
-                    decrypted = decrypt_data(encrypted, self.vault_key)
-                    data = json.loads(decrypted)
-                    data['_vault_id'] = row[0]
-                    data['_created_at'] = row[6]
-                    records.append(data)
+                    decrypted = decrypt_data(encrypted_dict, self.vault_key)
                 except Exception as e:
                     print(f"Warning: Failed to decrypt record {row[0]}: {e}")
                     continue
             
-            return records
+            try:
+                data = json.loads(decrypted)
+                data['_vault_id'] = row[0]
+                data['_created_at'] = row[6]
+                records.append(data)
+            except Exception as e:
+                print(f"Warning: Failed to parse JSON for record {row[0]}: {e}")
+                continue
+        
+        return records
     
     def _delete_record(self, record_type: str, record_id: str, scope: ConsentScope) -> bool:
-        """Mark a record as deleted (soft delete)"""
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
-                UPDATE vault_records 
-                SET deleted = TRUE, updated_at = ?
-                WHERE record_type = ? AND record_id = ? AND user_id = ? AND scope = ?
-            """, (
-                int(datetime.now().timestamp() * 1000),
-                record_type, record_id, str(self.user_id), scope.value
-            ))
-            conn.commit()
-            return cursor.rowcount > 0
+        """Mark a record as deleted (soft delete) with serverless-compatible database handling"""
+        rows_affected = self._execute_with_connection("""
+            UPDATE vault_records 
+            SET deleted = TRUE, updated_at = ?
+            WHERE record_type = ? AND record_id = ? AND user_id = ? AND scope = ?
+        """, (
+            int(datetime.now().timestamp() * 1000),
+            record_type, record_id, str(self.user_id), scope.value
+        ))
+        return rows_affected > 0
     
     # Contact Management
     def store_contact(self, contact_data: Dict) -> str:

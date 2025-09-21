@@ -4418,6 +4418,295 @@ async def delete_conversation(conversation_id: str):
             detail=f"Failed to delete conversation: {str(e)}"
         )
 
+# ============================================================================
+# VAULT DATA ACCESS ENDPOINTS
+# ============================================================================
+
+from hushh_mcp.agents.relationship_memory.utils.vault_manager import VaultManager
+
+@app.get("/vault/user/{user_id}/contacts")
+async def get_user_contacts(user_id: str):
+    """Get all contacts for a user from vault storage."""
+    try:
+        print(f"🔍 [API] Getting contacts for user: {user_id}")
+        
+        # Use the correct vault key from test data creation
+        vault_key = "e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8"
+        db_path = rf"C:\Users\Dell\Hushh_Hackathon_Team_Mailer\hushh_mcp\agents\relationship_memory\utils\data\relationship_memory_{user_id}.db"
+        
+        # Initialize vault manager with the correct vault key and database path
+        vault_manager = VaultManager(user_id, vault_key, db_path)
+        
+        # Get contacts from vault
+        contacts = vault_manager.get_all_contacts()
+        print(f"📊 [API] Found {len(contacts)} contacts in vault")
+        
+        # Format contacts for frontend
+        formatted_contacts = []
+        for contact in contacts:
+            formatted_contact = {
+                "id": contact.get("id", "unknown"),
+                "name": contact.get("name", "Unknown"),
+                "email": contact.get("email", ""),
+                "phone": contact.get("phone", ""),
+                "company": contact.get("company", ""),
+                "notes": contact.get("notes", ""),
+                "tags": contact.get("tags", []),
+                "created_at": contact.get("created_at", ""),
+                "updated_at": contact.get("updated_at", ""),
+                "last_interaction": contact.get("last_interaction", ""),
+                "relationship_type": contact.get("relationship_type", "general"),
+                "importance_level": contact.get("importance_level", "medium")
+            }
+            formatted_contacts.append(formatted_contact)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "contacts": formatted_contacts,
+            "total_count": len(formatted_contacts),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ [API] Error getting contacts: {str(e)}")
+        return {
+            "status": "error",
+            "user_id": user_id,
+            "contacts": [],
+            "total_count": 0,
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+@app.get("/vault/user/{user_id}/memories")
+async def get_user_memories(user_id: str):
+    """Get all memories for a user from vault storage."""
+    try:
+        print(f"🔍 [API] Getting memories for user: {user_id}")
+        
+        # Use the correct vault key from test data creation
+        vault_key = "e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8"
+        db_path = rf"C:\Users\Dell\Hushh_Hackathon_Team_Mailer\hushh_mcp\agents\relationship_memory\utils\data\relationship_memory_{user_id}.db"
+        
+        # Initialize vault manager with the correct vault key and database path
+        vault_manager = VaultManager(user_id, vault_key, db_path)
+        
+        # Get memories from vault
+        memories = vault_manager.get_all_memories()
+        print(f"📊 [API] Found {len(memories)} memories in vault")
+        
+        # Format memories for frontend
+        formatted_memories = []
+        for memory in memories:
+            formatted_memory = {
+                "id": memory.get("id", "unknown"),
+                "title": memory.get("title", "Memory"),
+                "content": memory.get("content", ""),
+                "contact_id": memory.get("contact_id", ""),
+                "contact_name": memory.get("contact_name", ""),
+                "memory_type": memory.get("memory_type", "general"),
+                "tags": memory.get("tags", []),
+                "importance": memory.get("importance", "medium"),
+                "created_at": memory.get("created_at", ""),
+                "updated_at": memory.get("updated_at", ""),
+                "date_referenced": memory.get("date_referenced", ""),
+                "context": memory.get("context", ""),
+                "emotion": memory.get("emotion", "neutral")
+            }
+            formatted_memories.append(formatted_memory)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "memories": formatted_memories,
+            "total_count": len(formatted_memories),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ [API] Error getting memories: {str(e)}")
+        return {
+            "status": "error",
+            "user_id": user_id,
+            "memories": [],
+            "total_count": 0,
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+@app.get("/vault/user/{user_id}/reminders")
+async def get_user_reminders(user_id: str):
+    """Get all reminders for a user from vault storage."""
+    try:
+        print(f"🔍 [API] Getting reminders for user: {user_id}")
+        
+        # Use the correct vault key from test data creation
+        vault_key = "e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8"
+        db_path = rf"C:\Users\Dell\Hushh_Hackathon_Team_Mailer\hushh_mcp\agents\relationship_memory\utils\data\relationship_memory_{user_id}.db"
+        
+        # Initialize vault manager with the correct vault key and database path
+        vault_manager = VaultManager(user_id, vault_key, db_path)
+        
+        # Get reminders from vault
+        reminders = vault_manager.get_all_reminders()
+        print(f"📊 [API] Found {len(reminders)} reminders in vault")
+        
+        # Format reminders for frontend
+        formatted_reminders = []
+        for reminder in reminders:
+            formatted_reminder = {
+                "id": reminder.get("id", "unknown"),
+                "title": reminder.get("title", "Reminder"),
+                "description": reminder.get("description", ""),
+                "due_date": reminder.get("due_date", ""),
+                "due_time": reminder.get("due_time", ""),
+                "contact_id": reminder.get("contact_id", ""),
+                "contact_name": reminder.get("contact_name", ""),
+                "reminder_type": reminder.get("reminder_type", "general"),
+                "priority": reminder.get("priority", "medium"),
+                "status": reminder.get("status", "pending"),
+                "recurring": reminder.get("recurring", False),
+                "recurrence_pattern": reminder.get("recurrence_pattern", ""),
+                "tags": reminder.get("tags", []),
+                "created_at": reminder.get("created_at", ""),
+                "updated_at": reminder.get("updated_at", ""),
+                "completed_at": reminder.get("completed_at", ""),
+                "notes": reminder.get("notes", "")
+            }
+            formatted_reminders.append(formatted_reminder)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "reminders": formatted_reminders,
+            "total_count": len(formatted_reminders),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ [API] Error getting reminders: {str(e)}")
+        return {
+            "status": "error",
+            "user_id": user_id,
+            "reminders": [],
+            "total_count": 0,
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+@app.get("/vault/user/{user_id}/interactions")
+async def get_user_interactions(user_id: str):
+    """Get all interactions for a user from vault storage."""
+    try:
+        print(f"🔍 [API] Getting interactions for user: {user_id}")
+        
+        # Use the correct vault key from test data creation
+        vault_key = "e2d989c4d382c80beebbe58c6f07f94b42e554f691ab11738115a489350584b8"
+        db_path = rf"C:\Users\Dell\Hushh_Hackathon_Team_Mailer\hushh_mcp\agents\relationship_memory\utils\data\relationship_memory_{user_id}.db"
+        
+        # Initialize vault manager with the correct vault key and database path
+        vault_manager = VaultManager(user_id, vault_key, db_path)
+        
+        # Get interactions from vault
+        interactions = vault_manager.get_all_interactions()
+        print(f"📊 [API] Found {len(interactions)} interactions in vault")
+        
+        # Format interactions for frontend
+        formatted_interactions = []
+        for interaction in interactions:
+            formatted_interaction = {
+                "id": interaction.get("id", "unknown"),
+                "contact_id": interaction.get("contact_id", ""),
+                "contact_name": interaction.get("contact_name", ""),
+                "interaction_type": interaction.get("interaction_type", "general"),
+                "method": interaction.get("method", "unknown"),
+                "title": interaction.get("title", "Interaction"),
+                "content": interaction.get("content", ""),
+                "summary": interaction.get("summary", ""),
+                "date": interaction.get("date", ""),
+                "duration": interaction.get("duration", ""),
+                "location": interaction.get("location", ""),
+                "context": interaction.get("context", ""),
+                "outcome": interaction.get("outcome", ""),
+                "follow_up_needed": interaction.get("follow_up_needed", False),
+                "tags": interaction.get("tags", []),
+                "sentiment": interaction.get("sentiment", "neutral"),
+                "created_at": interaction.get("created_at", ""),
+                "updated_at": interaction.get("updated_at", "")
+            }
+            formatted_interactions.append(formatted_interaction)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "interactions": formatted_interactions,
+            "total_count": len(formatted_interactions),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ [API] Error getting interactions: {str(e)}")
+        return {
+            "status": "error",
+            "user_id": user_id,
+            "interactions": [],
+            "total_count": 0,
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
+@app.get("/vault/user/{user_id}/all")
+async def get_user_all_data(user_id: str):
+    """Get all vault data for a user (contacts, memories, reminders, interactions)."""
+    try:
+        print(f"🔍 [API] Getting all vault data for user: {user_id}")
+        
+        # Get all data types
+        contacts_response = await get_user_contacts(user_id)
+        memories_response = await get_user_memories(user_id)
+        reminders_response = await get_user_reminders(user_id)
+        interactions_response = await get_user_interactions(user_id)
+        
+        return {
+            "status": "success",
+            "user_id": user_id,
+            "data": {
+                "contacts": contacts_response.get("contacts", []),
+                "memories": memories_response.get("memories", []),
+                "reminders": reminders_response.get("reminders", []),
+                "interactions": interactions_response.get("interactions", [])
+            },
+            "counts": {
+                "contacts": contacts_response.get("total_count", 0),
+                "memories": memories_response.get("total_count", 0),
+                "reminders": reminders_response.get("total_count", 0),
+                "interactions": interactions_response.get("total_count", 0)
+            },
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except Exception as e:
+        print(f"❌ [API] Error getting all vault data: {str(e)}")
+        return {
+            "status": "error",
+            "user_id": user_id,
+            "data": {
+                "contacts": [],
+                "memories": [],
+                "reminders": [],
+                "interactions": []
+            },
+            "counts": {
+                "contacts": 0,
+                "memories": 0,
+                "reminders": 0,
+                "interactions": 0
+            },
+            "error": str(e),
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+
 if __name__ == "__main__":
     print("Starting HushMCP Agent API Server...")
     print("API Documentation: http://127.0.0.1:8001/docs")

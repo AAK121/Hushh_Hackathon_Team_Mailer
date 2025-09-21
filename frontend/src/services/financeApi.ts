@@ -1,9 +1,13 @@
 /**
  * Enhanced Finance API Service for ChanduFinance Agent
- * Integrates with the new comprehensive finance endpoints
+ * Integrates with the backend finance service
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
+import { apiConfig } from '../config/api.config';
+
+// Backend URL for Finance Service
+const FINANCE_SERVICE_URL = 'https://hush-backend-sepia.vercel.app';
+const BASE_URL = FINANCE_SERVICE_URL;
 
 // Types for requests and responses
 export interface FinanceApiResponse {
@@ -125,6 +129,31 @@ class FinanceApiService {
     this.defaultGeminiKey = import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyCYmItUaAVeo1pRFnBdFPqTibIqas17TBI';
   }
 
+  // Helper method to get dynamic finance endpoint
+  private getFinanceEndpoint(operation: string): string {
+    try {
+      // Try microservice endpoint first
+      if (apiConfig.mode === 'microservices' || apiConfig.mode === 'hybrid') {
+        const microservice = (apiConfig.chanduFinance as any)?.microservice;
+        if (microservice?.[operation]) {
+          return microservice[operation];
+        }
+      }
+      
+      // Fallback to backend endpoint
+      const backendEndpoint = (apiConfig.chanduFinance as any)?.[operation];
+      if (backendEndpoint) {
+        return backendEndpoint;
+      }
+      
+      // Default fallback
+      return `${this.baseUrl}/agents/chandufinance/${operation}`;
+    } catch (error) {
+      console.warn(`Failed to get finance endpoint for ${operation}, using fallback`);
+      return `${this.baseUrl}/agents/chandufinance/${operation}`;
+    }
+  }
+
   // Token Management
   async createToken(user_id: string, scope: string): Promise<string> {
     try {
@@ -158,7 +187,8 @@ class FinanceApiService {
     [key: string]: any;
   }): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/agents/chandufinance/execute`, {
+      const endpoint = this.getFinanceEndpoint('execute');
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

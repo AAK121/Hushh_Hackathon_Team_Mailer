@@ -1,0 +1,96 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - ADDTOCALENDAR_SERVICE_URL=http://addtocalendar:8001
+      - MAILERPANDA_SERVICE_URL=http://mailerpanda:8002
+      - RESEARCH_SERVICE_URL=http://research:8003
+      - FINANCE_SERVICE_URL=http://finance:8004
+      - MEMORY_SERVICE_URL=http://memory:8005
+    depends_on:
+      - addtocalendar
+      - mailerpanda
+      - research
+      - finance
+      - memory
+    networks:
+      - hushh-network
+
+  addtocalendar:
+    build:
+      context: ./agents/addtocalendar
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - PORT=8001
+    volumes:
+      - ../../backend:/app/backend
+    networks:
+      - hushh-network
+
+  mailerpanda:
+    build:
+      context: ./agents/mailerpanda
+      dockerfile: Dockerfile
+    ports:
+      - "8002:8002"
+    environment:
+      - PORT=8002
+    volumes:
+      - ../../backend:/app/backend
+    networks:
+      - hushh-network
+
+  research:
+    build:
+      context: ./agents/research
+      dockerfile: Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - PORT=8003
+    volumes:
+      - ../../backend:/app/backend
+    networks:
+      - hushh-network
+
+  finance:
+    build:
+      context: ./agents/finance
+      dockerfile: Dockerfile
+    ports:
+      - "8004:8004"
+    environment:
+      - PORT=8004
+    volumes:
+      - ../../backend:/app/backend
+    networks:
+      - hushh-network
+
+  memory:
+    build:
+      context: ./agents/memory
+      dockerfile: Dockerfile
+    ports:
+      - "8005:8005"
+    environment:
+      - PORT=8005
+    volumes:
+      - ../../backend:/app/backend
+    networks:
+      - hushh-network
+
+networks:
+  hushh-network:
+    driver: bridge
+
+volumes:
+  hushh-data:

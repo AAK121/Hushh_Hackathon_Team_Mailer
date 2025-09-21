@@ -3,6 +3,8 @@ Email Prioritization Operon for HushMCP
 Small, reusable function for AI-powered email prioritization
 """
 
+from __future__ import annotations
+
 import json
 import google.generativeai as genai
 from typing import List, Dict, Optional
@@ -305,3 +307,155 @@ def categorize_emails_operon(emails: List[Dict], user_id: str, consent_token: st
             email_copy['category_confidence'] = 0.5
             fallback_emails.append(email_copy)
         return fallback_emails
+
+
+def analyze_email(email_content: str, user_id: str, consent_token: str, 
+                 analysis_type: str = "comprehensive", ai_model: str = "gemini-1.5-flash") -> Dict:
+    """
+    Comprehensive email analysis function.
+    
+    This function provides general email analysis including sentiment, intent, 
+    priority, and key information extraction.
+    
+    Args:
+        email_content: Raw email content to analyze
+        user_id: User identifier for consent validation
+        consent_token: Valid consent token for email access
+        analysis_type: Type of analysis ("comprehensive", "priority", "sentiment", "intent")
+        ai_model: Gemini model to use for analysis
+        
+    Returns:
+        Dictionary with analysis results
+        
+    Raises:
+        PermissionError: If consent token is invalid
+        ValueError: If email content is invalid
+    """
+    
+    # Configure Gemini AI
+    import os
+    google_api_key = os.environ.get("GOOGLE_API_KEY", os.environ.get("GEMINI_API_KEY"))
+    if google_api_key:
+        genai.configure(api_key=google_api_key)
+    
+    # Validate consent before processing
+    is_valid, reason, _ = validate_token(consent_token, expected_scope=ConsentScope.VAULT_READ_EMAIL)
+    if not is_valid:
+        raise PermissionError(f"Email Analysis Access Denied: {reason}")
+    
+    if not email_content or not email_content.strip():
+        raise ValueError("Email content cannot be empty")
+    
+    try:
+        # Initialize the Gemini model
+        model = genai.GenerativeModel(ai_model)
+        
+        # Create analysis prompt based on type
+        if analysis_type == "comprehensive":
+            prompt = f"""
+            Analyze the following email comprehensively and provide structured analysis:
+
+            EMAIL CONTENT:
+            {email_content}
+
+            Please provide analysis in the following JSON format:
+            {{
+                "sentiment": "positive/negative/neutral",
+                "sentiment_confidence": 0.0-1.0,
+                "priority_score": 1-10,
+                "intent": "request/information/complaint/marketing/personal/urgent",
+                "intent_confidence": 0.0-1.0,
+                "key_topics": ["topic1", "topic2"],
+                "requires_response": true/false,
+                "urgency_level": "low/medium/high/critical",
+                "summary": "Brief summary of email content",
+                "action_items": ["action1", "action2"],
+                "category": "work/personal/marketing/support/notification"
+            }}
+            
+            Provide only the JSON response, no additional text.
+            """
+        elif analysis_type == "priority":
+            prompt = f"""
+            Analyze this email and provide a priority score from 1-10 (10 being highest priority):
+
+            EMAIL CONTENT:
+            {email_content}
+
+            Consider factors like:
+            - Urgency indicators
+            - Sender importance
+            - Content importance
+            - Time sensitivity
+
+            Provide response as JSON: {{"priority_score": X, "reasoning": "explanation"}}
+            """
+        elif analysis_type == "sentiment":
+            prompt = f"""
+            Analyze the sentiment of this email:
+
+            EMAIL CONTENT:
+            {email_content}
+
+            Provide response as JSON: {{"sentiment": "positive/negative/neutral", "confidence": 0.0-1.0, "reasoning": "explanation"}}
+            """
+        elif analysis_type == "intent":
+            prompt = f"""
+            Analyze the intent of this email:
+
+            EMAIL CONTENT:
+            {email_content}
+
+            Provide response as JSON: {{"intent": "request/information/complaint/marketing/personal/urgent", "confidence": 0.0-1.0, "reasoning": "explanation"}}
+            """
+        else:
+            raise ValueError(f"Unknown analysis type: {analysis_type}")
+        
+        # Generate AI response
+        response = model.generate_content(prompt)
+        ai_response = response.text.strip()
+        
+        # Parse JSON response
+        try:
+            analysis_result = json.loads(ai_response)
+            
+            # Add metadata
+            analysis_result["analysis_type"] = analysis_type
+            analysis_result["timestamp"] = datetime.now().isoformat()
+            analysis_result["model_used"] = ai_model
+            analysis_result["user_id"] = user_id
+            
+            return analysis_result
+            
+        except json.JSONDecodeError:
+            # Fallback if AI doesn't return valid JSON
+            return {
+                "analysis_type": analysis_type,
+                "timestamp": datetime.now().isoformat(),
+                "model_used": ai_model,
+                "user_id": user_id,
+                "error": "AI response was not valid JSON",
+                "raw_response": ai_response,
+                "fallback_analysis": {
+                    "sentiment": "neutral",
+                    "priority_score": 5,
+                    "intent": "information",
+                    "summary": "Email analysis completed with fallback values"
+                }
+            }
+            
+    except Exception as e:
+        # Return error analysis
+        return {
+            "analysis_type": analysis_type,
+            "timestamp": datetime.now().isoformat(),
+            "model_used": ai_model,
+            "user_id": user_id,
+            "error": str(e),
+            "fallback_analysis": {
+                "sentiment": "neutral",
+                "priority_score": 5,
+                "intent": "unknown",
+                "summary": "Email analysis failed, using fallback values"
+            }
+        }

@@ -9,6 +9,8 @@ three-statement modeling, and investment recommendations. Designed to be used
 by financial agents within the HushhMCP ecosystem.
 """
 
+from __future__ import annotations
+
 import json
 import math
 from typing import Dict, List, Optional, Tuple, Any
@@ -348,3 +350,138 @@ def format_valuation_report(dcf_results: Dict[str, Any], recommendation: Dict[st
         report['sensitivity_analysis'] = sensitivity
     
     return report
+
+
+def create_financial_model(
+    company_data: Dict[str, Any], 
+    model_type: str = "dcf",
+    forecast_years: int = 5,
+    wacc: Optional[float] = None,
+    terminal_growth_rate: float = 0.025,
+    market_price: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Main function to create comprehensive financial models.
+    
+    This is the primary entry point for financial modeling operations.
+    
+    Args:
+        company_data: Dictionary containing company financial data
+        model_type: Type of model ('dcf', 'three_statement', 'valuation')
+        forecast_years: Number of years to forecast (default: 5)
+        wacc: Weighted Average Cost of Capital (calculated if not provided)
+        terminal_growth_rate: Terminal growth rate for DCF (default: 2.5%)
+        market_price: Current market price for comparison
+        
+    Returns:
+        Dictionary with complete financial model results
+        
+    Raises:
+        FinancialModelingError: If modeling fails or data is insufficient
+    """
+    try:
+        # Validate input data
+        if not validate_financial_data(company_data):
+            raise FinancialModelingError("Invalid or insufficient financial data provided")
+        
+        # Initialize results
+        results = {
+            "model_type": model_type,
+            "forecast_years": forecast_years,
+            "timestamp": datetime.now().isoformat(),
+            "status": "success"
+        }
+        
+        if model_type == "three_statement":
+            # Build three-statement model
+            three_statement_results = build_three_statement_model(company_data)
+            results["three_statement_model"] = three_statement_results
+            
+        elif model_type == "dcf":
+            # Build three-statement model first for forecasts
+            forecasts = build_three_statement_model(company_data)
+            
+            # Calculate WACC if not provided
+            if wacc is None:
+                # Simple WACC estimation based on industry averages
+                wacc = 0.10  # Default 10% WACC
+                if "industry" in company_data:
+                    industry_waccs = {
+                        "technology": 0.12,
+                        "healthcare": 0.09,
+                        "finance": 0.08,
+                        "energy": 0.11,
+                        "consumer": 0.10,
+                        "industrial": 0.09
+                    }
+                    wacc = industry_waccs.get(company_data["industry"].lower(), 0.10)
+            
+            # Perform DCF analysis
+            dcf_results = perform_dcf_analysis(forecasts, wacc, terminal_growth_rate)
+            results["dcf_analysis"] = dcf_results
+            
+            # Generate recommendation if market price provided
+            if market_price:
+                intrinsic_value = dcf_results.get("intrinsic_value", 0)
+                recommendation = generate_recommendation(market_price, intrinsic_value)
+                results["recommendation"] = recommendation
+                
+                # Add sensitivity analysis
+                wacc_range = (wacc - 0.02, wacc + 0.02)
+                growth_range = (terminal_growth_rate - 0.01, terminal_growth_rate + 0.01)
+                sensitivity = calculate_sensitivity_analysis(
+                    dcf_results, wacc_range, growth_range
+                )
+                results["sensitivity_analysis"] = sensitivity
+                
+                # Format comprehensive report
+                report = format_valuation_report(dcf_results, recommendation, sensitivity)
+                results["valuation_report"] = report
+            
+        elif model_type == "valuation":
+            # Comprehensive valuation model
+            forecasts = build_three_statement_model(company_data)
+            
+            # Calculate WACC if not provided
+            if wacc is None:
+                wacc = 0.10  # Default
+            
+            dcf_results = perform_dcf_analysis(forecasts, wacc, terminal_growth_rate)
+            
+            results["forecasts"] = forecasts
+            results["dcf_analysis"] = dcf_results
+            
+            if market_price:
+                intrinsic_value = dcf_results.get("intrinsic_value", 0)
+                recommendation = generate_recommendation(market_price, intrinsic_value)
+                
+                # Sensitivity analysis
+                wacc_range = (wacc - 0.02, wacc + 0.02)
+                growth_range = (terminal_growth_rate - 0.01, terminal_growth_rate + 0.01)
+                sensitivity = calculate_sensitivity_analysis(
+                    dcf_results, wacc_range, growth_range
+                )
+                
+                # Complete report
+                report = format_valuation_report(dcf_results, recommendation, sensitivity)
+                
+                results["recommendation"] = recommendation
+                results["sensitivity_analysis"] = sensitivity
+                results["valuation_report"] = report
+        
+        else:
+            raise FinancialModelingError(f"Unsupported model type: {model_type}")
+        
+        return results
+        
+    except Exception as e:
+        return {
+            "model_type": model_type,
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "error_details": {
+                "message": "Financial modeling failed",
+                "suggestion": "Please check input data format and try again"
+            }
+        }

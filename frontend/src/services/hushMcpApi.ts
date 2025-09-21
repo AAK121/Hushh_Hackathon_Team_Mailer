@@ -1,12 +1,13 @@
 // HushMCP Agent API Service
 import { HushMCPTokenManager } from './tokenManager';
+import { apiConfig } from '../config/api.config';
 
-const API_BASE_URL = import.meta.env.VITE_HUSHMCP_API_URL || import.meta.env.VITE_API_BASE_URL || 'https://hush-backend-sepia.vercel.app';
+// Use the dynamic API configuration
+const API_BASE_URL = apiConfig.baseUrl;
 
 // Initialize token manager
 const tokenManager = new HushMCPTokenManager();
 
-// Import EmailTemplate from MassMail.tsx
 // EmailTemplate interface
 export interface EmailTemplate {
   subject: string;
@@ -84,7 +85,17 @@ export interface MailerPandaExecuteRequest {
   use_ai_generation?: boolean;
   ai_provider?: 'openai' | 'google' | 'anthropic';
   ai_model?: string;
-  body: string;
+  
+  // Personalization settings (matching backend)
+  enable_description_personalization?: boolean;
+  excel_file_path?: string;
+  personalization_mode?: 'smart' | 'conservative' | 'aggressive';
+  
+  // API keys (matching backend)
+  google_api_key?: string;
+  mailjet_api_key?: string;
+  mailjet_api_secret?: string;
+  api_keys?: Record<string, string>;
 }
 
 export interface MailerPandaResponse {
@@ -202,7 +213,10 @@ class HushMcpApiService {
   };
 
   private async makeRequest(endpoint: string, options: RequestInit = {}) {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    // Use full URL if already provided, otherwise use API_BASE_URL
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    const response = await fetch(url, {
       headers: {
         'Content-Type': 'application/json',
         ...options.headers,
@@ -216,6 +230,43 @@ class HushMcpApiService {
     }
 
     return response.json();
+  }
+
+  // Helper method to get dynamic endpoint based on configuration
+  private getAgentEndpoint(agentName: string, operation: string): string {
+    try {
+      // Special handling for MailerPanda - always use backend since it's integrated there
+      if (agentName === 'mailerPanda') {
+        const agent = (apiConfig as any)[agentName];
+        if (agent?.[operation]) {
+          const endpoint = agent[operation];
+          return typeof endpoint === 'function' ? endpoint() : endpoint;
+        }
+        return `/agents/mailerpanda/${operation}`;
+      }
+      
+      // Try to get microservice endpoint first, fallback to backend
+      if (apiConfig.mode === 'microservices' || apiConfig.mode === 'hybrid') {
+        const agent = (apiConfig as any)[agentName];
+        if (agent?.microservice?.[operation]) {
+          const endpoint = agent.microservice[operation];
+          return typeof endpoint === 'function' ? endpoint() : endpoint;
+        }
+      }
+      
+      // Fallback to backend endpoint
+      const agent = (apiConfig as any)[agentName];
+      if (agent?.[operation]) {
+        const endpoint = agent[operation];
+        return typeof endpoint === 'function' ? endpoint() : endpoint;
+      }
+      
+      // Default fallback to old pattern
+      return `/agents/${agentName}/${operation}`;
+    } catch (error) {
+      console.warn(`Failed to get dynamic endpoint for ${agentName}.${operation}, using fallback`);
+      return `/agents/${agentName}/${operation}`;
+    }
   }
 
   // AI Configuration
@@ -271,11 +322,13 @@ class HushMcpApiService {
 
   // AddToCalendar Agent Methods
   async getAddToCalendarRequirements() {
-    return this.makeRequest('/agents/addtocalendar/requirements');
+    const endpoint = this.getAgentEndpoint('addToCalendar', 'requirements') || apiConfig.agents.requirements('addtocalendar');
+    return this.makeRequest(endpoint);
   }
 
   async executeAddToCalendar(request: AddToCalendarRequest): Promise<AddToCalendarResponse> {
-    return this.makeRequest('/agents/addtocalendar/execute', {
+    const endpoint = this.getAgentEndpoint('addToCalendar', 'execute') || apiConfig.addToCalendar.execute;
+    return this.makeRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         ...request,
@@ -371,7 +424,8 @@ class HushMcpApiService {
 
   // Execute MailerPanda agent
   async executeMailerPanda(request: MailerPandaExecuteRequest): Promise<MailerPandaResponse> {
-    return this.makeRequest('/agents/mailerpanda/execute', {
+    const endpoint = this.getAgentEndpoint('mailerPanda', 'execute') || apiConfig.mailerPanda.execute;
+    return this.makeRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify({
         ...request,
@@ -383,7 +437,8 @@ class HushMcpApiService {
 
   // Approve/reject MailerPanda campaign
   async approveMailerPanda(request: ApprovalRequest): Promise<MailerPandaResponse> {
-    return this.makeRequest('/agents/mailerpanda/approve', {
+    const endpoint = apiConfig.mailerPanda.approve || '/agents/mailerpanda/approve';
+    return this.makeRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -391,7 +446,8 @@ class HushMcpApiService {
 
   // Get campaign session status
   async getCampaignSession(campaignId: string): Promise<SessionResponse> {
-    return this.makeRequest(`/agents/mailerpanda/session/${campaignId}`);
+    const endpoint = apiConfig.mailerPanda.session ? apiConfig.mailerPanda.session(campaignId) : `/agents/mailerpanda/session/${campaignId}`;
+    return this.makeRequest(endpoint);
   }
 
   // Helper method to create all required consent tokens for MailerPanda
@@ -528,8 +584,10 @@ class HushMcpApiService {
     is_startup?: boolean;
     gemini_api_key?: string;
   }) {
+    const endpoint = this.getAgentEndpoint('relationshipMemory', 'execute') || apiConfig.relationshipMemory.execute;
+    
     try {
-      return await this.makeRequest('/agents/relationship_memory/execute', {
+      return await this.makeRequest(endpoint, {
         method: 'POST',
         body: JSON.stringify(request),
       });
@@ -544,13 +602,13 @@ class HushMcpApiService {
           is_startup: true
         };
         
-        await this.makeRequest('/agents/relationship_memory/execute', {
+        await this.makeRequest(endpoint, {
           method: 'POST',
           body: JSON.stringify(resetRequest),
         });
         
         // Now try the original request again
-        return await this.makeRequest('/agents/relationship_memory/execute', {
+        return await this.makeRequest(endpoint, {
           method: 'POST',
           body: JSON.stringify(request),
         });
@@ -769,7 +827,8 @@ class HushMcpApiService {
     complexity?: string;
     gemini_api_key?: string;
   }) {
-    return this.makeRequest('/agents/chandufinance/execute', {
+    const endpoint = this.getAgentEndpoint('chanduFinance', 'execute') || apiConfig.chanduFinance.execute;
+    return this.makeRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -777,7 +836,8 @@ class HushMcpApiService {
 
   // Get ChanduFinance status
   async getChanduFinanceStatus() {
-    return this.makeRequest('/agents/chandufinance/status');
+    const endpoint = apiConfig.chanduFinance.status || '/agents/chandufinance/status';
+    return this.makeRequest(endpoint);
   }
 
   // Helper to create ChanduFinance token
@@ -802,7 +862,8 @@ class HushMcpApiService {
     consent_tokens: Record<string, string>;
     query: string;
   }) {
-    return this.makeRequest('/agents/research/search/arxiv', {
+    const endpoint = this.getAgentEndpoint('research', 'searchArxiv') || apiConfig.research.searchArxiv;
+    return this.makeRequest(endpoint, {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -819,7 +880,11 @@ class HushMcpApiService {
     formData.append('consent_tokens', JSON.stringify(consentTokens));
     formData.append('file', file);
 
-    const response = await fetch(`${API_BASE_URL}/agents/research/upload`, {
+    // Get dynamic endpoint for research upload
+    const endpoint = this.getAgentEndpoint('research', 'upload') || apiConfig.research.searchArxiv || `${API_BASE_URL}/agents/research/upload`;
+    const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+    
+    const response = await fetch(url, {
       method: 'POST',
       body: formData,
     });

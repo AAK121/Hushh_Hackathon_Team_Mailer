@@ -23,3 +23,6 @@ def verify_user_email(email: str) -> bool:
 
 # Alias for consistency with operon naming convention
 verify_email_operon = verify_user_email
+
+# Additional alias expected by __init__.py
+verify_email_address = verify_user_email

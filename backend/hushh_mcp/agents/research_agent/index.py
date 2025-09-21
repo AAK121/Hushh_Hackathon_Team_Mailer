@@ -1,6 +1,9 @@
 # hushh_mcp/agents/research_agent/index.py
 
+from __future__ import annotations
+
 import os
+import sys
 import uuid
 import json
 import asyncio
@@ -8,8 +11,66 @@ import feedparser
 import requests
 import logging
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, TypedDict
+from typing import Dict, Any, List, Optional
 from pathlib import Path
+import functools
+
+# Configure logging early
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def safe_async_run(coro):
+    """
+    Safely run async coroutines in serverless environments.
+    Handles event loop issues that can occur in Vercel/serverless deployments.
+    """
+    try:
+        # Try to get existing loop
+        loop = asyncio.get_event_loop()
+        if loop.is_closed():
+            # Create new loop if closed
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+        return loop.run_until_complete(coro)
+    except RuntimeError as e:
+        if "Event loop is closed" in str(e) or "no running event loop" in str(e):
+            # Create new event loop for serverless environments
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                return loop.run_until_complete(coro)
+            finally:
+                # Don't close the loop in serverless environments
+                pass
+        else:
+            raise
+
+# Fix for Python 3.13 ForwardRef compatibility
+try:
+    # Try to patch ForwardRef._evaluate to handle the recursive_guard parameter
+    import typing
+    if hasattr(typing, 'ForwardRef') and sys.version_info >= (3, 13):
+        original_evaluate = typing.ForwardRef._evaluate
+        def patched_evaluate(self, globalns, localns, frozenset=frozenset, recursive_guard=None):
+            if recursive_guard is None:
+                recursive_guard = frozenset()
+            return original_evaluate(self, globalns, localns, frozenset)
+        typing.ForwardRef._evaluate = patched_evaluate
+except Exception as e:
+    logger.warning(f"Could not patch ForwardRef for Python 3.13 compatibility: {e}")
+
+# Handle TypedDict import with fallback for ForwardRef issues
+try:
+    from typing import TypedDict
+except ImportError:
+    # Fallback for older Python versions
+    try:
+        from typing_extensions import TypedDict
+    except ImportError:
+        # Final fallback - create a simple dict subclass
+        class TypedDict(dict):
+            def __init_subclass__(cls, **kwargs):
+                super().__init_subclass__()
 
 # LangGraph and LangChain imports
 try:
@@ -48,7 +109,59 @@ from fastapi import UploadFile
 # HushMCP imports
 from hushh_mcp.constants import ConsentScope
 from hushh_mcp.consent.token import validate_token
-from hushh_mcp.vault.encrypt import encrypt_data, decrypt_data
+
+# Vault encryption functions - implemented directly for Vercel compatibility
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.exceptions import InvalidTag
+import base64
+from hushh_mcp.types import EncryptedPayload
+
+def encrypt_data(plaintext: str, key_hex: str) -> EncryptedPayload:
+    """Encrypt data using AES-256-GCM - Direct implementation for Vercel compatibility."""
+    try:
+        IV_LENGTH = 12  # GCM recommended IV size
+        ALGORITHM_NAME = "aes-256-gcm"
+        
+        key = bytes.fromhex(key_hex)
+        iv = os.urandom(IV_LENGTH)
+        backend = default_backend()
+
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv), backend=backend)
+        encryptor = cipher.encryptor()
+
+        ciphertext = encryptor.update(plaintext.encode('utf-8')) + encryptor.finalize()
+        tag = encryptor.tag
+
+        return EncryptedPayload(
+            ciphertext=base64.b64encode(ciphertext).decode('utf-8'),
+            iv=base64.b64encode(iv).decode('utf-8'),
+            tag=base64.b64encode(tag).decode('utf-8'),
+            encoding="base64",
+            algorithm=ALGORITHM_NAME
+        )
+    except Exception as e:
+        raise RuntimeError(f"Encryption failed: {str(e)}")
+
+def decrypt_data(payload: EncryptedPayload, key_hex: str) -> str:
+    """Decrypt data using AES-256-GCM - Direct implementation for Vercel compatibility."""
+    try:
+        key = bytes.fromhex(key_hex)
+        iv = base64.b64decode(payload.iv)
+        tag = base64.b64decode(payload.tag)
+        ciphertext = base64.b64decode(payload.ciphertext)
+
+        backend = default_backend()
+        cipher = Cipher(algorithms.AES(key), modes.GCM(iv, tag), backend=backend)
+        decryptor = cipher.decryptor()
+
+        decrypted = decryptor.update(ciphertext) + decryptor.finalize()
+        return decrypted.decode('utf-8')
+
+    except InvalidTag:
+        raise ValueError("Decryption failed: Invalid authentication tag. Possible tampering.")
+    except Exception as e:
+        raise RuntimeError(f"Decryption failed: {str(e)}")
 from hushh_mcp.config import (
     VAULT_ENCRYPTION_KEY, 
     ARXIV_API_BASE_URL,
@@ -58,27 +171,31 @@ from hushh_mcp.config import (
     ARXIV_MAX_RESULTS
 )
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-class ResearchAgentState(TypedDict):
-    """State definition for the Research Agent LangGraph workflow."""
-    user_id: str
-    consent_tokens: Dict[str, str]
-    session_id: str
-    query: Optional[str]
-    paper_id: Optional[str]
-    paper_content: Optional[str]
-    arxiv_results: Optional[List[Dict]]
-    summary: Optional[str]
-    snippet: Optional[str]
-    instruction: Optional[str]
-    processed_snippet: Optional[str]
-    notes: Optional[Dict[str, str]]
-    error: Optional[str]
-    status: str
-    mode: str  # 'interactive' or 'api'
+# Define state class with error handling for ForwardRef issues
+try:
+    class ResearchAgentState(TypedDict):
+        """State definition for the Research Agent LangGraph workflow."""
+        user_id: str
+        consent_tokens: Dict[str, str]
+        session_id: str
+        query: Optional[str]
+        paper_id: Optional[str]
+        paper_content: Optional[str]
+        arxiv_results: Optional[List[Dict]]
+        summary: Optional[str]
+        snippet: Optional[str]
+        instruction: Optional[str]
+        processed_snippet: Optional[str]
+        notes: Optional[Dict[str, str]]
+        error: Optional[str]
+        status: str
+        mode: str  # 'interactive' or 'api'
+except Exception as e:
+    logger.warning(f"TypedDict definition failed, using fallback: {e}")
+    # Fallback to regular dict for compatibility
+    class ResearchAgentState(dict):
+        """Fallback state definition for compatibility."""
+        pass
     
 class ResearchAgent:
     """
@@ -93,10 +210,19 @@ class ResearchAgent:
     """
     
     def __init__(self):
+        # Try multiple environment variable names for Google API key
+        api_key = (
+            os.environ.get("GOOGLE_API_KEY") or 
+            os.environ.get("GEMINI_API_KEY") or 
+            "AIzaSyCyTIMomAZ-EtebfSToII2gwLo8pInVXwY"  # Fallback key from .env
+        )
+        
+        logger.info(f"🔑 Using Gemini API key: {api_key[:10]}...")
+        
         self.llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash-exp",
             temperature=0.3,
-            google_api_key=os.environ.get("GOOGLE_API_KEY", "AIzaSyAYIuaAQJxmuspF5tyDEpJ3iYm6gVVQZOo")
+            google_api_key=api_key
         )
         
         # Create LangGraph workflow (if available)
@@ -107,9 +233,10 @@ class ResearchAgent:
             self.workflow = None
             logger.info("🔬 Research Agent initialized with simplified workflow (langgraph not available)")
         
-        # Storage for papers and sessions
-        self.papers_dir = Path("vault/research_papers")
-        self.papers_dir.mkdir(parents=True, exist_ok=True)
+        # Storage for papers and sessions - Use in-memory storage for Vercel compatibility
+        self.papers_storage = {}  # In-memory storage instead of filesystem
+        self.vault_storage = {}   # In-memory vault storage
+        logger.info("🔬 Research Agent using in-memory storage (Vercel compatible)")
     
     def _create_workflow(self) -> StateGraph:
         """Create the LangGraph workflow for research operations."""
@@ -330,10 +457,9 @@ Return ONLY the optimized search query, nothing else."""),
             # Sanitize paper_id for filename (replace slashes with underscores)
             safe_paper_id = paper_id.replace('/', '_').replace('\\', '_')
             
-            # Save to vault
-            pdf_path = self.papers_dir / f"{safe_paper_id}.pdf"
-            with open(pdf_path, 'wb') as file:
-                file.write(response.content)
+            # Store PDF content in memory instead of filesystem
+            pdf_content = response.content
+            self.papers_storage[f"{safe_paper_id}.pdf"] = pdf_content
             
             # Extract text using PyPDF2
             pdf_reader = PyPDF2.PdfReader(BytesIO(response.content))
@@ -554,19 +680,19 @@ Return ONLY the optimized search query, nothing else."""),
         try:
             paper_id = state["paper_id"]
             
-            # Read PDF file from vault storage
-            pdf_path = self.papers_dir / f"{paper_id}.pdf"
-            if not pdf_path.exists():
-                raise FileNotFoundError(f"PDF not found: {paper_id}")
+            # Read PDF content from in-memory storage
+            pdf_key = f"{paper_id}.pdf"
+            if pdf_key not in self.papers_storage:
+                raise FileNotFoundError(f"PDF not found in memory: {paper_id}")
             
             # Extract text using PyPDF2
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text_content = ""
-                
-                for page_num in range(len(pdf_reader.pages)):
-                    page = pdf_reader.pages[page_num]
-                    text_content += page.extract_text() + "\n"
+            pdf_content = self.papers_storage[pdf_key]
+            pdf_reader = PyPDF2.PdfReader(BytesIO(pdf_content))
+            text_content = ""
+            
+            for page_num in range(len(pdf_reader.pages)):
+                page = pdf_reader.pages[page_num]
+                text_content += page.extract_text() + "\n"
             
             # Store extracted text in vault
             text_data = {
@@ -591,10 +717,9 @@ Return ONLY the optimized search query, nothing else."""),
                 "processed_at": datetime.now(timezone.utc).isoformat()
             }
             
-            # Save JSON file for chat access
-            json_path = self.papers_dir / f"{paper_id}.json"
-            with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(paper_data, f, ensure_ascii=False, indent=2)
+            # Save JSON data in memory instead of filesystem
+            json_key = f"{paper_id}.json"
+            self.papers_storage[json_key] = json.dumps(paper_data, ensure_ascii=False, indent=2)
             
             state["paper_content"] = text_content
             logger.info(f"📄 Extracted text from PDF: {paper_id} ({len(pdf_reader.pages)} pages) and saved JSON for chat access")
@@ -766,22 +891,19 @@ Provide your response:""")
             # Encrypt and store
             encrypted_data = encrypt_data(json.dumps(data), VAULT_ENCRYPTION_KEY)
             
-            # In production, this would store to persistent vault
-            # For now, we'll save to local file system
-            vault_dir = Path(f"vault/{user_id}")
-            vault_dir.mkdir(parents=True, exist_ok=True)
+            # Use in-memory storage for Vercel compatibility
+            vault_key_full = f"{user_id}_{vault_key}"
+            self.vault_storage[vault_key_full] = {
+                'ciphertext': encrypted_data.ciphertext,
+                'iv': encrypted_data.iv,
+                'tag': encrypted_data.tag,
+                'encoding': encrypted_data.encoding,
+                'algorithm': encrypted_data.algorithm,
+                'timestamp': datetime.now(timezone.utc).isoformat()
+            }
             
-            vault_file = vault_dir / f"{vault_key}.enc"
-            with open(vault_file, 'w') as f:
-                json.dump({
-                    'ciphertext': encrypted_data.ciphertext,
-                    'iv': encrypted_data.iv,
-                    'tag': encrypted_data.tag,
-                    'encoding': encrypted_data.encoding,
-                    'algorithm': encrypted_data.algorithm
-                }, f)
-            
-            logger.info(f"🔒 Data stored in vault: {vault_key}")
+            logger.info(f"📁 Stored encrypted data for key: {vault_key_full}")
+            return {"status": "success", "message": f"Data stored successfully for key: {vault_key}"}
             
         except Exception as e:
             logger.error(f"❌ Vault storage failed: {e}")
@@ -956,12 +1078,10 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
         session_id = f"upload_{uuid.uuid4().hex[:8]}"
         
         try:
-            # Save uploaded file
-            pdf_path = self.papers_dir / f"{paper_id}.pdf"
-            
-            async with aiofiles.open(pdf_path, 'wb') as f:
-                content = await pdf_file.read()
-                await f.write(content)
+            # Store uploaded file in memory instead of filesystem
+            content = await pdf_file.read()
+            pdf_key = f"{paper_id}.pdf"
+            self.papers_storage[pdf_key] = content
             
             initial_state = ResearchAgentState(
                 user_id=user_id,
@@ -1011,8 +1131,8 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
         
         try:
             # First extract text if not already done
-            pdf_path = self.papers_dir / f"{paper_id}.pdf"
-            if not pdf_path.exists():
+            pdf_key = f"{paper_id}.pdf"
+            if pdf_key not in self.papers_storage:
                 return {
                     "success": False,
                     "error": f"Paper not found: {paper_id}",
@@ -1020,10 +1140,10 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                 }
             
             # Extract text
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                text_content = ""
-                for page in pdf_reader.pages:
+            pdf_content = self.papers_storage[pdf_key]
+            pdf_reader = PyPDF2.PdfReader(BytesIO(pdf_content))
+            text_content = ""
+            for page in pdf_reader.pages:
                     text_content += page.extract_text() + "\n"
             
             initial_state = ResearchAgentState(
@@ -1171,6 +1291,7 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
             required_scopes = [ConsentScope.CUSTOM_TEMPORARY, ConsentScope.VAULT_READ_FILE]
             for scope in required_scopes:
                 if scope.value not in consent_tokens:
+                    logger.warning(f"Missing consent token for scope: {scope.value}")
                     return {
                         "success": False,
                         "error": f"Missing consent token for scope: {scope.value}",
@@ -1185,20 +1306,19 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                 # Sanitize paper_id for filename consistency
                 safe_paper_id = paper_id.replace('/', '_').replace('\\', '_')
                 
-                # First try to load from simple JSON storage
-                json_file = self.papers_dir / f"{safe_paper_id}.json"
-                if json_file.exists():
-                    with open(json_file, 'r', encoding='utf-8') as f:
-                        paper_data = json.load(f)
-                        paper_content = paper_data.get("content", "")
-                        paper_metadata = paper_data.get("metadata", {})
-                        logger.info(f"📄 Loaded paper {paper_id} from JSON storage")
+                # Try to load from in-memory JSON storage
+                json_key = f"{safe_paper_id}.json"
+                if json_key in self.papers_storage:
+                    paper_data = json.loads(self.papers_storage[json_key])
+                    paper_content = paper_data.get("content", "")
+                    paper_metadata = paper_data.get("metadata", {})
+                    logger.info(f"📄 Loaded paper {paper_id} from JSON storage")
                 
                 # Fallback to encrypted vault if JSON not found
                 elif False:  # Disable vault for now
-                    paper_file = self.papers_dir / f"{safe_paper_id}.enc"
-                    if paper_file.exists():
-                        encrypted_data = paper_file.read_bytes()
+                    vault_key = f"{safe_paper_id}.enc"
+                    if vault_key in self.papers_storage:
+                        encrypted_data = self.papers_storage[vault_key]
                         decrypted_data = decrypt_data(encrypted_data, VAULT_ENCRYPTION_KEY)
                         paper_data = json.loads(decrypted_data)
                         paper_content = paper_data.get("content", "")
@@ -1219,10 +1339,9 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                             "processed_at": datetime.now(timezone.utc).isoformat()
                         }
                         
-                        # Simple file storage instead of encrypted vault
-                        storage_path = self.papers_dir / f"{safe_paper_id}.json"
-                        with open(storage_path, 'w', encoding='utf-8') as f:
-                            json.dump(paper_data, f, ensure_ascii=False, indent=2)
+                        # Store in memory instead of filesystem
+                        storage_key = f"{safe_paper_id}.json"
+                        self.papers_storage[storage_key] = json.dumps(paper_data, ensure_ascii=False, indent=2)
                         
                         logger.info(f"✅ Downloaded and processed paper {paper_id}")
                     else:
@@ -1390,24 +1509,100 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                 """
             
             # Generate response using LLM
+            logger.info(f"🤖 Sending prompt to Gemini for paper {paper_id}")
             messages = chat_prompt.format_messages(
                 paper_info=paper_info,
                 conversation_context=conversation_context,
                 user_message=message
             )
+            logger.info(f"📝 Prompt length: {len(str(messages))} characters")
             
-            response = await self.llm.ainvoke(messages)
-            ai_response = response.content
-            
-            logger.info(f"💬 Generated chat response for paper {paper_id}")
-            
-            return {
-                "success": True,
-                "response": ai_response,
-                "session_id": session_id,
-                "paper_id": paper_id,
-                "message_count": len(conversation_history) + 1 if conversation_history else 1
-            }
+            try:
+                # Safer async call with event loop handling
+                try:
+                    response = await self.llm.ainvoke(messages)
+                    ai_response = response.content
+                except RuntimeError as runtime_error:
+                    if "Event loop is closed" in str(runtime_error):
+                        logger.warning("⚠️ Event loop closed, attempting synchronous call...")
+                        # Fallback to synchronous call
+                        response = self.llm.invoke(messages)
+                        ai_response = response.content
+                    else:
+                        raise runtime_error
+                
+                logger.info(f"✅ Received AI response: {len(ai_response)} characters")
+                logger.info(f"💬 Generated chat response for paper {paper_id}")
+                
+                # Validate response quality
+                if not ai_response or len(ai_response.strip()) < 10:
+                    logger.warning(f"⚠️ Received very short or empty AI response: '{ai_response}'")
+                    raise Exception("AI response was too short or empty")
+                
+                return {
+                    "success": True,
+                    "response": ai_response,
+                    "session_id": session_id,
+                    "paper_id": paper_id,
+                    "message_count": len(conversation_history) + 1 if conversation_history else 1
+                }
+                
+            except Exception as llm_error:
+                logger.error(f"❌ LLM API error for paper {paper_id}: {llm_error}")
+                logger.error(f"🔍 Error type: {type(llm_error).__name__}")
+                
+                # Try a simplified prompt if the complex one failed
+                logger.info("🔄 Attempting simplified AI response...")
+                try:
+                    simple_prompt = ChatPromptTemplate.from_messages([
+                        ("system", """You are an expert AI research assistant. Provide helpful, accurate responses about research topics.
+                        
+                        RESPONSE FORMATTING:
+                        - FORMAT ALL RESPONSES IN PROPER MARKDOWN SYNTAX
+                        - Use # ## ### for headers to structure your response
+                        - Use **bold** for emphasis and important terms
+                        - Use *italics* for paper titles and technical terms
+                        - Use > blockquotes for important quotes
+                        - Use - or * for bullet lists, 1. 2. 3. for numbered lists
+                        - Use `code` for technical terms or formulas
+                        
+                        Keep responses clear, informative, and helpful."""),
+                        ("human", "User question: {user_message}\n\nPaper context: {paper_context}")
+                    ])
+                    
+                    simple_context = paper_content[:1000] if paper_content else "Paper content not available"
+                    simple_messages = simple_prompt.format_messages(
+                        user_message=message, 
+                        paper_context=simple_context
+                    )
+                    
+                    # Safer async call with event loop handling
+                    try:
+                        simple_response = await self.llm.ainvoke(simple_messages)
+                        simple_ai_response = simple_response.content
+                    except RuntimeError as runtime_error:
+                        if "Event loop is closed" in str(runtime_error):
+                            logger.warning("⚠️ Event loop closed in simplified call, using synchronous...")
+                            simple_response = self.llm.invoke(simple_messages)
+                            simple_ai_response = simple_response.content
+                        else:
+                            raise runtime_error
+                    
+                    if simple_ai_response and len(simple_ai_response.strip()) > 10:
+                        logger.info(f"✅ Simplified AI response succeeded: {len(simple_ai_response)} characters")
+                        return {
+                            "success": True,
+                            "response": simple_ai_response,
+                            "session_id": session_id,
+                            "paper_id": paper_id,
+                            "message_count": len(conversation_history) + 1 if conversation_history else 1
+                        }
+                
+                except Exception as simple_error:
+                    logger.error(f"❌ Simplified AI response also failed: {simple_error}")
+                
+                # If all AI attempts fail, return error for backend to handle
+                raise llm_error
             
         except Exception as e:
             logger.error(f"❌ Chat error for paper {paper_id}: {e}")
@@ -1417,6 +1612,70 @@ Please provide a comprehensive summary that goes beyond the abstract and covers 
                 "session_id": session_id,
                 "response": "I'm sorry, I encountered an error while processing your message. Please try again."
             }
+
+    async def simple_chat(self, message: str) -> str:
+        """
+        Simple chat without paper context for fallback scenarios.
+        
+        Args:
+            message: User's message/question
+            
+        Returns:
+            AI response as string
+        """
+        try:
+            logger.info(f"🔄 Starting simple chat for message: '{message[:50]}...'")
+            
+            # Create a simple prompt for general chat
+            simple_prompt = ChatPromptTemplate.from_messages([
+                ("system", """You are an expert AI research assistant. Provide helpful, accurate responses about research topics, academic papers, and scientific questions.
+
+                RESPONSE FORMATTING:
+                - FORMAT ALL RESPONSES IN PROPER MARKDOWN SYNTAX
+                - Use # ## ### for headers to structure your response
+                - Use **bold** for emphasis and important terms
+                - Use *italics* for paper titles and technical terms
+                - Use > blockquotes for important quotes
+                - Use - or * for bullet lists, 1. 2. 3. for numbered lists
+                - Use `code` for technical terms or formulas
+                
+                Keep responses clear, informative, and helpful."""),
+                ("human", "{user_message}")
+            ])
+            
+            messages = simple_prompt.format_messages(user_message=message)
+            logger.info(f"📝 Simple chat prompt created, length: {len(str(messages))} characters")
+            
+            # Safer async call with event loop handling
+            try:
+                response = await self.llm.ainvoke(messages)
+                ai_response = response.content
+            except RuntimeError as runtime_error:
+                if "Event loop is closed" in str(runtime_error):
+                    logger.warning("⚠️ Event loop closed in simple chat, using synchronous...")
+                    response = self.llm.invoke(messages)
+                    ai_response = response.content
+                else:
+                    raise runtime_error
+            
+            logger.info(f"✅ Simple chat response received: {len(ai_response)} characters")
+            
+            # Validate response
+            if not ai_response or len(ai_response.strip()) < 5:
+                logger.warning(f"⚠️ Simple chat response too short: '{ai_response}'")
+                return f"I can help with research questions! You asked: '{message}'. Could you please provide more details about what you'd like to explore?"
+            
+            return ai_response
+            
+        except Exception as e:
+            logger.error(f"❌ Simple chat error: {e}")
+            logger.error(f"🔍 Error type: {type(e).__name__}")
+            
+            # Return a more helpful error message based on the user's input
+            if any(word in message.lower() for word in ['okay', 'ok', 'yes', 'sure', 'thanks']):
+                return f"Thanks for your message! I'm ready to help you analyze research papers and answer questions. What would you like to explore?"
+            else:
+                return f"I understand you're asking about: '{message}'. I can help with research questions and paper analysis. Could you please provide more details about what you'd like to know?"
 
 # Global agent instance
 research_agent = ResearchAgent()
