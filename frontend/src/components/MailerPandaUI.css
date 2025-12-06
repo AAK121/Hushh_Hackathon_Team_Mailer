@@ -115,14 +115,14 @@
 .checkbox-label input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  accent-color: #4f46e5;
+  accent-color: #ca907e;
   cursor: pointer;
 }
 
 .checkbox-label:has(input:checked) {
-  background-color: #eff6ff;
-  border-color: #4f46e5;
-  color: #1e40af;
+  background-color: #f4e9e5;
+  border-color: #ca907e;
+  color: #994636;
 }
 
 .checkmark {
@@ -148,13 +148,13 @@
 
 .main-input:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  border-color: #ca907e;
+  box-shadow: 0 0 0 2px rgba(202, 144, 126, 0.2);
 }
 
 .input-group button {
   border: none;
-  background-color: #4f46e5;
+  background-color: #ca907e;
   color: white;
   border-radius: 8px;
   width: 50px;
@@ -168,11 +168,11 @@
 }
 
 .input-group button:hover {
-  background-color: #4338ca;
+  background-color: #994636;
 }
 
 .input-group button:disabled {
-  background-color: #a5b4fc;
+  background-color: #dfbcb1;
   cursor: not-allowed;
 }
 
@@ -217,8 +217,8 @@
 
 .suggestion-box:focus {
   outline: none;
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+  border-color: #ca907e;
+  box-shadow: 0 0 0 2px rgba(202, 144, 126, 0.2);
 }
 
 /* Button Groups */
@@ -244,12 +244,12 @@
 
 /* Button Styles */
 button.btn-approve {
-  background-color: #10b981;
+  background-color: #895b1e;
   color: white;
 }
 
 button.btn-approve:hover {
-  background-color: #059669;
+  background-color: #6e4918;
   transform: translateY(-1px);
 }
 
@@ -302,11 +302,11 @@ button.btn-danger:hover {
 
 /* Confirmation Card */
 .confirmation-card {
-  border-left: 4px solid #f59e0b;
+  border-left: 4px solid #ca907e;
 }
 
 .confirmation-card h2 {
-  color: #92400e;
+  color: #994636;
 }
 
 /* Button disabled states */
@@ -372,6 +372,6 @@ button:disabled:hover {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #4f46e5;
+  outline: 2px solid #ca907e;
   outline-offset: 2px;
 }

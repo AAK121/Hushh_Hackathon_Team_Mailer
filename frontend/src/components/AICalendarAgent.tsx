@@ -975,7 +975,7 @@ const StyledWrapper = styled.div`
   transform: translateY(0);
 
   /* Dynamic animated background */
-  background: linear-gradient(-45deg, #0f0f23, #1a1a2e, #16213e, #0f3460);
+  background: linear-gradient(-45deg, #1a1210, #2a1f1c, #3d2a20, #4a3528);
   background-size: 400% 400%;
   animation: gradientShift 15s ease infinite;
 
@@ -988,9 +988,9 @@ const StyledWrapper = styled.div`
     right: 0;
     bottom: 0;
     background-image: 
-      radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-      radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+      radial-gradient(circle at 20% 80%, rgba(202, 144, 126, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 80% 20%, rgba(178, 87, 178, 0.3) 0%, transparent 50%),
+      radial-gradient(circle at 40% 40%, rgba(137, 91, 30, 0.2) 0%, transparent 50%);
     animation: particleFloat 20s ease-in-out infinite;
     pointer-events: none;
   }
@@ -1254,7 +1254,7 @@ const Select = styled.select`
 
   &:focus {
     outline: none;
-    border-color: #e81cff;
+    border-color: #ca907e;
   }
 
   option {
@@ -1277,7 +1277,7 @@ const RangeInput = styled.input`
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #e81cff, #40c9ff);
+    background: linear-gradient(145deg, #ca907e, #b257b2);
     cursor: pointer;
   }
 
@@ -1285,7 +1285,7 @@ const RangeInput = styled.input`
     width: 20px;
     height: 20px;
     border-radius: 50%;
-    background: linear-gradient(145deg, #e81cff, #40c9ff);
+    background: linear-gradient(145deg, #ca907e, #b257b2);
     cursor: pointer;
     border: none;
   }
@@ -1302,7 +1302,7 @@ const NumberInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #e81cff;
+    border-color: #ca907e;
   }
 
   &::placeholder {
@@ -1318,7 +1318,7 @@ const ButtonSection = styled.div`
 const ExecuteButton = styled.button`
   padding: 16px 32px;
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   border-radius: 8px;
   color: white;
@@ -1413,7 +1413,7 @@ const ClearButton = styled.button`
   justify-content: center;
   padding: 12px 16px;
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   border-radius: 8px;
   color: white;
@@ -1492,7 +1492,7 @@ const StatsGrid = styled.div`
 
 const StatCard = styled.div`
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   padding: 16px;
   border-radius: 8px;
@@ -1521,7 +1521,7 @@ const StatLabel = styled.div`
 
 const ResultCard = styled.div`
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   padding: 16px;
   border-radius: 8px;
@@ -1561,7 +1561,7 @@ const EventsList = styled.div`
 
 const EventCard = styled.div`
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   padding: 20px;
   border-radius: 12px;
@@ -1635,7 +1635,7 @@ const EventTitle = styled.h3`
   
   /* Gradient text effect on hover */
   .event-card:hover & {
-    background: linear-gradient(135deg, #e81cff, #40c9ff);
+    background: linear-gradient(135deg, #ca907e, #b257b2);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1695,7 +1695,7 @@ const ReviewHeader = styled.div`
   text-align: center;
   padding: 16px;
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   border-radius: 8px;
   backdrop-filter: blur(10px);
@@ -1724,7 +1724,7 @@ const ReviewSubtitle = styled.p`
 const EventReviewCard = styled.div<{ selected: boolean }>`
   background: linear-gradient(#212121, #212121) padding-box,
               linear-gradient(145deg, transparent 35%, 
-                ${props => props.selected ? '#22c55e, #4ade80' : '#e81cff, #40c9ff'}) border-box;
+                ${props => props.selected ? '#22c55e, #4ade80' : '#ca907e, #b257b2'}) border-box;
   border: 2px solid transparent;
   padding: 20px;
   border-radius: 12px;
@@ -1810,13 +1810,13 @@ const EventCheckbox = styled.div`
     position: relative;
     
     &:hover {
-      border-color: rgba(232, 28, 255, 0.6);
+      border-color: rgba(202, 144, 126, 0.6);
       transform: scale(1.1);
-      box-shadow: 0 0 10px rgba(232, 28, 255, 0.3);
+      box-shadow: 0 0 10px rgba(202, 144, 126, 0.3);
     }
 
     &:checked {
-      background: linear-gradient(135deg, #e81cff, #40c9ff);
+      background: linear-gradient(135deg, #ca907e, #b257b2);
       border-color: transparent;
       transform: scale(1.05);
       
@@ -1928,8 +1928,8 @@ const EditInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #e81cff;
-    box-shadow: 0 0 0 2px rgba(232, 28, 255, 0.2);
+    border-color: #ca907e;
+    box-shadow: 0 0 0 2px rgba(202, 144, 126, 0.2);
   }
 
   &::placeholder {
@@ -1949,8 +1949,8 @@ const EditTextarea = styled.textarea`
 
   &:focus {
     outline: none;
-    border-color: #e81cff;
-    box-shadow: 0 0 0 2px rgba(232, 28, 255, 0.2);
+    border-color: #ca907e;
+    box-shadow: 0 0 0 2px rgba(202, 144, 126, 0.2);
   }
 
   &::placeholder {
@@ -1962,7 +1962,7 @@ const ApprovalActions = styled.div`
   margin-top: 24px;
   padding: 20px;
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   border-radius: 8px;
   backdrop-filter: blur(10px);
@@ -2206,7 +2206,7 @@ const WarningItem = styled.li`
 const InfoPanel = styled.div`
   margin-top: 32px;
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   padding: 16px;
   border-radius: 8px;
@@ -2248,7 +2248,7 @@ const TransitionContainer = styled.div<{ showTransition: boolean }>`
 
 const TransitionConfigPanel = styled.div<{ showTransition: boolean }>`
   background: linear-gradient(#212121, #212121) padding-box,
-              linear-gradient(145deg, transparent 35%, #e81cff, #40c9ff) border-box;
+              linear-gradient(145deg, transparent 35%, #ca907e, #b257b2) border-box;
   border: 2px solid transparent;
   padding: 20px;
   border-radius: 12px;

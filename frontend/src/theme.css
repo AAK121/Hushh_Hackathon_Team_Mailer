@@ -1,0 +1,375 @@
+/* ===========================================
+   HUSHH AI GLOBAL THEME
+   Unified Color Palette for All Components
+   =========================================== */
+
+/* ===== CSS CUSTOM PROPERTIES ===== */
+:root {
+  /* Primary Palette - Rosy Taupe */
+  --rosy-taupe-100: #2e1913;
+  --rosy-taupe-200: #5d3326;
+  --rosy-taupe-300: #8b4c39;
+  --rosy-taupe-400: #b7674e;
+  --rosy-taupe: #ca907e;
+  --rosy-taupe-500: #ca907e;
+  --rosy-taupe-600: #d4a597;
+  --rosy-taupe-700: #dfbcb1;
+  --rosy-taupe-800: #ead2cb;
+  --rosy-taupe-900: #f4e9e5;
+
+  /* Secondary Palette - Reddish Brown */
+  --reddish-brown-100: #1f0e0b;
+  --reddish-brown-200: #3e1c16;
+  --reddish-brown-300: #5d2b21;
+  --reddish-brown-400: #7c392b;
+  --reddish-brown: #994636;
+  --reddish-brown-500: #994636;
+  --reddish-brown-600: #c0604d;
+  --reddish-brown-700: #d08879;
+  --reddish-brown-800: #e0b0a6;
+  --reddish-brown-900: #efd7d2;
+
+  /* Accent Palette - Golden Earth */
+  --golden-earth-100: #1c1206;
+  --golden-earth-200: #37250c;
+  --golden-earth-300: #533712;
+  --golden-earth-400: #6e4918;
+  --golden-earth: #895b1e;
+  --golden-earth-500: #895b1e;
+  --golden-earth-600: #c2802b;
+  --golden-earth-700: #daa157;
+  --golden-earth-800: #e6c08f;
+  --golden-earth-900: #f3e0c7;
+
+  /* Highlight Palette - Amethyst */
+  --amethyst-100: #241124;
+  --amethyst-200: #492149;
+  --amethyst-300: #6d326d;
+  --amethyst-400: #914391;
+  --amethyst: #b257b2;
+  --amethyst-500: #b257b2;
+  --amethyst-600: #c179c1;
+  --amethyst-700: #d19ad1;
+  --amethyst-800: #e0bce0;
+  --amethyst-900: #f0ddf0;
+
+  /* Semantic Colors */
+  --color-primary: var(--rosy-taupe);
+  --color-primary-dark: var(--reddish-brown);
+  --color-primary-light: var(--rosy-taupe-700);
+  --color-secondary: var(--golden-earth);
+  --color-accent: var(--amethyst);
+  
+  /* Background Colors */
+  --bg-dark: #1a1215;
+  --bg-darker: #0f0a0c;
+  --bg-light: #faf8f7;
+  --bg-card: #ffffff;
+  --bg-card-dark: rgba(202, 144, 126, 0.05);
+  
+  /* Text Colors */
+  --text-primary: #1a1215;
+  --text-secondary: #5a4a45;
+  --text-muted: #8b7a75;
+  --text-light: #ffffff;
+  --text-light-secondary: rgba(255, 255, 255, 0.85);
+  
+  /* Border Colors */
+  --border-light: #e8dcd8;
+  --border-medium: #d4c4be;
+  --border-focus: var(--rosy-taupe);
+  
+  /* Success/Error/Warning */
+  --color-success: #2d8a4e;
+  --color-success-light: #dcf5e5;
+  --color-error: #c53030;
+  --color-error-light: #fed7d7;
+  --color-warning: var(--golden-earth);
+  --color-warning-light: #fef3cd;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(26, 18, 21, 0.05);
+  --shadow-md: 0 4px 12px rgba(26, 18, 21, 0.1);
+  --shadow-lg: 0 8px 24px rgba(26, 18, 21, 0.15);
+  --shadow-xl: 0 16px 48px rgba(26, 18, 21, 0.2);
+  --shadow-glow: 0 0 30px rgba(202, 144, 126, 0.3);
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, var(--rosy-taupe) 0%, var(--reddish-brown) 100%);
+  --gradient-secondary: linear-gradient(135deg, var(--golden-earth) 0%, var(--golden-earth-600) 100%);
+  --gradient-accent: linear-gradient(135deg, var(--amethyst) 0%, var(--amethyst-700) 100%);
+  --gradient-warm: linear-gradient(135deg, var(--rosy-taupe) 0%, var(--golden-earth-600) 100%);
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+}
+
+/* ===== GLOBAL COMPONENT OVERRIDES ===== */
+
+/* Buttons - Primary */
+.btn-primary,
+.oauth-button--primary,
+button[type="submit"]:not(.btn-secondary):not(.btn-ghost) {
+  background: var(--gradient-primary) !important;
+  color: var(--text-light) !important;
+  border: none !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.btn-primary:hover,
+.oauth-button--primary:hover,
+button[type="submit"]:not(.btn-secondary):not(.btn-ghost):hover {
+  box-shadow: var(--shadow-glow) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Buttons - Secondary */
+.btn-secondary,
+.oauth-button--google,
+.oauth-button--github {
+  background: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-medium) !important;
+  transition: all var(--transition-normal) !important;
+}
+
+.btn-secondary:hover,
+.oauth-button--google:hover,
+.oauth-button--github:hover {
+  border-color: var(--rosy-taupe) !important;
+  background: var(--rosy-taupe-900) !important;
+}
+
+/* Form Inputs */
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select,
+.oauth-input,
+.main-input {
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-md) !important;
+  transition: all var(--transition-fast) !important;
+  background: var(--bg-card) !important;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus,
+select:focus,
+.oauth-input:focus,
+.main-input:focus {
+  border-color: var(--rosy-taupe) !important;
+  box-shadow: 0 0 0 3px rgba(202, 144, 126, 0.15) !important;
+  outline: none !important;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+  accent-color: var(--rosy-taupe) !important;
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--rosy-taupe) !important;
+}
+
+/* Cards */
+.card,
+.glass-wrapper,
+.agent-card {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-light) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow-md) !important;
+}
+
+/* Links */
+a:not(.btn):not(.landing-nav-link):not(.landing-footer-column a) {
+  color: var(--rosy-taupe) !important;
+  transition: color var(--transition-fast) !important;
+}
+
+a:not(.btn):not(.landing-nav-link):not(.landing-footer-column a):hover {
+  color: var(--reddish-brown) !important;
+}
+
+/* Progress Bars */
+progress,
+.progress-bar,
+.progress-fill {
+  background-color: var(--rosy-taupe-900) !important;
+}
+
+progress::-webkit-progress-value,
+.progress-fill {
+  background: var(--gradient-primary) !important;
+}
+
+/* Badges and Tags */
+.badge,
+.tag,
+.chip {
+  background: var(--rosy-taupe-900) !important;
+  color: var(--reddish-brown) !important;
+  border: 1px solid var(--rosy-taupe-700) !important;
+}
+
+/* ===== AGENT-SPECIFIC STYLES ===== */
+
+/* MailerPanda Agent */
+.mailerpanda-accent,
+[class*="mailerpanda"] .accent-color {
+  color: var(--rosy-taupe) !important;
+}
+
+.mailerpanda-bg,
+[class*="mailerpanda"] .accent-bg {
+  background: var(--gradient-primary) !important;
+}
+
+/* Research Agent */
+.research-accent,
+[class*="research"] .accent-color {
+  color: var(--reddish-brown) !important;
+}
+
+.research-bg,
+[class*="research"] .accent-bg {
+  background: linear-gradient(135deg, var(--reddish-brown) 0%, var(--rosy-taupe) 100%) !important;
+}
+
+/* Calendar Agent */
+.calendar-accent,
+[class*="calendar"] .accent-color {
+  color: var(--golden-earth) !important;
+}
+
+.calendar-bg,
+[class*="calendar"] .accent-bg {
+  background: var(--gradient-secondary) !important;
+}
+
+/* Relationship Agent */
+.relationship-accent,
+[class*="relationship"] .accent-color {
+  color: var(--amethyst) !important;
+}
+
+.relationship-bg,
+[class*="relationship"] .accent-bg {
+  background: var(--gradient-accent) !important;
+}
+
+/* ===== STYLED COMPONENTS OVERRIDES ===== */
+
+/* Override styled-components inline styles for consistency */
+[style*="background-color: #4f46e5"],
+[style*="background-color: rgb(79, 70, 229)"] {
+  background-color: var(--rosy-taupe) !important;
+}
+
+[style*="background-color: #3b82f6"],
+[style*="background-color: rgb(59, 130, 246)"] {
+  background-color: var(--rosy-taupe) !important;
+}
+
+[style*="background-color: #8b5cf6"],
+[style*="background-color: rgb(139, 92, 246)"] {
+  background-color: var(--amethyst) !important;
+}
+
+[style*="border-color: #4f46e5"],
+[style*="border-color: rgb(79, 70, 229)"] {
+  border-color: var(--rosy-taupe) !important;
+}
+
+[style*="color: #4f46e5"],
+[style*="color: rgb(79, 70, 229)"] {
+  color: var(--rosy-taupe) !important;
+}
+
+/* ===== ANIMATION UTILITIES ===== */
+@keyframes hushh-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(202, 144, 126, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(202, 144, 126, 0);
+  }
+}
+
+@keyframes hushh-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(202, 144, 126, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(202, 144, 126, 0.5);
+  }
+}
+
+.animate-hushh-pulse {
+  animation: hushh-pulse 2s infinite;
+}
+
+.animate-hushh-glow {
+  animation: hushh-glow 3s ease-in-out infinite;
+}
+
+/* ===== UTILITY CLASSES ===== */
+.text-rosy-taupe { color: var(--rosy-taupe) !important; }
+.text-reddish-brown { color: var(--reddish-brown) !important; }
+.text-golden-earth { color: var(--golden-earth) !important; }
+.text-amethyst { color: var(--amethyst) !important; }
+
+.bg-rosy-taupe { background-color: var(--rosy-taupe) !important; }
+.bg-reddish-brown { background-color: var(--reddish-brown) !important; }
+.bg-golden-earth { background-color: var(--golden-earth) !important; }
+.bg-amethyst { background-color: var(--amethyst) !important; }
+
+.border-rosy-taupe { border-color: var(--rosy-taupe) !important; }
+.border-reddish-brown { border-color: var(--reddish-brown) !important; }
+.border-golden-earth { border-color: var(--golden-earth) !important; }
+.border-amethyst { border-color: var(--amethyst) !important; }
+
+.gradient-primary { background: var(--gradient-primary) !important; }
+.gradient-secondary { background: var(--gradient-secondary) !important; }
+.gradient-accent { background: var(--gradient-accent) !important; }
+.gradient-warm { background: var(--gradient-warm) !important; }
+
+/* ===== SCROLLBAR STYLING ===== */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--rosy-taupe-900);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rosy-taupe-600);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rosy-taupe);
+}
+
+/* ===== SELECTION STYLING ===== */
+::selection {
+  background: var(--rosy-taupe);
+  color: var(--text-light);
+}
+
+::-moz-selection {
+  background: var(--rosy-taupe);
+  color: var(--text-light);
+}

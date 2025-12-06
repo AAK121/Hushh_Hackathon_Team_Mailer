@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import SignIn from './components/SignIn';
+import LandingPage from './components/LandingPage';
 import AIAgentSelection from './components/AIAgentSelection';
 import HITLChat from './components/HITLChat';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -157,6 +158,13 @@ function AppContent() {
     setActiveView('agent-store');
   };
 
+  // State to track if user wants to sign in (from landing page)
+  const [showSignIn, setShowSignIn] = useState(false);
+
+  const handleGetStarted = () => {
+    setShowSignIn(true);
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
@@ -169,7 +177,11 @@ function AppContent() {
   }
 
   if (!user) {
-    return <SignIn />;
+    // Show landing page by default, sign in when user clicks "Get Started"
+    if (showSignIn) {
+      return <SignIn />;
+    }
+    return <LandingPage onGetStarted={handleGetStarted} />;
   }
 
   return (

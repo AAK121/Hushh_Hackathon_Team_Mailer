@@ -51,9 +51,10 @@ def convert_numpy_types(obj):
 
 from fastapi import FastAPI, HTTPException, status, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 import uvicorn
+import asyncio
 
 # Add the project root to Python path for imports
 project_root = Path(__file__).parent
@@ -3699,6 +3700,207 @@ What would you like help with today?""",
             "session_id": request.session_id or f"chat_{int(start_time.timestamp())}",
             "processing_time": (datetime.now(timezone.utc) - start_time).total_seconds()
         }
+
+
+# ============================================================================
+# STREAMING CHAT ENDPOINT
+# ============================================================================
+
+class StreamingChatRequest(BaseModel):
+    """Request model for streaming chat."""
+    user_id: str = Field(..., description="User identifier")
+    message: str = Field(..., description="Chat message content")
+    session_id: Optional[str] = Field(None, description="Optional session ID")
+
+
+@app.post("/agents/chat/stream")
+async def stream_chat_message(request: StreamingChatRequest):
+    """
+    Streaming chat endpoint that returns tokens as Server-Sent Events (SSE).
+    This provides real-time token-by-token response streaming.
+    """
+    
+    async def generate_stream():
+        """Generator function that yields SSE-formatted tokens."""
+        start_time = datetime.now(timezone.utc)
+        session_id = request.session_id or f"chat_{int(start_time.timestamp())}"
+        
+        try:
+            user_message = request.message.lower().strip()
+            full_response = ""
+            agent_used = "general"
+            
+            # Determine which agent to use based on keywords
+            if any(keyword in user_message for keyword in [
+                'finance', 'financial', 'money', 'income', 'expense', 'budget', 
+                'investment', 'stock', 'portfolio', 'analysis', 'goal', 'saving'
+            ]):
+                agent_used = "chandufinance"
+                # Generate financial response
+                import re
+                income_match = re.search(r'income[:\s]*\$?(\d+)', user_message)
+                expense_match = re.search(r'expense[s]?[:\s]*\$?(\d+)', user_message)
+                
+                if income_match and expense_match:
+                    income = int(income_match.group(1))
+                    expenses = int(expense_match.group(1))
+                    net = income - expenses
+                    
+                    full_response = f"""💰 **Your Financial Snapshot:**
+- Monthly Income: ${income:,}
+- Monthly Expenses: ${expenses:,}
+- Net Income: ${net:,}
+
+📊 **Financial Health Analysis:**
+- Savings Rate: {(net/income*100):.1f}%
+- Expense Ratio: {(expenses/income*100):.1f}%
+
+💡 **Personalized Recommendations:**
+"""
+                    if net/income > 0.2:
+                        full_response += "✅ Excellent savings rate! Consider investing surplus funds.\n"
+                    elif net/income > 0.1:
+                        full_response += "✅ Good savings rate! Build emergency fund first, then invest.\n"
+                    else:
+                        full_response += "⚠️ Low savings rate. Review expenses and find areas to cut.\n"
+                    
+                    full_response += f"""
+🎯 **Next Steps:**
+1. Build emergency fund: ${expenses*3:,} - ${expenses*6:,}
+2. Invest surplus: ${max(0, net-500):,}/month recommended
+3. Review and optimize largest expense categories"""
+                else:
+                    full_response = """For effective financial management:
+
+- Track income and expenses regularly
+- Set clear, measurable financial goals
+- Build an emergency fund (3-6 months of expenses)
+- Consider diversified investment options
+- Review and adjust your budget monthly
+
+Please share your specific income, expenses, and goals for detailed personalized recommendations!"""
+
+            elif any(keyword in user_message for keyword in [
+                'contact', 'relationship', 'friend', 'family', 'remember', 'reminder',
+                'birthday', 'anniversary', 'meeting', 'person', 'people', 'add'
+            ]):
+                agent_used = "relationship_memory"
+                full_response = f"""I can help you manage relationships and contacts! Based on your request, I can assist with:
+
+✅ Adding new contacts with details
+✅ Setting reminders for important dates
+✅ Organizing personal connections
+✅ Tracking interactions and memories
+
+What specific action would you like me to take with your contacts or relationships?"""
+
+            elif any(keyword in user_message for keyword in [
+                'research', 'paper', 'study', 'academic', 'arxiv', 'journal',
+                'publication', 'article', 'scientific', 'search'
+            ]):
+                agent_used = "research"
+                full_response = f"""I can help with research! Based on your query, I can:
+
+🔍 Search academic databases and arXiv
+📄 Analyze research papers and documents
+💡 Provide research insights and summaries
+📚 Help organize your research notes
+
+Would you like me to search for specific topics or analyze particular papers?"""
+
+            elif any(keyword in user_message for keyword in [
+                'email', 'mail', 'campaign', 'send', 'newsletter', 'message'
+            ]):
+                agent_used = "mailerpanda"
+                full_response = """I can help with email campaigns! Using MailerPanda, I can:
+
+📧 Create personalized email campaigns
+✉️ Send mass emails with AI personalization
+📊 Track email delivery and engagement
+🎯 Target specific audiences with customized content
+
+Would you like to create a new email campaign or manage existing ones?"""
+
+            elif any(keyword in user_message for keyword in [
+                'calendar', 'event', 'schedule', 'meeting', 'appointment'
+            ]):
+                agent_used = "addtocalendar"
+                full_response = """I can help manage your calendar! Using AddToCalendar, I can:
+
+📅 Extract events from your emails automatically
+⏰ Create calendar events with proper timing
+🔔 Set up reminders for important dates
+📍 Include location and description details
+
+Would you like me to scan your emails for events or create a specific calendar entry?"""
+
+            else:
+                full_response = """I'm ready to help you! I can assist with:
+
+🧮 **Financial Analysis** - Ask about budgets, investments, financial goals, or income/expense analysis
+
+👥 **Relationship Management** - Add contacts, set reminders, or manage personal relationships
+
+📚 **Research** - Search academic papers, analyze documents, or find scientific information
+
+📧 **Email Campaigns** - Create and manage mass email campaigns
+
+📅 **Calendar Management** - Extract events from emails and manage your schedule
+
+What would you like help with today?"""
+
+            # Stream the response token by token (simulating LLM streaming)
+            # Split by words to create a natural streaming effect
+            words = full_response.split(' ')
+            
+            for i, word in enumerate(words):
+                # Add space before word (except first word)
+                token = word if i == 0 else ' ' + word
+                
+                # Send SSE formatted data
+                data = json.dumps({
+                    "token": token,
+                    "done": False,
+                    "agent": agent_used
+                })
+                yield f"data: {data}\n\n"
+                
+                # Small delay to simulate realistic streaming (20-50ms per token)
+                await asyncio.sleep(0.025)
+            
+            # Send completion message
+            processing_time = (datetime.now(timezone.utc) - start_time).total_seconds()
+            done_data = json.dumps({
+                "token": "",
+                "done": True,
+                "agent": agent_used,
+                "session_id": session_id,
+                "processing_time": processing_time,
+                "full_response": full_response
+            })
+            yield f"data: {done_data}\n\n"
+            
+        except Exception as e:
+            error_data = json.dumps({
+                "token": "",
+                "done": True,
+                "error": str(e),
+                "agent": "error"
+            })
+            yield f"data: {error_data}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*"
+        }
+    )
+
 
 @app.get("/agents/chat/status", response_model=AgentStatusResponse)
 async def get_general_chat_status():

@@ -1,19 +1,69 @@
 /* Inter font import */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
+/* Tailwind CSS v4 */
+@import "tailwindcss";
+
+/* Hushh AI Theme for Tailwind v4 */
+@theme {
+  --color-rosy-taupe-100: #2e1913;
+  --color-rosy-taupe-200: #5d3326;
+  --color-rosy-taupe-300: #8b4c39;
+  --color-rosy-taupe-400: #b7674e;
+  --color-rosy-taupe: #ca907e;
+  --color-rosy-taupe-500: #ca907e;
+  --color-rosy-taupe-600: #d4a597;
+  --color-rosy-taupe-700: #dfbcb1;
+  --color-rosy-taupe-800: #ead2cb;
+  --color-rosy-taupe-900: #f4e9e5;
+
+  --color-reddish-brown-100: #1f0e0b;
+  --color-reddish-brown-200: #3e1c16;
+  --color-reddish-brown-300: #5d2b21;
+  --color-reddish-brown-400: #7c392b;
+  --color-reddish-brown: #994636;
+  --color-reddish-brown-500: #994636;
+  --color-reddish-brown-600: #c0604d;
+  --color-reddish-brown-700: #d08879;
+  --color-reddish-brown-800: #e0b0a6;
+  --color-reddish-brown-900: #efd7d2;
+
+  --color-golden-earth-100: #1c1206;
+  --color-golden-earth-200: #37250c;
+  --color-golden-earth-300: #533712;
+  --color-golden-earth-400: #6e4918;
+  --color-golden-earth: #895b1e;
+  --color-golden-earth-500: #895b1e;
+  --color-golden-earth-600: #c2802b;
+  --color-golden-earth-700: #daa157;
+  --color-golden-earth-800: #e6c08f;
+  --color-golden-earth-900: #f3e0c7;
+
+  --color-amethyst-100: #241124;
+  --color-amethyst-200: #492149;
+  --color-amethyst-300: #6d326d;
+  --color-amethyst-400: #914391;
+  --color-amethyst: #b257b2;
+  --color-amethyst-500: #b257b2;
+  --color-amethyst-600: #c179c1;
+  --color-amethyst-700: #d19ad1;
+  --color-amethyst-800: #e0bce0;
+  --color-amethyst-900: #f0ddf0;
+}
+
 /* Custom CSS Variables for Color Scheme */
 :root {
-  /* Primary Color Scheme */
-  --primary-dark: #0F0E47;
-  --primary-main: #272757;
-  --primary-medium: #505081;
-  --primary-light: #8686AC;
+  /* Primary Color Scheme - Updated to Hushh Palette */
+  --primary-dark: #1a1215;
+  --primary-main: #994636;
+  --primary-medium: #ca907e;
+  --primary-light: #dfbcb1;
   
   /* Semantic Colors */
-  --background-primary: #0F0E47;
-  --background-secondary: #272757;
-  --surface-primary: rgba(134, 134, 172, 0.1);
-  --surface-secondary: rgba(80, 80, 129, 0.2);
+  --background-primary: #1a1215;
+  --background-secondary: #2e1913;
+  --surface-primary: rgba(202, 144, 126, 0.1);
+  --surface-secondary: rgba(153, 70, 54, 0.2);
   
   /* Text Colors */
   --text-primary: #ffffff;
@@ -21,25 +71,25 @@
   --text-muted: rgba(255, 255, 255, 0.6);
   
   /* Border Colors */
-  --border-primary: rgba(134, 134, 172, 0.3);
+  --border-primary: rgba(202, 144, 126, 0.3);
   --border-secondary: rgba(255, 255, 255, 0.2);
   
   /* Shadow Colors */
-  --shadow-primary: rgba(15, 14, 71, 0.3);
-  --shadow-secondary: rgba(39, 39, 87, 0.2);
+  --shadow-primary: rgba(26, 18, 21, 0.3);
+  --shadow-secondary: rgba(153, 70, 54, 0.2);
 }
 
 /* Custom light theme styles for the email app */
 body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  width: 100vw;
+  min-height: 100%;
+  width: 100%;
   font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   background-color: var(--background-primary);
   color: var(--text-primary);
-  overflow-x: auto;
-  overflow-y: auto;
+  overflow-x: hidden;
+  overflow-y: scroll;
 }
 
 * {
@@ -50,13 +100,15 @@ html {
   margin: 0;
   padding: 0;
   width: 100%;
-  overflow-x: auto;
-  overflow-y: auto;
+  height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  scroll-behavior: smooth;
 }
 
-/* Glass morphism styles */
+/* Glass morphism styles - Hushh Theme */
 .glass-background {
-  background: linear-gradient(135deg, #272757 0%, #8686AC 25%, #505081 75%, #0F0E47 100%);
+  background: linear-gradient(135deg, #1a1215 0%, #2e1913 25%, #3e1c16 50%, #5d2b21 75%, #1a1215 100%);
   position: relative;
   min-height: 100vh;
   width: 100vw;
@@ -119,9 +171,9 @@ html {
 }
 
 .glass-input:focus {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(202, 144, 126, 0.6);
   background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 0 20px rgba(134, 134, 172, 0.5);
+  box-shadow: 0 0 20px rgba(202, 144, 126, 0.5);
 }
 
 .glass-icon {
@@ -182,7 +234,7 @@ html {
 .glass-oauth-btn:hover {
   background: rgba(255, 255, 255, 0.15);
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(134, 134, 172, 0.2);
+  box-shadow: 0 4px 16px rgba(202, 144, 126, 0.2);
 }
 
 .glass-register-link {
@@ -342,7 +394,7 @@ html {
 .space-y-4 > * + * { margin-top: 1rem; }
 .min-w-0 { min-width: 0; }
 .flex-shrink-0 { flex-shrink: 0; }
-.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.truncate { overflow: auto; text-overflow: ellipsis; white-space: nowrap; }
 .transition-colors { transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out; }
 .transition-all { transition: all 0.15s ease-in-out; }
 .transition-opacity { transition: opacity 0.15s ease-in-out; }

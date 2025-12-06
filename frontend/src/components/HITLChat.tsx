@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -56,6 +56,8 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
   
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   const [showProviderDropdown, setShowProviderDropdown] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [_conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]); // Chat Agent API conversation state
@@ -178,39 +180,65 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Handle AI response for initial prompt
+  // Handle AI response for initial prompt with streaming
   useEffect(() => {
     if (initialPrompt && !initialResponseSent.current && messages.length === 1 && 
         messages[0].role === 'user' && messages[0].content === initialPrompt && 
         user?.id && currentSessionId) {
       initialResponseSent.current = true;
-      setIsLoading(true);
       
-      // Process initial prompt through Chat Agent API
-      hushMcpApi.sendChatMessageWithAutoTokens(user.id, initialPrompt, currentSessionId)
-        .then(response => {
-          if (response.status === 'success' && response.response) {
-            addMessage('assistant', response.response);
-            
-            // Update conversation history
-            setConversationHistory(prev => [
-              ...prev,
-              { role: 'user', content: initialPrompt, timestamp: new Date().toISOString() },
-              { role: 'assistant', content: response.response!, timestamp: new Date().toISOString() }
-            ]);
-          } else {
-            // Fallback to simulated response if API fails
-            const errorMessage = response.error || 'I\'m ready to help you. What would you like to know?';
-            addMessage('assistant', errorMessage);
-          }
-        })
-        .catch(error => {
+      // Create placeholder message for streaming
+      const assistantMessageId = `msg-initial-${Date.now()}`;
+      const placeholderMessage: Message = {
+        id: assistantMessageId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, placeholderMessage]);
+      setStreamingMessageId(assistantMessageId);
+      setIsStreaming(true);
+      
+      // Process initial prompt through streaming Chat Agent API
+      hushMcpApi.streamChatMessage(
+        user.id,
+        initialPrompt,
+        currentSessionId,
+        // onToken
+        (token: string) => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: msg.content + token }
+              : msg
+          ));
+        },
+        // onComplete
+        (fullResponse: string) => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: fullResponse }
+              : msg
+          ));
+          setConversationHistory(prev => [
+            ...prev,
+            { role: 'user', content: initialPrompt, timestamp: new Date().toISOString() },
+            { role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() }
+          ]);
+          setIsStreaming(false);
+          setStreamingMessageId(null);
+        },
+        // onError
+        (error: string) => {
           console.error('Error processing initial prompt:', error);
-          addMessage('assistant', 'I\'m ready to help you. What would you like to know?');
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: 'I\'m ready to help you. What would you like to know?' }
+              : msg
+          ));
+          setIsStreaming(false);
+          setStreamingMessageId(null);
+        }
+      );
     }
   }, [initialPrompt, messages, user?.id, currentSessionId]);
 
@@ -247,17 +275,26 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
     }
   };
 
+  // Update streaming message content
+  const updateStreamingMessage = useCallback((messageId: string, newContent: string) => {
+    setMessages(prev => prev.map(msg => 
+      msg.id === messageId
+        ? { ...msg, content: msg.content + newContent }
+        : msg
+    ));
+  }, []);
+
   const handleSendMessage = async () => {
-    if (!input.trim() || isLoading || !user?.id || !currentSessionId) return;
+    if (!input.trim() || isLoading || isStreaming || !user?.id || !currentSessionId) return;
 
     const userMessage = input.trim();
     addMessage('user', userMessage);
     setInput('');
     if (onSend) onSend(userMessage); // Notify parent to switch to full chat mode
-    setIsLoading(true);
 
     // Check if backend is connected
     if (isBackendConnected === false) {
+      setIsLoading(true);
       setTimeout(() => {
         addMessage('assistant', 'I\'m currently in offline mode as the backend service is not available. Once the service is restored, I\'ll be able to provide AI-powered responses and access to tools like email, calendar, and weather services.');
         setIsLoading(false);
@@ -265,43 +302,81 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
       return;
     }
 
+    // Create placeholder message for streaming
+    const assistantMessageId = `msg-${Date.now()}`;
+    const placeholderMessage: Message = {
+      id: assistantMessageId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, placeholderMessage]);
+    setStreamingMessageId(assistantMessageId);
+    setIsStreaming(true);
+
     try {
-      const response = await hushMcpApi.sendChatMessageWithAutoTokens(
+      // Use streaming API
+      await hushMcpApi.streamChatMessage(
         user.id,
         userMessage,
-        currentSessionId
+        currentSessionId,
+        // onToken callback - called for each token
+        (token: string, _agent: string) => {
+          updateStreamingMessage(assistantMessageId, token);
+        },
+        // onComplete callback - called when streaming is done
+        (fullResponse: string, _agent: string, _processingTime: number) => {
+          // Ensure the full response is set (in case any tokens were missed)
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: fullResponse }
+              : msg
+          ));
+          
+          // Update conversation history
+          setConversationHistory(prev => [
+            ...prev,
+            { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
+            { role: 'assistant', content: fullResponse, timestamp: new Date().toISOString() }
+          ]);
+          
+          setIsStreaming(false);
+          setStreamingMessageId(null);
+        },
+        // onError callback
+        (error: string) => {
+          console.error('Streaming error:', error);
+          // Update the message with error
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId
+              ? { ...msg, content: `Sorry, I encountered an error: ${error}. Please try again.` }
+              : msg
+          ));
+          setIsStreaming(false);
+          setStreamingMessageId(null);
+          setIsBackendConnected(false);
+        }
       );
-
-      if (response.status === 'success' && response.response) {
-        addMessage('assistant', response.response);
-        setConversationHistory(prev => [
-          ...prev,
-          { role: 'user', content: userMessage, timestamp: new Date().toISOString() },
-          { role: 'assistant', content: response.response!, timestamp: new Date().toISOString() }
-        ]);
-      } else if (response.status === 'permission_denied') {
-        addMessage('assistant', 'I need permission to access the required services. Please check your consent settings and try again.');
-      } else {
-        const errorMessage = response.error || `API returned status: ${response.status}. Please try again.`;
-        addMessage('assistant', errorMessage);
-      }
-
     } catch (error) {
+      console.error('Stream chat error:', error);
       setIsBackendConnected(false);
       let errorMessage = 'Sorry, I encountered an error while processing your message.';
       if (error instanceof Error) {
         if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
           errorMessage = 'The backend service appears to be unavailable. Please check your connection and try again.';
-        } else if (error.message.includes('CORS')) {
-          errorMessage += ' There was a CORS issue. Please check the backend configuration.';
         } else {
           errorMessage += ` Error: ${error.message}`;
         }
       }
-      errorMessage += ' I\'m now in offline mode.';
-      addMessage('assistant', errorMessage);
-    } finally {
-      setIsLoading(false);
+      
+      // Update the placeholder message with error
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessageId
+          ? { ...msg, content: errorMessage }
+          : msg
+      ));
+      setIsStreaming(false);
+      setStreamingMessageId(null);
     }
   };
 
@@ -410,6 +485,10 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
                       >
                         {message.content}
                       </ReactMarkdown>
+                      {/* Show blinking cursor while streaming this message */}
+                      {isStreaming && streamingMessageId === message.id && (
+                        <span className="streaming-cursor"></span>
+                      )}
                     </div>
                     
                     {/* Tool Approval UI */}
@@ -457,7 +536,8 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
               </div>
             ))}
             
-            {isLoading && (
+            {/* Show typing indicator only when loading (not streaming) */}
+            {isLoading && !isStreaming && (
               <div className="message-wrapper assistant">
                 <div className="message-container">
                   <div className="message-avatar">
@@ -495,13 +575,13 @@ const HITLChat: React.FC<HITLChatProps> = ({ onBack, initialPrompt, fullChatMode
                   }
                 }}
                 placeholder="Message Hushh AI Assistant..."
-                disabled={isLoading}
+                disabled={isLoading || isStreaming}
                 rows={1}
               />
               <button
                 className="send-button"
                 onClick={handleSendMessage}
-                disabled={!input.trim() || isLoading}
+                disabled={!input.trim() || isLoading || isStreaming}
               >
                 <PaperAirplaneIcon />
               </button>
@@ -1140,6 +1220,26 @@ const StyledWrapper = styled.div<{ fullChatMode?: boolean }>`
     30% {
       transform: translateY(-8px);
       opacity: 1;
+    }
+  }
+  
+  /* Streaming cursor animation */
+  .streaming-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.2em;
+    background: #10b981;
+    margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0%, 50% {
+      opacity: 1;
+    }
+    51%, 100% {
+      opacity: 0;
     }
   }
   

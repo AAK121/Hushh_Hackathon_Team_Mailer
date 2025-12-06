@@ -19,7 +19,7 @@ html, body {
 
 body {
     font-family: 'Outfit', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #994636 0%, #ca907e 100%);
     color: #333;
     height: 100vh;
     width: 100%;
@@ -46,7 +46,7 @@ body {
 
 /* Header Styles */
 .app-header {
-    background: linear-gradient(135deg, #3198ff, #34495e);
+    background: linear-gradient(135deg, #ca907e, #994636);
     color: white;
     display: flex;
     width: 100%;
@@ -501,7 +501,7 @@ body {
     background: white;
     border-radius: 8px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border-left: 4px solid #667eea;
+    border-left: 4px solid #ca907e;
 }
 
 .paper-full-title {
@@ -584,7 +584,7 @@ body {
 
 .content-header {
     padding: 12px 20px;
-    background: #667eea;
+    background: #ca907e;
     color: white;
     display: flex;
     justify-content: space-between;
@@ -689,7 +689,7 @@ body {
 .pdf-loading i {
     font-size: 2rem;
     margin-bottom: 15px;
-    color: #667eea;
+    color: #ca907e;
 }
 
 .pdf-error {
@@ -2247,7 +2247,7 @@ body {
     border-radius: 6px;
     overflow-x: auto;
     margin: 10px 0;
-    border: 1px solid #34495e;
+    border: 1px solid #895b1e;
 }
 
 .code-block code {
@@ -2950,7 +2950,7 @@ body {
 
 /* Better delimiter handling */
 .katex .delimcenter {
-    color: #34495e !important;
+    color: #895b1e !important;
     font-weight: 500 !important;
 }
 
@@ -3138,7 +3138,7 @@ body {
 
 /* Mathematical delimiters (parentheses, brackets, etc.) */
 .katex .delimcenter {
-    color: #34495e !important;
+    color: #895b1e !important;
 }
 
 /* Error handling for malformed math */
@@ -3187,7 +3187,7 @@ body {
 @media (prefers-color-scheme: dark) {
     .katex-display {
         background: rgba(44, 62, 80, 0.8) !important;
-        border-color: #34495e !important;
+        border-color: #895b1e !important;
         color: #ecf0f1 !important;
     }
     

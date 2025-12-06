@@ -14,7 +14,21 @@ html, body, #root {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: auto;
+}
+
+html {
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+  overflow-y: scroll;
+}
+
+#root {
+  min-height: 100%;
 }
 
 /* Custom scrollbar */
@@ -102,13 +116,13 @@ html, body, #root {
   transition-duration: 150ms;
 }
 
-/* Glow Button Styles */
+/* Glow Button Styles - Hushh Theme */
 .glow-button {
-  --bg-color: #0F0E47;
+  --bg-color: #1a1215;
   --text-color: #f1f5f9;
-  --glow-primary: #8686AC;
-  --glow-secondary: #505081;
-  --glow-accent: #272757;
+  --glow-primary: #ca907e;
+  --glow-secondary: #994636;
+  --glow-accent: #b7674e;
 
   display: inline-flex;
   justify-content: center;
@@ -215,23 +229,23 @@ html, body, #root {
   opacity: 0;
 }
 
-/* Color variants */
+/* Color variants - Hushh Theme */
 .glow-button--emerald {
-  --glow-primary: #10b981;
-  --glow-secondary: #059669;
-  --glow-accent: #34d399;
+  --glow-primary: #895b1e;
+  --glow-secondary: #c2802b;
+  --glow-accent: #daa157;
 }
 
 .glow-button--purple {
-  --glow-primary: #8b5cf6;
-  --glow-secondary: #7c3aed;
-  --glow-accent: #a78bfa;
+  --glow-primary: #b257b2;
+  --glow-secondary: #914391;
+  --glow-accent: #c179c1;
 }
 
 .glow-button--amber {
-  --glow-primary: #f59e0b;
-  --glow-secondary: #d97706;
-  --glow-accent: #fbbf24;
+  --glow-primary: #ca907e;
+  --glow-secondary: #994636;
+  --glow-accent: #d4a597;
 }
 
 /* Neumorphic Button Styles */

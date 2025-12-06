@@ -1732,7 +1732,7 @@ Try saying something like:
 // Styles
 const styles = {
   container: {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    background: 'linear-gradient(135deg, #ca907e 0%, #994636 100%)',
     minHeight: '100vh',
     width: '100%',
     maxWidth: '100vw',
@@ -1879,7 +1879,7 @@ const styles = {
   },
   addButton: {
     padding: '0.75rem 1.5rem',
-    background: 'linear-gradient(135deg, #505081, #0F0E47)',
+    background: 'linear-gradient(135deg, #895b1e, #4a3528)',
     border: 'none',
     borderRadius: '0.5rem',
     color: 'white',
@@ -2097,7 +2097,7 @@ const styles = {
   },
   userMessage: {
     alignSelf: 'flex-end',
-    background: 'linear-gradient(135deg, #505081, #0F0E47)',
+    background: 'linear-gradient(135deg, #895b1e, #4a3528)',
     color: 'white',
   },
   agentMessage: {

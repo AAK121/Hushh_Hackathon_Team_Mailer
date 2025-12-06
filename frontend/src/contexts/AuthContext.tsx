@@ -42,9 +42,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     console.log('AuthProvider useEffect - isSupabaseConfigured:', isSupabaseConfigured);
     
-    // Require proper Supabase configuration - no demo mode
+    // If Supabase is not configured, just set loading to false
+    // This allows the landing page to be shown
     if (!isSupabaseConfigured) {
-      throw new Error('� Supabase configuration is required. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.')
+      console.warn('⚠️ Supabase not configured. Landing page will be shown.');
+      setLoading(false);
+      return;
     }
 
     console.log('✅ Supabase is configured, checking session');

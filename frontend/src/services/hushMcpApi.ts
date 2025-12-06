@@ -531,6 +531,106 @@ class HushMcpApiService {
     });
   }
 
+  /**
+   * Stream chat message with real-time token-by-token response.
+   * Uses Server-Sent Events (SSE) for streaming.
+   * 
+   * @param userId - User identifier
+   * @param message - Chat message content
+   * @param sessionId - Optional session ID
+   * @param onToken - Callback function called for each token received
+   * @param onComplete - Callback function called when streaming is complete
+   * @param onError - Callback function called on error
+   */
+  async streamChatMessage(
+    userId: string,
+    message: string,
+    sessionId: string | undefined,
+    onToken: (token: string, agent: string) => void,
+    onComplete: (fullResponse: string, agent: string, processingTime: number) => void,
+    onError: (error: string) => void
+  ): Promise<void> {
+    const url = `${API_BASE_URL}/agents/chat/stream`;
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'text/event-stream',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          message: message,
+          session_id: sessionId || `session_${Date.now()}`
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body reader available');
+      }
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let fullResponse = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        
+        // Process complete SSE messages
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const jsonStr = line.slice(6); // Remove 'data: ' prefix
+              if (jsonStr.trim()) {
+                const data = JSON.parse(jsonStr);
+                
+                if (data.error) {
+                  onError(data.error);
+                  return;
+                }
+                
+                if (data.done) {
+                  // Streaming complete
+                  onComplete(
+                    data.full_response || fullResponse,
+                    data.agent || 'general',
+                    data.processing_time || 0
+                  );
+                  return;
+                } else {
+                  // Token received
+                  fullResponse += data.token;
+                  onToken(data.token, data.agent || 'general');
+                }
+              }
+            } catch (parseError) {
+              console.warn('Failed to parse SSE data:', line, parseError);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown streaming error';
+      console.error('Streaming chat error:', errorMessage);
+      onError(errorMessage);
+    }
+  }
+
   // Email verification method
   async verifyEmails(emails: string[]): Promise<{ results: Record<string, boolean>; valid_count: number; invalid_count: number }> {
     return this.makeRequest('/agents/mailerpanda/verify-emails', {
