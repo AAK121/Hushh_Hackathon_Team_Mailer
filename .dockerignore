@@ -1,0 +1,63 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend specific (exclude from backend)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Environment files (provided via docker-compose env_file directive)
+# Note: .env is excluded from build but loaded at runtime via env_file in docker-compose.yml
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+docs/
+
+# Test files
+tests/
+test_*.py
+
+# Temporary files
+tmp/
+temp/
+*.tmp

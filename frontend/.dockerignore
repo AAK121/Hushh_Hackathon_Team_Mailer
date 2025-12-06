@@ -1,0 +1,50 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+.vite/
+*.local
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Documentation
+*.md
+README.md
+DEVELOPER_SETUP.md
+TROUBLESHOOTING.md
+
+# Python files (not needed for frontend)
+*.py
+__pycache__/
+backend_requirements.txt
+api.py.bk
+*.pyc
+
+# CSV test files
+test-*.csv
+
+# Batch files
+*.bat

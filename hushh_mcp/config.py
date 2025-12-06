@@ -1,22 +1,39 @@
 # hushh_mcp/config.py
 
 import os
+import sys
 from dotenv import load_dotenv
 
 dotenv_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 
 # Load .env file into environment
-load_dotenv()
+load_dotenv(dotenv_path)
+
+print("Environment variables loaded from .env file", file=sys.stderr)
 
 # ==================== Security Keys ====================
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY or len(SECRET_KEY) < 32:
-    raise ValueError("❌ SECRET_KEY must be set in .env and at least 32 characters long")
+    error_msg = (
+        "❌ SECRET_KEY must be set in .env and at least 32 characters long\n"
+        "For Docker deployments, ensure:\n"
+        "  1. .env file exists in the project root with SECRET_KEY=<your-key>\n"
+        "  2. docker-compose.yml includes 'env_file: - .env' under the backend service\n"
+        f"Current SECRET_KEY value: {SECRET_KEY!r} (length: {len(SECRET_KEY) if SECRET_KEY else 0})"
+    )
+    raise ValueError(error_msg)
 
 VAULT_ENCRYPTION_KEY = os.getenv("VAULT_ENCRYPTION_KEY")
 if not VAULT_ENCRYPTION_KEY or len(VAULT_ENCRYPTION_KEY) != 64:
-    raise ValueError("❌ VAULT_ENCRYPTION_KEY must be a 64-character hex string (256-bit AES key)")
+    error_msg = (
+        "❌ VAULT_ENCRYPTION_KEY must be a 64-character hex string (256-bit AES key)\n"
+        "For Docker deployments, ensure:\n"
+        "  1. .env file exists in the project root with VAULT_ENCRYPTION_KEY=<64-hex-chars>\n"
+        "  2. docker-compose.yml includes 'env_file: - .env' under the backend service\n"
+        f"Current VAULT_ENCRYPTION_KEY value: {VAULT_ENCRYPTION_KEY!r} (length: {len(VAULT_ENCRYPTION_KEY) if VAULT_ENCRYPTION_KEY else 0})"
+    )
+    raise ValueError(error_msg)
 
 # ==================== Expiration Settings ====================
 
