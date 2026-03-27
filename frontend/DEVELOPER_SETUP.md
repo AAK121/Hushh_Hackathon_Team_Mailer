@@ -2,7 +2,7 @@
 
 ## 🚨 **IMMEDIATE ISSUE**: Google Verification Process
 
-The error you're seeing ("Access blocked: ozuayvppkblkhodyjepd.supabase.co has not completed the Google verification process") happens because your app is in "testing" mode in Google Cloud Console.
+The error you're seeing ("Access blocked: https://pwtjiojfxrkqsbvgtwdm.supabase.co has not completed the Google verification process") happens because your app is in "testing" mode in Google Cloud Console.
 
 ## 🚀 **STEP 1: Google Cloud Console Setup**
 
@@ -47,10 +47,10 @@ Go to **APIs & Services > Library** and enable:
    Authorized JavaScript origins:
    - http://localhost:5173
    - http://localhost:5174
-   - https://ozuayvppkblkhodyjepd.supabase.co
+   - https://https://pwtjiojfxrkqsbvgtwdm.supabase.co
    
    Authorized redirect URIs:
-   - https://ozuayvppkblkhodyjepd.supabase.co/auth/v1/callback
+   - https://https://pwtjiojfxrkqsbvgtwdm.supabase.co/auth/v1/callback
    - http://localhost:5173
    - http://localhost:5174
    ```
@@ -67,7 +67,7 @@ Go to **APIs & Services > Library** and enable:
    Client ID: [Paste from Google Cloud Console]
    Client Secret: [Paste from Google Cloud Console]
    
-   Redirect URL: https://ozuayvppkblkhodyjepd.supabase.co/auth/v1/callback
+   Redirect URL: https://https://pwtjiojfxrkqsbvgtwdm.supabase.co/auth/v1/callback
    ```
 
 ### B. Advanced Settings (Optional but Recommended)

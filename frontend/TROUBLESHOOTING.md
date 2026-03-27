@@ -28,7 +28,7 @@ This error means the Google Calendar integration isn't properly configured. Here
    - https://yourdomain.com (for production)
    
    Authorized redirect URIs:
-   - https://ozuayvppkblkhodyjepd.supabase.co/auth/v1/callback
+   - https://https://pwtjiojfxrkqsbvgtwdm.supabase.co/auth/v1/callback
    - http://localhost:5173
    - http://localhost:5174
    ```
@@ -45,7 +45,7 @@ This error means the Google Calendar integration isn't properly configured. Here
    Client ID: [Your Google OAuth Client ID from Step 1]
    Client Secret: [Your Google OAuth Client Secret from Step 1]
    
-   Redirect URL: https://ozuayvppkblkhodyjepd.supabase.co/auth/v1/callback
+   Redirect URL: https://https://pwtjiojfxrkqsbvgtwdm.supabase.co/auth/v1/callback
    ```
 
 ### B. Configure OAuth Scopes

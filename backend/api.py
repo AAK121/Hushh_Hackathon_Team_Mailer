@@ -105,7 +105,15 @@ app = FastAPI(
 # Enable CORS for frontend integration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:80",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5173",
+        "https://hushh-hackathon-team-mailer-1xcgl5fpr.vercel.app",  # Your Vercel app
+        "https://pwtjiojfxrkqsbvgtwdm.supabase.co",  # Supabase
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -5538,9 +5546,14 @@ async def validate_user_token(
         }
 
 if __name__ == "__main__":
+    # Get PORT from environment variable (Railway/Docker) or default to 8001 (local)
+    port = int(os.getenv("PORT", 8001))
+    host = os.getenv("HOST", "0.0.0.0")  # Listen on all interfaces for production
+    
     print("Starting HushMCP Agent API Server...")
-    print("API Documentation: http://127.0.0.1:8001/docs")
-    print("Alternative Docs: http://127.0.0.1:8001/redoc")
+    print(f"API Server: http://{host}:{port}")
+    print(f"API Documentation: http://localhost:{port}/docs")
+    print(f"Alternative Docs: http://localhost:{port}/redoc")
     print("Supported Agents:")
     print("   - AddToCalendar Agent: /agents/addtocalendar/")
     print("   - MailerPanda Agent: /agents/mailerpanda/")
@@ -5551,8 +5564,8 @@ if __name__ == "__main__":
     
     uvicorn.run(
         "api:app",
-        host="127.0.0.1",
-        port=8001,
+        host=host,
+        port=port,
         reload=False,
         log_level="info"
     )
