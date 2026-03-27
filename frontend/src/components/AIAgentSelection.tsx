@@ -103,11 +103,17 @@ Ask me anything about our agents, how to use them, or get started with the platf
         }),
       });
 
+      console.log('✅ Chat Response Status:', response.status);
+      console.log('📡 API URL:', API_BASE_URL);
+
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text();
+        console.error('❌ API Error Response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
       }
 
       const data: ChatResponse = await response.json();
+      console.log('✅ Chat Response Data:', data);
       
       // Update conversation ID if this is the first message
       if (!conversationId) {
@@ -123,11 +129,25 @@ Ask me anything about our agents, how to use them, or get started with the platf
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Chat error:', error);
+      console.error('❌ Chat error:', error);
+      console.error('❌ API Base URL was:', API_BASE_URL);
+      
+      let errorContent = 'I apologize, but I\'m having trouble connecting to the server right now.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch')) {
+          errorContent += '\n\n**Error**: Network error - Cannot reach the backend server.\n\n**Possible causes**:\n- Backend server is not running\n- CORS issue with the API\n- Network connectivity problem\n\n**Debug**: Check browser console for more details.';
+        } else if (error.message.includes('HTTP error')) {
+          errorContent += `\n\n**Error**: ${error.message}`;
+        } else {
+          errorContent += `\n\n**Error**: ${error.message}`;
+        }
+      }
+      
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I apologize, but I\'m having trouble connecting to the server right now. Please try again in a moment.',
+        content: errorContent,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
