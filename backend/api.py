@@ -474,6 +474,67 @@ async def root():
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
+@app.post("/chat", response_model=Dict[str, Any])
+async def chat_endpoint(request: ChatMessageRequest):
+    """
+    Simple unified chat endpoint for the frontend.
+    Routes to the appropriate agent based on the message content.
+    """
+    try:
+        user_id = getattr(request, 'user_id', 'default_user')
+        message = getattr(request, 'message', None)
+        
+        if not message:
+            return {
+                "response": "Please provide a message.",
+                "conversation_id": None,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "session_id": None,
+                "error": "No message provided"
+            }
+        
+        # Provide a helpful AI response about agents
+        user_message = message.lower().strip()
+        
+        # Check if they're asking about specific agents
+        if 'mailerpanda' in user_message or 'mail' in user_message or 'email' in user_message:
+            response = "📧 **MailerPanda Agent**: I can help you send personalized bulk emails with AI-powered content generation and human oversight. Click the sidebar to access the MailerPanda Agent!"
+        elif 'calendar' in user_message or 'schedule' in user_message or 'event' in user_message:
+            response = "📅 **Calendar Agent**: I can help you manage your calendar intelligently, sync with Google Calendar, and schedule meetings. Access it from the sidebar!"
+        elif 'relationship' in user_message or 'memory' in user_message or 'context' in user_message:
+            response = "🤝 **Relationship Manager**: I maintain cross-agent memory and context about your relationships and interactions. Perfect for consistent communication!"
+        elif 'research' in user_message or 'paper' in user_message or 'study' in user_message or 'arxiv' in user_message:
+            response = "🔬 **Research Assistant**: I can search for academic papers, summarize research, and find information across multiple sources. Try asking for paper recommendations!"
+        else:
+            response = f"""Got it! You said: "{message}"
+
+I'm an AI assistant here to help you with our **4 specialized agents**:
+
+🧙 **Available Commands:**
+- Type `/mailerpanda` to access the email marketing agent
+- Type `/calendar` to manage your calendar
+- Type `/research` to find research papers
+- Type `/relationship` for the memory assistant
+
+Or just ask me questions about how to use the platform!"""
+        
+        return {
+            "response": response,
+            "conversation_id": "conv_" + user_id,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "session_id": "session_" + user_id
+        }
+        
+    except Exception as e:
+        print(f"Error in chat endpoint: {str(e)}")
+        return {
+            "response": f"Sorry, I encountered an error: {str(e)}",
+            "conversation_id": None,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "session_id": None,
+            "error": str(e)
+        }
+
 @app.get("/health", response_model=Dict[str, Any])
 async def health_check():
     """Enhanced health check endpoint with diagnostic information."""

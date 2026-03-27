@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // Get API base URL from environment
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://hush-backend-sepia.vercel.app';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_HUSHMCP_API_URL || 'https://backend-sigma-rose-25.vercel.app';
 
 interface AIAgentSelectionProps {
   onSelectAgent?: (agent: 'mass-mail' | 'calendar') => void;
